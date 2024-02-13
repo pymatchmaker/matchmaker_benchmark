@@ -12,7 +12,7 @@ To setup the experiments, use the following script.
 
 ```bash
 # Download this repository
-git clone 
+git clone https://github.com/neosatrapahereje/ismir2024_matchmaker.git
  
 # Clone matchmaker
 git clone https://github.com/neosatrapahereje/matchmaker.git
@@ -25,6 +25,7 @@ conda env create -f environment.yml
 # cd path/to/matchmaker
 cd ../matchmaker
 
+# Install matchmaker (TODO update this part when matchmaker is published)
 pip install -e .
 ```
 
