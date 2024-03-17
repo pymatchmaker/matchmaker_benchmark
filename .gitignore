@@ -166,3 +166,7 @@ cython_debug/
 .vscode
 matchmaker/dp/dtw_loop.c
 matchmaker/utils/distances.c
+
+# Logs
+wandb/
+*.tsv

@@ -27,6 +27,9 @@ cd ../matchmaker
 
 # Install matchmaker (TODO update this part when matchmaker is published)
 pip install -e .
+
+# Install soundfont for fluidsynth
+wget ftp://ftp.osuosl.org/pub/musescore/soundfont/MuseScore_General/MuseScore_General.sf2 ~/.fluidsynth/
 ```
 
 ### Setting up the datasets
@@ -35,7 +38,11 @@ TBD
 
 ## Running the experiments
 
-TBD
+You can run the following command to run inference of a single audio file with a midi file provided on resources.
+
+```bash
+python matchmaker_eval/infer.py --audio ./resources/ex_VuV01M.wav --midi ./resources/ex_midi_score.mid --eval
+```
 
 ## Acknowledgments
 
