@@ -5,7 +5,7 @@ import mido
 import numpy as np
 import pandas as pd
 import scipy
-from matchmaker.dp.oltw_dixon import OnlineTimeWarpingDixon
+from matchmaker.dp import OnlineTimeWarpingArzt, OnlineTimeWarpingDixon
 from matchmaker.features.audio import compute_features_from_audio
 from matchmaker.io.audio import MockAudioStream
 from midi2audio import FluidSynth
@@ -21,11 +21,11 @@ FEATURES = ["chroma"]
 DEFAULT_LOCAL_COST: str = "euclidean"
 MAX_RUN_COUNT: int = 30
 SAMPLE_RATE = 16000  # temporary
-HOP_LENGTH = 320
+HOP_LENGTH = 640
 N_FFT = 2 * HOP_LENGTH
 N_MELS = 66
 NORM = np.inf
-CHUNK_SIZE = 4 * HOP_LENGTH
+CHUNK_SIZE = 1 * HOP_LENGTH
 FRAME_RATE = SAMPLE_RATE / HOP_LENGTH
 FRAME_PER_SEG: int = int(CHUNK_SIZE / HOP_LENGTH)
 WINDOW_SIZE: int = 5 * int(FRAME_RATE)  # 5 seconds
@@ -140,6 +140,7 @@ def run_evaluation(wp, ref_ann, target_ann):
         "median": np.median(absolute_errors_in_delay),
         "std": np.std(absolute_errors_in_delay),
         "skewness": scipy.stats.skew(errors_in_delay),
+        "kurtosis": scipy.stats.kurtosis(errors_in_delay),
     }
     for tau in TOLERANCES:
         results[f"{tau}ms"] = np.mean(absolute_errors_in_delay <= tau)
@@ -205,6 +206,9 @@ def run_score_following(score_audio: str, target_audio: str) -> NDArray[np.float
     feature_processors, reference_features = compute_features_from_audio(
         score_audio, features=FEATURES, sample_rate=SAMPLE_RATE, hop_length=HOP_LENGTH
     )
+    # oltw = OnlineTimeWarpingArzt(
+    #     reference_features=reference_features,
+    # )
     oltw = OnlineTimeWarpingDixon(
         reference_features=reference_features,
         local_cost_fun=DEFAULT_LOCAL_COST,

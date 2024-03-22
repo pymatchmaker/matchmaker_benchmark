@@ -12,37 +12,43 @@ from eval import (
     run_score_following,
     FEATURES,
     DEFAULT_LOCAL_COST,
-    CHUNK_SIZE,
     WINDOW_SIZE,
     SAMPLE_RATE,
     HOP_LENGTH,
+    FRAME_PER_SEG,
+    FRAME_RATE,
 )
 from tabulate import tabulate
+from datetime import datetime
 
 ASAP_DIR = "/Users/jiyun/workspace/asap-dataset"
 WORKING_DIR = Path(__file__).parent.parent
 METADATA_ASAP = WORKING_DIR / "data/metadata-asap-test.csv"
 
 
-def save_test_results(results):
-    with open("offline-test-results.tsv", "w", newline="") as f:
+def save_test_results(results, save_path: str):
+    with open(save_path, "w", newline="") as f:
         writer = csv.writer(f, delimiter="\t")
         writer.writerow(results.keys())
         writer.writerows(zip(*results.values()))
 
 
-def report_results_to_wandb(averaged_result):
+def report_results_to_wandb(averaged_result, config=None):
     wandb.init(
+        entity="matchmaker",
         project="matchmaker",
+        group="online-dp",
         config={
             "sample_rate": SAMPLE_RATE,
             "hop_length": HOP_LENGTH,
-            "chunk_size": CHUNK_SIZE,
-            "window_size": WINDOW_SIZE,
+            "window_size(s)": WINDOW_SIZE / FRAME_RATE,
             "distance_func": DEFAULT_LOCAL_COST,
+            "frame_per_seg": FRAME_PER_SEG,
             "feature": FEATURES,
+            "dataset": "asap",
+            "algorithm": "OLTWDixon",
         },
-        name=f"{DEFAULT_LOCAL_COST}_{FEATURES}_chunk({CHUNK_SIZE})_window({WINDOW_SIZE})",
+        name=f"{DEFAULT_LOCAL_COST}_{FEATURES}_chunk({FRAME_PER_SEG})_window({WINDOW_SIZE/FRAME_RATE})s",
     )
     wandb.log(averaged_result, step=None)
     wandb.finish()
@@ -62,7 +68,7 @@ def run_tests_and_eval(asap_dir, metadata_asap):
             # wp = run_offline_alignment(score_audio, target_audio)
 
             # Run evaluation
-            score_beat_ann = dir_path / "midi_score_adjusted_annotations.txt"
+            score_beat_ann = dir_path / f"{score_audio.stem}_annotations.txt"
             target_beat_ann = asap_dir / row.performance_annotations
             result = run_evaluation(wp, score_beat_ann, target_beat_ann)
         except Exception as e:
@@ -81,7 +87,6 @@ def run_tests_and_eval(asap_dir, metadata_asap):
 
         print("Results")
         print(tabulate(results, headers="keys", tablefmt="fancy_grid", showindex=True))
-
     print(tabulate(results, headers="keys", tablefmt="fancy_grid", showindex=True))
     return results
 
@@ -103,7 +108,11 @@ def main():
     metadata_asap = pd.read_csv(args.metadata_asap)
 
     results = run_tests_and_eval(asap_dir, metadata_asap)
-    save_test_results(results)
+    now = datetime.now()
+    save_test_results(
+        results,
+        save_path=f"{WORKING_DIR}/output/test_results_{now.strftime('%Y-%m-%d-%H:%M:%S')}.tsv",
+    )
     if args.wandb:
         averaged_result = {
             k: f"{np.mean(v):.2f}"
