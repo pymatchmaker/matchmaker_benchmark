@@ -16,6 +16,7 @@ import wandb
 ASAP_DIR = "/Users/jiyun/workspace/asap-dataset"
 WORKING_DIR = Path(__file__).parent.parent
 METADATA_ASAP = WORKING_DIR / "data/metadata-asap-test.csv"
+OUTPUT_DIR = WORKING_DIR / "output"
 
 
 def save_test_results(results, save_path: str):
@@ -40,8 +41,6 @@ def report_results_to_wandb(averaged_result: dict, config: MatchmakerEvalConfig)
 def run_tests_and_eval(asap_dir, metadata_asap, config):
     results = defaultdict(list)
     for i, row in enumerate(metadata_asap.itertuples()):
-        if i % 10 != 0:
-            continue
         print(row)
         dir_path = asap_dir / row.folder
         target_audio = asap_dir / row.audio_performance
@@ -70,6 +69,7 @@ def run_tests_and_eval(asap_dir, metadata_asap, config):
         # add metadata to results
         results["Piece"].append(row.folder)
         results["Name"].append(target_audio.stem)
+
         for k, v in config.model_dump(include=config.attr_exp).items():
             results[k].append(v)
 
@@ -78,6 +78,7 @@ def run_tests_and_eval(asap_dir, metadata_asap, config):
 
         print("Results")
         print(tabulate(results, headers="keys", tablefmt="fancy_grid", showindex=True))
+
     print(tabulate(results, headers="keys", tablefmt="fancy_grid", showindex=True))
     return results
 
@@ -102,19 +103,19 @@ def main():
     configs = get_list_of_exp_config()
     for config in tqdm(configs):
         results = run_tests_and_eval(asap_dir, metadata_asap, config)
+
         if not args.dry_run:
-            now = datetime.now()
             save_test_results(
                 results,
-                save_path=f"{WORKING_DIR}/output/test_results_{now.strftime('%Y-%m-%d-%H:%M:%S')}.tsv",
+                save_path=f"{OUTPUT_DIR}/test_results_{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}.tsv",
             )
             if args.wandb:
                 averaged_result = {
-                    k: f"{np.mean(v):.2f}"
+                    k: f"{np.mean(v):.3f}"
                     for k, v in results.items()
-                    if k not in {"Piece", "Name"}
+                    if k in config.attr_exp
                 }
-                report_results_to_wandb(averaged_result)
+                report_results_to_wandb(averaged_result, config)
 
 
 if __name__ == "__main__":

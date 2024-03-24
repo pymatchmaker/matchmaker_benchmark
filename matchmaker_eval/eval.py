@@ -202,6 +202,7 @@ def run_score_following(
         window_size=config.window_size,
         max_run_count=config.max_run_count,
         frame_per_seg=config.frame_per_seg,
+        frame_rate=config.frame_rate,
     )
 
     audio_stream = MockAudioStream(

@@ -1,19 +1,15 @@
 from pydantic_settings import BaseSettings
 
 # default configs
-DEFAULT_LOCAL_COST: str = "euclidean"
-MAX_RUN_COUNT: int = 30
-SAMPLE_RATE = 16000  # temporary
-HOP_LENGTH = 640
-N_FFT = 2 * HOP_LENGTH
-N_MELS = 66
-CHUNK_SIZE = 1 * HOP_LENGTH
-FRAME_RATE = SAMPLE_RATE / HOP_LENGTH
-FRAME_PER_SEG: int = int(CHUNK_SIZE / HOP_LENGTH)
-WINDOW_SIZE: int = 5 * int(FRAME_RATE)  # 5 seconds
+SAMPLE_RATE = 16000
+FRAME_RATE = 25
+CHUNK_SIZE = 1  # num of hop_length
+WINDOW_SIZE = 5  # seconds
 FEATURES = ["chroma"]
+DEFAULT_LOCAL_COST = "euclidean"
 DATASET = "asap"
 ALGORITHM = "oltw_dixon"
+MAX_RUN_COUNT = 30 // CHUNK_SIZE
 
 # experiment configs
 SAMPLE_RATE_EXP = [16000, 22050]  #  2
@@ -66,13 +62,13 @@ def initialize_config(**kwargs) -> dict:
     window_size = kwargs.get("window_size", WINDOW_SIZE)
     features = kwargs.get("features", FEATURES)
     distance_func = kwargs.get("distance_func", DEFAULT_LOCAL_COST)
+    max_run_count = kwargs.get("max_run_count", MAX_RUN_COUNT)
     dataset = kwargs.get("dataset", DATASET)
     algorithm = kwargs.get("algorithm", ALGORITHM)
 
     hop_length = sample_rate // frame_rate
     n_fft = 2 * hop_length
-    frame_per_seg = int(chunk_size / hop_length)
-    max_run_count = 30
+    frame_per_seg = chunk_size
 
     # initialize config
     conf = MatchmakerEvalConfig(
