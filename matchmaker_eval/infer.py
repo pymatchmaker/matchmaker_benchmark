@@ -57,19 +57,20 @@ def main():
 
     assert midi_path.exists()
 
+    config = initialize_config()
     score_audio_path = midi_path.with_suffix(".wav")  # "ex_midi_score.wav"
     if not score_audio_path.exists():
         score_audio_path = convert_score_to_audio(
-            midi_path=midi_path,
-            save_path=score_audio_path,
+            midi_path, score_audio_path, config.sample_rate
         )
 
     print(f"Midi path: {midi_path}")
     print(f"Score audio path: {score_audio_path}")
 
     # Run score following & save result
-    conf = initialize_config()
-    wp = run_score_following(score_audio_path.as_posix(), target_audio.as_posix(), conf)
+    wp = run_score_following(
+        score_audio_path.as_posix(), target_audio.as_posix(), config
+    )
     save_score_following_result(wp=wp, save_path="./wp-result.tsv")
 
     # Run evaluation
@@ -77,7 +78,9 @@ def main():
         score_beat_ann = dir_path / "ex_midi_score_annotations.txt"
         target_beat_ann = dir_path / f"{target_audio.stem}_annotations.txt"
         results = {"Name": target_audio.stem}
-        result_stats = run_evaluation(wp, score_beat_ann, target_beat_ann)
+        result_stats = run_evaluation(
+            wp, score_beat_ann, target_beat_ann, config.frame_rate
+        )
 
         results |= result_stats
 

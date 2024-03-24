@@ -13,83 +13,67 @@ from numpy.typing import NDArray
 from synctoolbox.dtw.mrmsdtw import sync_via_mrmsdtw
 from synctoolbox.feature.dlnco import pitch_onset_features_to_DLNCO
 from synctoolbox.feature.pitch_onset import audio_to_pitch_onset_features
+from utils import MatchmakerEvalConfig
 
 SOUND_FONT_PATH = "~/.fluidsynth/MuseScore_General.sf2"
 TOLERANCES = [50, 100, 200, 300, 500]
-FEATURES = ["chroma"]
-
-DEFAULT_LOCAL_COST: str = "euclidean"
-MAX_RUN_COUNT: int = 30
-SAMPLE_RATE = 16000  # temporary
-HOP_LENGTH = 640
-N_FFT = 2 * HOP_LENGTH
-N_MELS = 66
-NORM = np.inf
-CHUNK_SIZE = 1 * HOP_LENGTH
-FRAME_RATE = SAMPLE_RATE / HOP_LENGTH
-FRAME_PER_SEG: int = int(CHUNK_SIZE / HOP_LENGTH)
-WINDOW_SIZE: int = 5 * int(FRAME_RATE)  # 5 seconds
+ALGORITHMS = {
+    "oltw_dixon": OnlineTimeWarpingDixon,
+    "oltw_arzt": OnlineTimeWarpingArzt,
+}
 
 
-def _get_DLNCO_features_from_audio(
-    audio,
-    feature_sequence_length,
-    Fs=SAMPLE_RATE,
-    feature_rate=FRAME_RATE,
-    verbose=False,
-):
+def _get_DLNCO_features_from_audio(audio, feature_sequence_length, Fs, feature_rate):
     f_pitch_onset = audio_to_pitch_onset_features(f_audio=audio, Fs=Fs)
     f_DLNCO = pitch_onset_features_to_DLNCO(
         f_peaks=f_pitch_onset,
         feature_rate=feature_rate,
         feature_sequence_length=feature_sequence_length,
-        visualize=verbose,
+        visualize=False,
     )
 
     return f_DLNCO
 
 
 def run_offline_alignment(
-    score_audio_path: Path, ref_audio_path: Path, same_feature=False
+    score_audio_path: Path, ref_audio_path: Path, config, same_feature=False
 ):
     # read audio
-    audio_1, _ = librosa.load(score_audio_path.as_posix(), sr=SAMPLE_RATE)
-    audio_2, _ = librosa.load(ref_audio_path.as_posix(), sr=SAMPLE_RATE)
+    audio_1, _ = librosa.load(score_audio_path.as_posix(), sr=config.sample_rate)
+    audio_2, _ = librosa.load(ref_audio_path.as_posix(), sr=config.sample_rate)
 
     if same_feature:
         # extract chroma stft features
         f_chroma_librosa_1 = librosa.feature.chroma_stft(
             y=audio_1,
-            sr=SAMPLE_RATE,
-            hop_length=HOP_LENGTH,
+            sr=config.sample_rate,
+            hop_length=config.hop_length,
         )
         f_chroma_librosa_2 = librosa.feature.chroma_stft(
             y=audio_2,
-            sr=SAMPLE_RATE,
-            hop_length=HOP_LENGTH,
+            sr=config.sample_rate,
+            hop_length=config.hop_length,
         )
         f_DLNCO_1, f_DLNCO_2 = None, None
     else:
         # extract chroma cens features
         f_chroma_librosa_1 = librosa.feature.chroma_cens(
             y=audio_1,
-            sr=SAMPLE_RATE,
-            hop_length=HOP_LENGTH,
+            sr=config.sample_rate,
+            hop_length=config.hop_length,
         )
         f_chroma_librosa_2 = librosa.feature.chroma_cens(
             y=audio_2,
-            sr=SAMPLE_RATE,
-            hop_length=HOP_LENGTH,
+            sr=config.sample_rate,
+            hop_length=config.hop_length,
         )
         # generate DLNCO features
         f_DLNCO_1 = _get_DLNCO_features_from_audio(
-            audio=audio_1,
-            feature_sequence_length=f_chroma_librosa_1.shape[1],
+            audio_1, f_chroma_librosa_1.shape[1], config.sample_rate, config.frame_rate
         )
 
         f_DLNCO_2 = _get_DLNCO_features_from_audio(
-            audio=audio_2,
-            feature_sequence_length=f_chroma_librosa_2.shape[1],
+            audio_2, f_chroma_librosa_2.shape[1], config.sample_rate, config.frame_rate
         )
 
     wp_chroma_dlnco = sync_via_mrmsdtw(
@@ -97,7 +81,7 @@ def run_offline_alignment(
         f_onset1=f_DLNCO_1,
         f_chroma2=f_chroma_librosa_2,
         f_onset2=f_DLNCO_2,
-        input_feature_rate=FRAME_RATE,
+        input_feature_rate=config.frame_rate,
         verbose=False,
     )
     return wp_chroma_dlnco
@@ -122,13 +106,13 @@ def transfer_positions(wp, ref_ann, frame_rate):
     return target_ann
 
 
-def run_evaluation(wp, ref_ann, target_ann):
+def run_evaluation(wp, ref_ann, target_ann, frame_rate):
     ref_annots = pd.read_csv(filepath_or_buffer=ref_ann, delimiter="\t", header=None)[0]
     target_annots = pd.read_csv(
         filepath_or_buffer=target_ann, delimiter="\t", header=None
     )[0]
 
-    target_annots_predicted = transfer_positions(wp, ref_annots, FRAME_RATE)
+    target_annots_predicted = transfer_positions(wp, ref_annots, frame_rate)
 
     errors_in_delay = (
         target_annots - target_annots_predicted
@@ -148,9 +132,9 @@ def run_evaluation(wp, ref_ann, target_ann):
     return results
 
 
-def convert_score_to_audio(midi_path: Path, save_path: Path) -> Path:
+def convert_score_to_audio(midi_path: Path, save_path: Path, sample_rate: int) -> Path:
     # Convert MIDI to audio
-    fs = FluidSynth(SOUND_FONT_PATH, sample_rate=SAMPLE_RATE)
+    fs = FluidSynth(SOUND_FONT_PATH, sample_rate=sample_rate)
     fs.midi_to_audio(midi_path, save_path.as_posix())
 
     print(
@@ -188,7 +172,7 @@ def regenerate_tempo_adjusted_midi(midi_path: Path, target_duration: float) -> P
 
 
 def run_score_following(
-    score_audio: str, target_audio: str, config
+    score_audio: str, target_audio: str, config: MatchmakerEvalConfig
 ) -> NDArray[np.float32]:
     """
     Run score following on the given audio and the target audio.
@@ -211,10 +195,8 @@ def run_score_following(
         sample_rate=config.sample_rate,
         hop_length=config.hop_length,
     )
-    # oltw = OnlineTimeWarpingArzt(
-    #     reference_features=reference_features,
-    # )
-    oltw = OnlineTimeWarpingDixon(
+    algorithm = ALGORITHMS[config.algorithm]
+    oltw = algorithm(
         reference_features=reference_features,
         local_cost_fun=config.distance_func,
         window_size=config.window_size,

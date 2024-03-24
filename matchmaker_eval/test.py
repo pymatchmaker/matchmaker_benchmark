@@ -1,25 +1,17 @@
 import argparse
 import csv
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import wandb
-from eval import (
-    run_evaluation,
-    run_offline_alignment,
-    run_score_following,
-    FEATURES,
-    DEFAULT_LOCAL_COST,
-    WINDOW_SIZE,
-    SAMPLE_RATE,
-    HOP_LENGTH,
-    FRAME_PER_SEG,
-    FRAME_RATE,
-)
+from eval import run_evaluation, run_offline_alignment, run_score_following
 from tabulate import tabulate
-from datetime import datetime
+from tqdm import tqdm
+from utils import MatchmakerEvalConfig, get_list_of_exp_config
+
+import wandb
 
 ASAP_DIR = "/Users/jiyun/workspace/asap-dataset"
 WORKING_DIR = Path(__file__).parent.parent
@@ -33,30 +25,23 @@ def save_test_results(results, save_path: str):
         writer.writerows(zip(*results.values()))
 
 
-def report_results_to_wandb(averaged_result, config=None):
+def report_results_to_wandb(averaged_result: dict, config: MatchmakerEvalConfig):
     wandb.init(
         entity="matchmaker",
         project="matchmaker",
         group="online-dp",
-        config={
-            "sample_rate": SAMPLE_RATE,
-            "hop_length": HOP_LENGTH,
-            "window_size(s)": WINDOW_SIZE / FRAME_RATE,
-            "distance_func": DEFAULT_LOCAL_COST,
-            "frame_per_seg": FRAME_PER_SEG,
-            "feature": FEATURES,
-            "dataset": "asap",
-            "algorithm": "OLTWDixon",
-        },
-        name=f"{DEFAULT_LOCAL_COST}_{FEATURES}_chunk({FRAME_PER_SEG})_window({WINDOW_SIZE/FRAME_RATE})s",
+        config=config.model_dump(include=config.attr_exp),
+        name=f"online-dp-{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}",
     )
     wandb.log(averaged_result, step=None)
     wandb.finish()
 
 
-def run_tests_and_eval(asap_dir, metadata_asap):
+def run_tests_and_eval(asap_dir, metadata_asap, config):
     results = defaultdict(list)
-    for row in metadata_asap.itertuples():
+    for i, row in enumerate(metadata_asap.itertuples()):
+        if i % 10 != 0:
+            continue
         print(row)
         dir_path = asap_dir / row.folder
         target_audio = asap_dir / row.audio_performance
@@ -64,13 +49,17 @@ def run_tests_and_eval(asap_dir, metadata_asap):
 
         try:
             # Run score following & evaluation
-            wp = run_score_following(score_audio.as_posix(), target_audio.as_posix())
+            wp = run_score_following(
+                score_audio.as_posix(), target_audio.as_posix(), config
+            )
             # wp = run_offline_alignment(score_audio, target_audio)
 
             # Run evaluation
             score_beat_ann = dir_path / f"{score_audio.stem}_annotations.txt"
             target_beat_ann = asap_dir / row.performance_annotations
-            result = run_evaluation(wp, score_beat_ann, target_beat_ann)
+            result = run_evaluation(
+                wp, score_beat_ann, target_beat_ann, config.frame_rate
+            )
         except Exception as e:
             print(f"Error: {e}")
             continue
@@ -81,6 +70,8 @@ def run_tests_and_eval(asap_dir, metadata_asap):
         # add metadata to results
         results["Piece"].append(row.folder)
         results["Name"].append(target_audio.stem)
+        for k, v in config.model_dump(include=config.attr_exp).items():
+            results[k].append(v)
 
         for k, v in result.items():
             results[k].append(v)
@@ -102,24 +93,28 @@ def main():
     parser.add_argument(
         "--wandb", action="store_true", help="save result to wandb", default=False
     )
+    parser.add_argument("--dry-run", action="store_true", help="dry run", default=False)
     args = parser.parse_args()
 
     asap_dir = Path(args.asap_dir)
     metadata_asap = pd.read_csv(args.metadata_asap)
 
-    results = run_tests_and_eval(asap_dir, metadata_asap)
-    now = datetime.now()
-    save_test_results(
-        results,
-        save_path=f"{WORKING_DIR}/output/test_results_{now.strftime('%Y-%m-%d-%H:%M:%S')}.tsv",
-    )
-    if args.wandb:
-        averaged_result = {
-            k: f"{np.mean(v):.2f}"
-            for k, v in results.items()
-            if k not in {"Piece", "Name"}
-        }
-        report_results_to_wandb(averaged_result)
+    configs = get_list_of_exp_config()
+    for config in tqdm(configs):
+        results = run_tests_and_eval(asap_dir, metadata_asap, config)
+        if not args.dry_run:
+            now = datetime.now()
+            save_test_results(
+                results,
+                save_path=f"{WORKING_DIR}/output/test_results_{now.strftime('%Y-%m-%d-%H:%M:%S')}.tsv",
+            )
+            if args.wandb:
+                averaged_result = {
+                    k: f"{np.mean(v):.2f}"
+                    for k, v in results.items()
+                    if k not in {"Piece", "Name"}
+                }
+                report_results_to_wandb(averaged_result)
 
 
 if __name__ == "__main__":
