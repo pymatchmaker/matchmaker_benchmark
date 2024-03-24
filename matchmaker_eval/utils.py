@@ -1,34 +1,11 @@
+from pathlib import Path
+
+import yaml
 from pydantic_settings import BaseSettings
 
-# default configs
-SAMPLE_RATE = 16000
-FRAME_RATE = 25
-CHUNK_SIZE = 1  # num of hop_length
-WINDOW_SIZE = 5  # seconds
-FEATURES = ["chroma"]
-DEFAULT_LOCAL_COST = "euclidean"
-DATASET = "asap"
-ALGORITHM = "oltw_dixon"
-MAX_RUN_COUNT = 30 // CHUNK_SIZE
-
-# experiment configs
-SAMPLE_RATE_EXP = [16000, 22050]  #  2
-FRAME_RATE_EXP = [25, 50, 100]  # 3
-WINDOW_SIZE_EXP = [1, 3, 5]  # 3
-FEATURES_EXP = ["chroma"]
-SCIPY_DISTANCES = [
-    "euclidean",
-    "cosine",
-    "dice",
-    "braycurtis",
-    "canberra",
-    "chebyshev",
-    "cityblock",
-    "correlation",
-    "jensenshannon",
-    "minkowski",
-    "sqeuclidean",
-]
+WORKING_DIR = Path(__file__).parent.parent
+DEFAULT_CONFIG_PATH = WORKING_DIR / "config/default.yaml"
+EXP_CONFIG_PATH = WORKING_DIR / "config/experiment.yaml"
 
 
 class MatchmakerEvalConfig(BaseSettings):
@@ -44,6 +21,7 @@ class MatchmakerEvalConfig(BaseSettings):
     n_fft: int
     frame_per_seg: int
     max_run_count: int
+    # attributes for experiment (for logging purpose)
     attr_exp: list[str] = [
         "sample_rate",
         "frame_rate",
@@ -55,16 +33,24 @@ class MatchmakerEvalConfig(BaseSettings):
     ]
 
 
+def load_config(config_path: str) -> dict:
+    with open(config_path, "r") as f:
+        config_dict = yaml.safe_load(f)
+    return config_dict
+
+
 def initialize_config(**kwargs) -> dict:
-    sample_rate = kwargs.get("sample_rate", SAMPLE_RATE)
-    frame_rate = kwargs.get("frame_rate", FRAME_RATE)
-    chunk_size = kwargs.get("chunk_size", CHUNK_SIZE)
-    window_size = kwargs.get("window_size", WINDOW_SIZE)
-    features = kwargs.get("features", FEATURES)
-    distance_func = kwargs.get("distance_func", DEFAULT_LOCAL_COST)
-    max_run_count = kwargs.get("max_run_count", MAX_RUN_COUNT)
-    dataset = kwargs.get("dataset", DATASET)
-    algorithm = kwargs.get("algorithm", ALGORITHM)
+    default_config = load_config(DEFAULT_CONFIG_PATH.as_posix())
+
+    sample_rate = kwargs.get("sample_rate", default_config["sample_rate"])
+    frame_rate = kwargs.get("frame_rate", default_config["frame_rate"])
+    chunk_size = kwargs.get("chunk_size", default_config["chunk_size"])
+    window_size = kwargs.get("window_size", default_config["window_size"])
+    features = kwargs.get("features", default_config["features"])
+    distance_func = kwargs.get("distance_func", default_config["distance_func"])
+    max_run_count = kwargs.get("max_run_count", default_config["max_run_count"])
+    dataset = kwargs.get("dataset", default_config["dataset"])
+    algorithm = kwargs.get("algorithm", default_config["algorithm"])
 
     hop_length = sample_rate // frame_rate
     n_fft = 2 * hop_length
@@ -89,8 +75,9 @@ def initialize_config(**kwargs) -> dict:
 
 
 def get_list_of_exp_config():
+    experiment_config = load_config(EXP_CONFIG_PATH.as_posix())
     configs = []
-    for distance_func in SCIPY_DISTANCES:
+    for distance_func in experiment_config["distance_func_exp"]:
         config = initialize_config(
             distance_func=distance_func,
         )
