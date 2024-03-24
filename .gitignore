@@ -170,3 +170,4 @@ matchmaker/utils/distances.c
 # Logs
 wandb/
 *.tsv
+output/
