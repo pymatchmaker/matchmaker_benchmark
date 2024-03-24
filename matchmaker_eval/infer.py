@@ -5,6 +5,7 @@ from pathlib import Path
 import partitura
 from eval import convert_score_to_audio, run_evaluation, run_score_following
 from tabulate import tabulate
+from utils import initialize_config
 
 
 def save_score_following_result(wp, save_path: str):
@@ -67,7 +68,8 @@ def main():
     print(f"Score audio path: {score_audio_path}")
 
     # Run score following & save result
-    wp = run_score_following(score_audio_path.as_posix(), target_audio.as_posix())
+    conf = initialize_config()
+    wp = run_score_following(score_audio_path.as_posix(), target_audio.as_posix(), conf)
     save_score_following_result(wp=wp, save_path="./wp-result.tsv")
 
     # Run evaluation

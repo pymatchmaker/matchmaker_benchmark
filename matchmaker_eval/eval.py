@@ -187,7 +187,9 @@ def regenerate_tempo_adjusted_midi(midi_path: Path, target_duration: float) -> P
     return new_midi_path
 
 
-def run_score_following(score_audio: str, target_audio: str) -> NDArray[np.float32]:
+def run_score_following(
+    score_audio: str, target_audio: str, config
+) -> NDArray[np.float32]:
     """
     Run score following on the given audio and the target audio.
 
@@ -204,26 +206,29 @@ def run_score_following(score_audio: str, target_audio: str) -> NDArray[np.float
         Resulting warping path with pairs of indices of the reference and target audio.
     """
     feature_processors, reference_features = compute_features_from_audio(
-        score_audio, features=FEATURES, sample_rate=SAMPLE_RATE, hop_length=HOP_LENGTH
+        score_audio,
+        features=config.features,
+        sample_rate=config.sample_rate,
+        hop_length=config.hop_length,
     )
     # oltw = OnlineTimeWarpingArzt(
     #     reference_features=reference_features,
     # )
     oltw = OnlineTimeWarpingDixon(
         reference_features=reference_features,
-        local_cost_fun=DEFAULT_LOCAL_COST,
-        window_size=WINDOW_SIZE,
-        max_run_count=MAX_RUN_COUNT,
-        frame_per_seg=int(CHUNK_SIZE / HOP_LENGTH),
+        local_cost_fun=config.distance_func,
+        window_size=config.window_size,
+        max_run_count=config.max_run_count,
+        frame_per_seg=config.frame_per_seg,
     )
 
     audio_stream = MockAudioStream(
-        sample_rate=SAMPLE_RATE,
-        hop_length=HOP_LENGTH,
+        sample_rate=config.sample_rate,
+        hop_length=config.hop_length,
         queue=oltw.queue,
         features=feature_processors,
         file_path=target_audio,
-        chunk_size=CHUNK_SIZE,
+        chunk_size=config.chunk_size,
     )
 
     # Run score following
