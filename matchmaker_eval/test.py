@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from eval import run_evaluation, run_offline_alignment, run_score_following
+from eval import METRICS, run_evaluation, run_offline_alignment, run_score_following
 from tabulate import tabulate
 from tqdm import tqdm
 from utils import MatchmakerEvalConfig, get_list_of_exp_config
@@ -38,7 +38,7 @@ def report_results_to_wandb(averaged_result: dict, config: MatchmakerEvalConfig)
     wandb.finish()
 
 
-def run_tests_and_eval(asap_dir, metadata_asap, config):
+def run_tests_and_eval(asap_dir, metadata_asap, config, dry_run=False):
     results = defaultdict(list)
     for i, row in enumerate(metadata_asap.itertuples()):
         print(row)
@@ -78,8 +78,13 @@ def run_tests_and_eval(asap_dir, metadata_asap, config):
 
         print("Results")
         print(tabulate(results, headers="keys", tablefmt="fancy_grid", showindex=True))
-
     print(tabulate(results, headers="keys", tablefmt="fancy_grid", showindex=True))
+
+    if not dry_run:
+        save_test_results(
+            results,
+            save_path=f"{OUTPUT_DIR}/test_results_{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}.tsv",
+        )
     return results
 
 
@@ -102,20 +107,12 @@ def main():
 
     configs = get_list_of_exp_config()
     for config in tqdm(configs):
-        results = run_tests_and_eval(asap_dir, metadata_asap, config)
-
-        if not args.dry_run:
-            save_test_results(
-                results,
-                save_path=f"{OUTPUT_DIR}/test_results_{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}.tsv",
-            )
-            if args.wandb:
-                averaged_result = {
-                    k: f"{np.mean(v):.3f}"
-                    for k, v in results.items()
-                    if k in config.attr_exp
-                }
-                report_results_to_wandb(averaged_result, config)
+        results = run_tests_and_eval(asap_dir, metadata_asap, config, args.dry_run)
+        if args.wandb:
+            averaged_result = {
+                k: f"{np.mean(v):.4f}" for k, v in results.items() if k in METRICS
+            }
+            report_results_to_wandb(averaged_result, config)
 
 
 if __name__ == "__main__":

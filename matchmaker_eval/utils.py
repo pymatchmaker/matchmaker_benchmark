@@ -21,6 +21,7 @@ class MatchmakerEvalConfig(BaseSettings):
     n_fft: int
     frame_per_seg: int
     max_run_count: int
+
     # attributes for experiment (for logging purpose)
     attr_exp: list[str] = [
         "sample_rate",

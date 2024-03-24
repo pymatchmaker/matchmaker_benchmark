@@ -21,6 +21,9 @@ ALGORITHMS = {
     "oltw_dixon": OnlineTimeWarpingDixon,
     "oltw_arzt": OnlineTimeWarpingArzt,
 }
+METRICS = ["mean", "median", "std", "skewness", "kurtosis"] + [
+    f"{t}ms" for t in TOLERANCES
+]
 
 
 def _get_DLNCO_features_from_audio(audio, feature_sequence_length, Fs, feature_rate):
@@ -119,15 +122,15 @@ def run_evaluation(wp, ref_ann, target_ann, frame_rate):
     ) * 1000  # in milliseconds
     absolute_errors_in_delay = np.abs(errors_in_delay)
 
-    results = {
-        "mean": np.mean(absolute_errors_in_delay),
-        "median": np.median(absolute_errors_in_delay),
-        "std": np.std(absolute_errors_in_delay),
-        "skewness": scipy.stats.skew(errors_in_delay),
-        "kurtosis": scipy.stats.kurtosis(errors_in_delay),
+    results = {  # f"{np.mean(v):.4f}"
+        "mean": f"{np.mean(absolute_errors_in_delay):.4f}",
+        "median": f"{np.median(absolute_errors_in_delay):.4f}",
+        "std": f"{np.std(absolute_errors_in_delay):.4f}",
+        "skewness": f"{scipy.stats.skew(errors_in_delay):.4f}",
+        "kurtosis": f"{scipy.stats.kurtosis(errors_in_delay):.4f}",
     }
     for tau in TOLERANCES:
-        results[f"{tau}ms"] = np.mean(absolute_errors_in_delay <= tau)
+        results[f"{tau}ms"] = f"{np.mean(absolute_errors_in_delay <= tau):.4f}"
 
     return results
 

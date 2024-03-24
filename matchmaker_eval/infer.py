@@ -1,10 +1,10 @@
 import argparse
 import csv
+import json
 from pathlib import Path
 
 import partitura
 from eval import convert_score_to_audio, run_evaluation, run_score_following
-from tabulate import tabulate
 from utils import initialize_config
 
 
@@ -77,16 +77,16 @@ def main():
     if args.eval:
         score_beat_ann = dir_path / "ex_midi_score_annotations.txt"
         target_beat_ann = dir_path / f"{target_audio.stem}_annotations.txt"
-        results = {"Name": target_audio.stem}
         result_stats = run_evaluation(
             wp, score_beat_ann, target_beat_ann, config.frame_rate
         )
 
+        results = {"Name": target_audio.stem}
+        for k, v in config.model_dump(include=config.attr_exp).items():
+            results[k] = v
         results |= result_stats
-
-        print(
-            tabulate([results], headers="keys", tablefmt="fancy_grid", showindex=True)
-        )
+        print(f"Results for {target_audio.stem}")
+        print(json.dumps(results, indent=4))
 
 
 if __name__ == "__main__":
