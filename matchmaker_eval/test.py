@@ -9,7 +9,7 @@ import pandas as pd
 from eval import METRICS, run_evaluation, run_offline_alignment, run_score_following
 from tabulate import tabulate
 from tqdm import tqdm
-from utils import MatchmakerEvalConfig, get_list_of_exp_config
+from utils import MatchmakerEvalConfig, get_list_of_exp_config, save_config
 
 import wandb
 
@@ -48,7 +48,7 @@ def run_tests_and_eval(asap_dir, metadata_asap, config, dry_run=False):
 
         try:
             # Run score following & evaluation
-            wp = run_score_following(
+            model, wp = run_score_following(
                 score_audio.as_posix(), target_audio.as_posix(), config
             )
             # wp = run_offline_alignment(score_audio, target_audio)
@@ -57,14 +57,14 @@ def run_tests_and_eval(asap_dir, metadata_asap, config, dry_run=False):
             score_beat_ann = dir_path / f"{score_audio.stem}_annotations.txt"
             target_beat_ann = asap_dir / row.performance_annotations
             result = run_evaluation(
-                wp, score_beat_ann, target_beat_ann, config.frame_rate
+                model.warping_path, score_beat_ann, target_beat_ann, config.frame_rate
             )
         except Exception as e:
             print(f"Error: {e}")
             continue
 
-        # if result["mean"] > 10000:  # remove outliers?
-        #     continue
+        if result["500ms"] < 0.8:  # remove outliers
+            continue
 
         # add metadata to results
         results["Piece"].append(row.folder)
@@ -104,9 +104,18 @@ def main():
 
     asap_dir = Path(args.asap_dir)
     metadata_asap = pd.read_csv(args.metadata_asap)
+    # save results
+    save_dir = (
+        OUTPUT_DIR / f"test_results_{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}"
+    )
+    save_dir.mkdir(parents=True, exist_ok=True)
 
     configs = get_list_of_exp_config()
-    for config in tqdm(configs):
+    for i, config in enumerate(tqdm(configs), 1):
+        run_dir = save_dir / f"{i}"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        save_config(config, run_dir)
+
         results = run_tests_and_eval(asap_dir, metadata_asap, config, args.dry_run)
         if args.wandb:
             averaged_result = {

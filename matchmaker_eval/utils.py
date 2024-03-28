@@ -84,3 +84,12 @@ def get_list_of_exp_config():
         )
         configs.append(config)
     return configs
+
+
+def save_config(config, save_dir):
+    config_path = save_dir / "config.yaml"
+    with open(config_path, "w") as f:
+        config_dict = {
+            k: v for k, v in config.__dict__.items() if not k.startswith("__")
+        }
+        yaml.dump(config_dict, f)

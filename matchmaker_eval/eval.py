@@ -122,15 +122,15 @@ def run_evaluation(wp, ref_ann, target_ann, frame_rate):
     ) * 1000  # in milliseconds
     absolute_errors_in_delay = np.abs(errors_in_delay)
 
-    results = {  # f"{np.mean(v):.4f}"
-        "mean": f"{np.mean(absolute_errors_in_delay):.4f}",
-        "median": f"{np.median(absolute_errors_in_delay):.4f}",
-        "std": f"{np.std(absolute_errors_in_delay):.4f}",
-        "skewness": f"{scipy.stats.skew(errors_in_delay):.4f}",
-        "kurtosis": f"{scipy.stats.kurtosis(errors_in_delay):.4f}",
+    results = {
+        "mean": float(f"{np.mean(absolute_errors_in_delay):.4f}"),
+        "median": float(f"{np.median(absolute_errors_in_delay):.4f}"),
+        "std": float(f"{np.std(absolute_errors_in_delay):.4f}"),
+        "skewness": float(f"{scipy.stats.skew(errors_in_delay):.4f}"),
+        "kurtosis": float(f"{scipy.stats.kurtosis(errors_in_delay):.4f}"),
     }
     for tau in TOLERANCES:
-        results[f"{tau}ms"] = f"{np.mean(absolute_errors_in_delay <= tau):.4f}"
+        results[f"{tau}ms"] = float(f"{np.mean(absolute_errors_in_delay <= tau):.4f}")
 
     return results
 
@@ -224,4 +224,4 @@ def run_score_following(
     print(f"=====================oltl run ended=====================")
     audio_stream.stop()
 
-    return oltw.warping_path
+    return oltw, oltw.warping_path
