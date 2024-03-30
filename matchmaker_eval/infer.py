@@ -25,7 +25,7 @@ def save_score_following_result(model, save_dir, score_ann, target_ann, frame_ra
 
     dist = scipy.spatial.distance.cdist(
         model.reference_features,
-        model.input_features[: model.input_index],
+        model.input_features[: model.warping_path[1][-1]],
         metric=model.local_cost_fun,
     )  # [d, wy]
     plt.figure(figsize=(20, 20))

@@ -90,7 +90,7 @@ def run_offline_alignment(
     return wp_chroma_dlnco
 
 
-def transfer_positions(wp, ref_ann, frame_rate):
+def transfer_positions(wp, target_anns):
     """
     Transfer the positions of the reference annotations to the target annotations using the warping path.
 
@@ -100,26 +100,27 @@ def transfer_positions(wp, ref_ann, frame_rate):
         array of warping path.
     ref_ann : List[float]
         reference annotations.
-    frame_rate : float
-        frame rate of the annotations to convert frame index to time.
     """
-    x, y = wp[0] / frame_rate, wp[1] / frame_rate
-    f = scipy.interpolate.interp1d(x, y, kind="linear")
-    target_ann = f(ref_ann)
-    return target_ann
+    x, y = wp[0], wp[1]
+    predicted_refs = [x[np.where(y >= t)[0][0]] for t in target_anns]
+    return predicted_refs
 
 
 def run_evaluation(wp, ref_ann, target_ann, frame_rate):
-    ref_annots = pd.read_csv(filepath_or_buffer=ref_ann, delimiter="\t", header=None)[0]
-    target_annots = pd.read_csv(
-        filepath_or_buffer=target_ann, delimiter="\t", header=None
-    )[0]
+    ref_annots = np.rint(
+        pd.read_csv(filepath_or_buffer=ref_ann, delimiter="\t", header=None)[0]
+        * frame_rate
+    )
+    target_annots = np.rint(
+        pd.read_csv(filepath_or_buffer=target_ann, delimiter="\t", header=None)[0]
+        * frame_rate
+    )
 
-    target_annots_predicted = transfer_positions(wp, ref_annots, frame_rate)
+    ref_annots_predicted = transfer_positions(wp, target_annots)
 
     errors_in_delay = (
-        target_annots - target_annots_predicted
-    ) * 1000  # in milliseconds
+        (ref_annots - ref_annots_predicted) / frame_rate * 1000
+    )  # in milliseconds
     absolute_errors_in_delay = np.abs(errors_in_delay)
 
     results = {
@@ -199,7 +200,7 @@ def run_score_following(
         hop_length=config.hop_length,
     )
     algorithm = ALGORITHMS[config.algorithm]
-    oltw = algorithm(
+    matchmaker = algorithm(
         reference_features=reference_features,
         local_cost_fun=config.distance_func,
         window_size=config.window_size,
@@ -211,7 +212,7 @@ def run_score_following(
     audio_stream = MockAudioStream(
         sample_rate=config.sample_rate,
         hop_length=config.hop_length,
-        queue=oltw.queue,
+        queue=matchmaker.queue,
         features=feature_processors,
         file_path=target_audio,
         chunk_size=config.chunk_size,
@@ -219,9 +220,9 @@ def run_score_following(
 
     # Run score following
     audio_stream.start()
-    oltw.run()
+    matchmaker.run()
 
     print(f"=====================oltl run ended=====================")
     audio_stream.stop()
 
-    return oltw, oltw.warping_path
+    return matchmaker, matchmaker.warping_path
