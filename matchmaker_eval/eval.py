@@ -8,15 +8,14 @@ import scipy
 from matchmaker.dp import OnlineTimeWarpingArzt, OnlineTimeWarpingDixon
 from matchmaker.features.audio import compute_features_from_audio
 from matchmaker.io.audio import MockAudioStream
-from midi2audio import FluidSynth
 from numpy.typing import NDArray
 from synctoolbox.dtw.mrmsdtw import sync_via_mrmsdtw
 from synctoolbox.feature.dlnco import pitch_onset_features_to_DLNCO
 from synctoolbox.feature.pitch_onset import audio_to_pitch_onset_features
 from utils import MatchmakerEvalConfig
+from libfmp.c3 import compute_strict_alignment_path_mask
 
-SOUND_FONT_PATH = "~/.fluidsynth/MuseScore_General.sf2"
-TOLERANCES = [50, 100, 200, 300, 500]
+TOLERANCES = [100, 300, 500, 1000]
 ALGORITHMS = {
     "oltw_dixon": OnlineTimeWarpingDixon,
     "oltw_arzt": OnlineTimeWarpingArzt,
@@ -79,7 +78,7 @@ def run_offline_alignment(
             audio_2, f_chroma_librosa_2.shape[1], config.sample_rate, config.frame_rate
         )
 
-    wp_chroma_dlnco = sync_via_mrmsdtw(
+    wp = sync_via_mrmsdtw(
         f_chroma1=f_chroma_librosa_1,
         f_onset1=f_DLNCO_1,
         f_chroma2=f_chroma_librosa_2,
@@ -87,10 +86,11 @@ def run_offline_alignment(
         input_feature_rate=config.frame_rate,
         verbose=False,
     )
-    return wp_chroma_dlnco
+    wp = compute_strict_alignment_path_mask(wp.T).T
+    return wp
 
 
-def transfer_positions(wp, target_anns):
+def transfer_positions(wp, ref_anns):
     """
     Transfer the positions of the reference annotations to the target annotations using the warping path.
 
@@ -102,8 +102,8 @@ def transfer_positions(wp, target_anns):
         reference annotations.
     """
     x, y = wp[0], wp[1]
-    predicted_refs = [x[np.where(y >= t)[0][0]] for t in target_anns]
-    return predicted_refs
+    predicted_targets = [y[np.where(x >= r)[0][0]] for r in ref_anns]
+    return predicted_targets
 
 
 def run_evaluation(wp, ref_ann, target_ann, frame_rate):
@@ -116,11 +116,17 @@ def run_evaluation(wp, ref_ann, target_ann, frame_rate):
         * frame_rate
     )
 
-    ref_annots_predicted = transfer_positions(wp, target_annots)
-
+    target_annots_predicted = transfer_positions(wp, ref_annots)
     errors_in_delay = (
-        (ref_annots - ref_annots_predicted) / frame_rate * 1000
+        (target_annots - target_annots_predicted) / frame_rate * 1000
     )  # in milliseconds
+
+    # # Find the values that are at the 5th and 95th percentiles
+    # lower_threshold = np.percentile(errors_in_delay, 5)
+    # upper_threshold = np.percentile(errors_in_delay, 95)
+    # errors_in_delay = errors_in_delay[
+    #     (errors_in_delay > lower_threshold) & (errors_in_delay < upper_threshold)
+    # ]
     absolute_errors_in_delay = np.abs(errors_in_delay)
 
     results = {
@@ -134,17 +140,6 @@ def run_evaluation(wp, ref_ann, target_ann, frame_rate):
         results[f"{tau}ms"] = float(f"{np.mean(absolute_errors_in_delay <= tau):.4f}")
 
     return results
-
-
-def convert_score_to_audio(midi_path: Path, save_path: Path, sample_rate: int) -> Path:
-    # Convert MIDI to audio
-    fs = FluidSynth(SOUND_FONT_PATH, sample_rate=sample_rate)
-    fs.midi_to_audio(midi_path, save_path.as_posix())
-
-    print(
-        f"Score Audio path: {save_path}, duration: {librosa.get_duration(path=save_path.as_posix())}"
-    )
-    return save_path
 
 
 def regenerate_tempo_adjusted_midi(midi_path: Path, target_duration: float) -> Path:

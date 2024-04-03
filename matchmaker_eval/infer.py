@@ -8,8 +8,13 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import partitura
 import scipy
-from eval import convert_score_to_audio, run_evaluation, run_score_following
-from utils import initialize_config, save_config
+from eval import run_evaluation, run_score_following
+from utils import (
+    initialize_config,
+    save_config,
+    convert_score_to_audio,
+    save_results_to_csv,
+)
 
 DEFAULT_AUDIO_PATH = "./resources/ex_VuV01M.wav"
 DEFAULT_MIDI_PATH = "./resources/ex_midi_score.mid"
@@ -19,9 +24,7 @@ OUTPUT_DIR = WORKING_DIR / "output"
 
 def save_score_following_result(model, save_dir, score_ann, target_ann, frame_rate):
     save_path = save_dir / "online_results.tsv"
-    with open(save_path, "w") as csvfile:
-        writer = csv.writer(csvfile, delimiter="\t")
-        writer.writerows(model.warping_path.T)
+    save_results_to_csv(model.warping_path.T, save_path.as_posix())
 
     dist = scipy.spatial.distance.cdist(
         model.reference_features,
@@ -112,7 +115,7 @@ def main():
     save_dir.mkdir(parents=True, exist_ok=True)
     save_config(config, save_dir)
 
-    score_beat_ann = dir_path / "ex_midi_score_annotations.txt"
+    score_beat_ann = dir_path / f"{midi_path.stem}_annotations.txt"
     target_beat_ann = dir_path / f"{target_audio.stem}_annotations.txt"
     save_score_following_result(
         model, save_dir, score_beat_ann, target_beat_ann, config.frame_rate

@@ -1,8 +1,12 @@
+import csv
 from pathlib import Path
 
+import librosa
 import yaml
+from midi2audio import FluidSynth
 from pydantic_settings import BaseSettings
 
+SOUND_FONT_PATH = "~/.fluidsynth/MuseScore_General.sf2"
 WORKING_DIR = Path(__file__).parent.parent
 DEFAULT_CONFIG_PATH = WORKING_DIR / "config/default.yaml"
 EXP_CONFIG_PATH = WORKING_DIR / "config/experiment.yaml"
@@ -93,3 +97,21 @@ def save_config(config, save_dir):
             k: v for k, v in config.__dict__.items() if not k.startswith("__")
         }
         yaml.dump(config_dict, f)
+
+
+def convert_score_to_audio(midi_path: str, save_path: str, sample_rate: int) -> Path:
+    # Convert MIDI to audio
+    fs = FluidSynth(SOUND_FONT_PATH, sample_rate=sample_rate)
+    fs.midi_to_audio(midi_path, save_path)
+
+    print(
+        f"Score Audio path: {save_path}, duration: {librosa.get_duration(path=save_path)}"
+    )
+    return save_path
+
+
+def save_results_to_csv(results, save_path: str):
+    with open(save_path, "w", newline="") as f:
+        writer = csv.writer(f, delimiter="\t")
+        writer.writerow(results.keys())
+        writer.writerows(zip(*results.values()))

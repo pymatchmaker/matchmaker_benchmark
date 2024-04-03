@@ -1,5 +1,4 @@
 import argparse
-import csv
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -9,21 +8,25 @@ import pandas as pd
 from eval import METRICS, run_evaluation, run_offline_alignment, run_score_following
 from tabulate import tabulate
 from tqdm import tqdm
-from utils import MatchmakerEvalConfig, get_list_of_exp_config, save_config
+from utils import (
+    MatchmakerEvalConfig,
+    get_list_of_exp_config,
+    save_config,
+    save_results_to_csv,
+)
 
 import wandb
 
-ASAP_DIR = "/Users/jiyun/workspace/asap-dataset"
 WORKING_DIR = Path(__file__).parent.parent
-METADATA_ASAP = WORKING_DIR / "data/metadata-asap-test.csv"
+DATASET_DIR = {
+    "asap": Path("/Users/jiyun/workspace/asap-dataset"),
+    "batik": Path("/Users/jiyun/dataset/Batik_Audio"),
+}
+METADATA_PATH = {
+    "asap": WORKING_DIR / "data/metadata-asap-test.csv",
+    "batik": WORKING_DIR / "data/metadata-batik.csv",
+}
 OUTPUT_DIR = WORKING_DIR / "output"
-
-
-def save_test_results(results, save_path: str):
-    with open(save_path, "w", newline="") as f:
-        writer = csv.writer(f, delimiter="\t")
-        writer.writerow(results.keys())
-        writer.writerows(zip(*results.values()))
 
 
 def report_results_to_wandb(averaged_result: dict, config: MatchmakerEvalConfig):
@@ -38,24 +41,25 @@ def report_results_to_wandb(averaged_result: dict, config: MatchmakerEvalConfig)
     wandb.finish()
 
 
-def run_tests_and_eval(asap_dir, metadata_asap, config, dry_run=False):
+def run_tests_and_eval_by_dataset(dataset_type: str, config: MatchmakerEvalConfig):
+    dataset_dir = DATASET_DIR[dataset_type]
+    metadata = pd.read_csv(METADATA_PATH[dataset_type])
     results = defaultdict(list)
-    for i, row in enumerate(metadata_asap.itertuples()):
+    for row in metadata.itertuples():
         print(row)
-        dir_path = asap_dir / row.folder
-        target_audio = asap_dir / row.audio_performance
-        score_audio = dir_path / "midi_score_adjusted.wav"
+        score_audio = dataset_dir / row.audio_score
+        target_audio = dataset_dir / row.audio_performance
+        score_beat_ann = dataset_dir / row.midi_score_annotations
+        target_beat_ann = dataset_dir / row.performance_annotations
 
         try:
             # Run score following & evaluation
             model, wp = run_score_following(
                 score_audio.as_posix(), target_audio.as_posix(), config
             )
-            # wp = run_offline_alignment(score_audio, target_audio)
+            # wp = run_offline_alignment(score_audio, target_audio, config)
 
             # Run evaluation
-            score_beat_ann = dir_path / f"{score_audio.stem}_annotations.txt"
-            target_beat_ann = asap_dir / row.performance_annotations
             result = run_evaluation(
                 model.warping_path, score_beat_ann, target_beat_ann, config.frame_rate
             )
@@ -63,38 +67,33 @@ def run_tests_and_eval(asap_dir, metadata_asap, config, dry_run=False):
             print(f"Error: {e}")
             continue
 
-        if result["500ms"] < 0.8:  # remove outliers
-            continue
+        # if result["500ms"] < 0.6:  # remove outliers
+        #     print(f"Outlier: result({result})")
+        #     continue
 
         # add metadata to results
-        results["Piece"].append(row.folder)
+        results["Piece"].append(row.title)
         results["Name"].append(target_audio.stem)
+        results["Difficulty"].append(row.difficulty)
 
+        # add config to results
         for k, v in config.model_dump(include=config.attr_exp).items():
             results[k].append(v)
 
+        # add evaluation results to results
         for k, v in result.items():
             results[k].append(v)
 
         print("Results")
         print(tabulate(results, headers="keys", tablefmt="fancy_grid", showindex=True))
     print(tabulate(results, headers="keys", tablefmt="fancy_grid", showindex=True))
-
-    if not dry_run:
-        save_test_results(
-            results,
-            save_path=f"{OUTPUT_DIR}/test_results_{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}.tsv",
-        )
     return results
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--asap-dir", type=str, help="Path to ASAP dataset", default=ASAP_DIR
-    )
-    parser.add_argument(
-        "--metadata-asap", type=str, help="Path to metadata file", default=METADATA_ASAP
+        "--dataset-type", type=str, help="Type of dataset", default="asap"
     )
     parser.add_argument(
         "--wandb", action="store_true", help="save result to wandb", default=False
@@ -102,8 +101,7 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="dry run", default=False)
     args = parser.parse_args()
 
-    asap_dir = Path(args.asap_dir)
-    metadata_asap = pd.read_csv(args.metadata_asap)
+    dataset_type = args.dataset_type
     # save results
     save_dir = (
         OUTPUT_DIR / f"test_results_{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}"
@@ -112,15 +110,24 @@ def main():
 
     configs = get_list_of_exp_config()
     for i, config in enumerate(tqdm(configs), 1):
-        run_dir = save_dir / f"{i}"
-        run_dir.mkdir(parents=True, exist_ok=True)
-        save_config(config, run_dir)
+        config.dataset = dataset_type
+        print(f"Config: {config.model_dump(include=config.attr_exp)}")
 
-        results = run_tests_and_eval(asap_dir, metadata_asap, config, args.dry_run)
+        results = run_tests_and_eval_by_dataset(dataset_type, config)
+
+        if not args.dry_run:
+            run_dir = save_dir / f"{i}"
+            run_dir.mkdir(parents=True, exist_ok=True)
+
+            save_config(config, run_dir)
+            save_results_to_csv(
+                results, save_path=(run_dir / f"test_results.tsv").as_posix()
+            )
         if args.wandb:
             averaged_result = {
                 k: f"{np.mean(v):.4f}" for k, v in results.items() if k in METRICS
             }
+            averaged_result["piece_count"] = len(results["Piece"])
             report_results_to_wandb(averaged_result, config)
 
 
