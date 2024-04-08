@@ -8,12 +8,12 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import partitura
 import scipy
-from eval import run_evaluation, run_score_following
+from eval import run_evaluation, run_score_following, run_offline_alignment
 from utils import (
     initialize_config,
     save_config,
     convert_score_to_audio,
-    save_results_to_csv,
+    save_nparray_to_csv,
 )
 
 DEFAULT_AUDIO_PATH = "./resources/ex_VuV01M.wav"
@@ -24,7 +24,7 @@ OUTPUT_DIR = WORKING_DIR / "output"
 
 def save_score_following_result(model, save_dir, score_ann, target_ann, frame_rate):
     save_path = save_dir / "online_results.tsv"
-    save_results_to_csv(model.warping_path.T, save_path.as_posix())
+    save_nparray_to_csv(model.warping_path.T, save_path.as_posix())
 
     dist = scipy.spatial.distance.cdist(
         model.reference_features,
@@ -34,7 +34,7 @@ def save_score_following_result(model, save_dir, score_ann, target_ann, frame_ra
     plt.figure(figsize=(20, 20))
     plt.imshow(dist, aspect="auto", origin="lower", interpolation="nearest")
     plt.title(
-        f"[{save_dir.name}] \n Online DTW path with ground-truth labels",
+        f"[{save_dir.name}] \n Matchmaker alignment path with ground-truth labels",
         fontsize=25,
     )
     plt.xlabel("Performance Audio frame", fontsize=25)
@@ -107,7 +107,7 @@ def main():
     model, wp = run_score_following(
         score_audio_path.as_posix(), target_audio.as_posix(), config
     )
-
+    # wp = run_offline_alignment(score_audio_path, target_audio, config)
     # save results
     save_dir = (
         OUTPUT_DIR / f"infer_results_{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}"

@@ -7,7 +7,7 @@ import pandas as pd
 import scipy
 from matchmaker.dp import OnlineTimeWarpingArzt, OnlineTimeWarpingDixon
 from matchmaker.features.audio import compute_features_from_audio
-from matchmaker.io.audio import MockAudioStream
+from matchmaker.io.audio import MockAudioStream, AudioStream
 from numpy.typing import NDArray
 from synctoolbox.dtw.mrmsdtw import sync_via_mrmsdtw
 from synctoolbox.feature.dlnco import pitch_onset_features_to_DLNCO
@@ -121,24 +121,22 @@ def run_evaluation(wp, ref_ann, target_ann, frame_rate):
         (target_annots - target_annots_predicted) / frame_rate * 1000
     )  # in milliseconds
 
-    # # Find the values that are at the 5th and 95th percentiles
-    # lower_threshold = np.percentile(errors_in_delay, 5)
-    # upper_threshold = np.percentile(errors_in_delay, 95)
-    # errors_in_delay = errors_in_delay[
-    #     (errors_in_delay > lower_threshold) & (errors_in_delay < upper_threshold)
-    # ]
     absolute_errors_in_delay = np.abs(errors_in_delay)
+    filtered_abs_errors_in_delay = absolute_errors_in_delay[
+        absolute_errors_in_delay <= 1000
+    ]
 
     results = {
-        "mean": float(f"{np.mean(absolute_errors_in_delay):.4f}"),
-        "median": float(f"{np.median(absolute_errors_in_delay):.4f}"),
-        "std": float(f"{np.std(absolute_errors_in_delay):.4f}"),
-        "skewness": float(f"{scipy.stats.skew(errors_in_delay):.4f}"),
-        "kurtosis": float(f"{scipy.stats.kurtosis(errors_in_delay):.4f}"),
+        "mean": float(f"{np.mean(filtered_abs_errors_in_delay):.4f}"),
+        "median": float(f"{np.median(filtered_abs_errors_in_delay):.4f}"),
+        "std": float(f"{np.std(filtered_abs_errors_in_delay):.4f}"),
+        "skewness": float(f"{scipy.stats.skew(filtered_abs_errors_in_delay):.4f}"),
+        "kurtosis": float(f"{scipy.stats.kurtosis(filtered_abs_errors_in_delay):.4f}"),
     }
     for tau in TOLERANCES:
         results[f"{tau}ms"] = float(f"{np.mean(absolute_errors_in_delay <= tau):.4f}")
 
+    results["count"] = len(filtered_abs_errors_in_delay)
     return results
 
 
@@ -212,6 +210,14 @@ def run_score_following(
         file_path=target_audio,
         chunk_size=config.chunk_size,
     )
+
+    # audio_stream = AudioStream(
+    #     sample_rate=config.sample_rate,
+    #     hop_length=config.hop_length,
+    #     queue=matchmaker.queue,
+    #     features=feature_processors,
+    #     chunk_size=config.chunk_size,
+    # )
 
     # Run score following
     audio_stream.start()

@@ -21,10 +21,12 @@ WORKING_DIR = Path(__file__).parent.parent
 DATASET_DIR = {
     "asap": Path("/Users/jiyun/workspace/asap-dataset"),
     "batik": Path("/Users/jiyun/dataset/Batik_Audio"),
+    "vienna": Path("/Users/jiyun/workspace/vienna4x22"),
 }
 METADATA_PATH = {
     "asap": WORKING_DIR / "data/metadata-asap-test.csv",
     "batik": WORKING_DIR / "data/metadata-batik.csv",
+    "vienna": WORKING_DIR / "data/metadata-vienna.csv",
 }
 OUTPUT_DIR = WORKING_DIR / "output"
 
@@ -57,17 +59,18 @@ def run_tests_and_eval_by_dataset(dataset_type: str, config: MatchmakerEvalConfi
             model, wp = run_score_following(
                 score_audio.as_posix(), target_audio.as_posix(), config
             )
-            # wp = run_offline_alignment(score_audio, target_audio, config)
-
-            # Run evaluation
             result = run_evaluation(
                 model.warping_path, score_beat_ann, target_beat_ann, config.frame_rate
             )
+            # wp = run_offline_alignment(score_audio, target_audio, config)
+            # result = run_evaluation(
+            #     wp, score_beat_ann, target_beat_ann, config.frame_rate
+            # )
         except Exception as e:
             print(f"Error: {e}")
             continue
 
-        # if result["500ms"] < 0.6:  # remove outliers
+        # if result["1000ms"] < 0.8:  # remove outliers
         #     print(f"Outlier: result({result})")
         #     continue
 
@@ -128,6 +131,7 @@ def main():
                 k: f"{np.mean(v):.4f}" for k, v in results.items() if k in METRICS
             }
             averaged_result["piece_count"] = len(results["Piece"])
+            averaged_result["count"] = sum([c for c in results["count"]])
             report_results_to_wandb(averaged_result, config)
 
 

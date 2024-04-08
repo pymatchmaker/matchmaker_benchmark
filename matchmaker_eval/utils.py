@@ -2,6 +2,7 @@ import csv
 from pathlib import Path
 
 import librosa
+from numpy.typing import NDArray
 import yaml
 from midi2audio import FluidSynth
 from pydantic_settings import BaseSettings
@@ -82,11 +83,20 @@ def initialize_config(**kwargs) -> dict:
 def get_list_of_exp_config():
     experiment_config = load_config(EXP_CONFIG_PATH.as_posix())
     configs = []
-    for distance_func in experiment_config["distance_func_exp"]:
-        config = initialize_config(
-            distance_func=distance_func,
-        )
-        configs.append(config)
+    for sample_rate in experiment_config["sample_rate_exp"]:
+        for frame_rate in experiment_config["frame_rate_exp"]:
+            for window_size in experiment_config["window_size_exp"]:
+                for distance_func in experiment_config["distance_func_exp"]:
+                    config = initialize_config(
+                        algorithm=experiment_config["algorithm"],
+                        sample_rate=sample_rate,
+                        frame_rate=frame_rate,
+                        window_size=window_size,
+                        features=experiment_config["features_exp"],
+                        distance_func=distance_func,
+                    )
+                    configs.append(config)
+                configs.append(config)
     return configs
 
 
@@ -110,8 +120,14 @@ def convert_score_to_audio(midi_path: str, save_path: str, sample_rate: int) -> 
     return save_path
 
 
-def save_results_to_csv(results, save_path: str):
+def save_results_to_csv(results: dict, save_path: str):
     with open(save_path, "w", newline="") as f:
         writer = csv.writer(f, delimiter="\t")
         writer.writerow(results.keys())
         writer.writerows(zip(*results.values()))
+
+
+def save_nparray_to_csv(array: NDArray, save_path: str):
+    with open(save_path, "w") as csvfile:
+        writer = csv.writer(csvfile, delimiter="\t")
+        writer.writerows(array)
