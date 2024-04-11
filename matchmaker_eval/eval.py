@@ -123,7 +123,7 @@ def run_evaluation(wp, ref_ann, target_ann, frame_rate):
 
     absolute_errors_in_delay = np.abs(errors_in_delay)
     filtered_abs_errors_in_delay = absolute_errors_in_delay[
-        absolute_errors_in_delay <= 1000
+        absolute_errors_in_delay <= TOLERANCES[-1]
     ]
 
     results = {

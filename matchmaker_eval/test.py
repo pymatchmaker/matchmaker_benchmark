@@ -1,6 +1,7 @@
 import argparse
 from collections import defaultdict
 from datetime import datetime
+import json
 from pathlib import Path
 
 import numpy as np
@@ -13,6 +14,7 @@ from utils import (
     get_list_of_exp_config,
     save_config,
     save_results_to_csv,
+    save_score_following_result,
 )
 
 import wandb
@@ -43,11 +45,13 @@ def report_results_to_wandb(averaged_result: dict, config: MatchmakerEvalConfig)
     wandb.finish()
 
 
-def run_tests_and_eval_by_dataset(dataset_type: str, config: MatchmakerEvalConfig):
+def run_tests_and_eval_by_dataset(
+    dataset_type: str, config: MatchmakerEvalConfig, run_dir: Path
+):
     dataset_dir = DATASET_DIR[dataset_type]
     metadata = pd.read_csv(METADATA_PATH[dataset_type])
     results = defaultdict(list)
-    for row in metadata.itertuples():
+    for i, row in enumerate(metadata.itertuples(), 1):
         print(row)
         score_audio = dataset_dir / row.audio_score
         target_audio = dataset_dir / row.audio_performance
@@ -58,6 +62,10 @@ def run_tests_and_eval_by_dataset(dataset_type: str, config: MatchmakerEvalConfi
             # Run score following & evaluation
             model, wp = run_score_following(
                 score_audio.as_posix(), target_audio.as_posix(), config
+            )
+
+            save_score_following_result(
+                model, run_dir, score_beat_ann, target_beat_ann, config.frame_rate, i
             )
             result = run_evaluation(
                 model.warping_path, score_beat_ann, target_beat_ann, config.frame_rate
@@ -70,9 +78,9 @@ def run_tests_and_eval_by_dataset(dataset_type: str, config: MatchmakerEvalConfi
             print(f"Error: {e}")
             continue
 
-        # if result["1000ms"] < 0.8:  # remove outliers
-        #     print(f"Outlier: result({result})")
-        #     continue
+        if result["count"] == 0:  # remove outliers
+            print(f"Outlier: result({result})")
+            continue
 
         # add metadata to results
         results["Piece"].append(row.title)
@@ -95,16 +103,16 @@ def run_tests_and_eval_by_dataset(dataset_type: str, config: MatchmakerEvalConfi
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--dataset-type", type=str, help="Type of dataset", default="asap"
-    )
+    # parser.add_argument(
+    #     "--dataset-type", type=str, help="Type of dataset", default="asap"
+    # )
     parser.add_argument(
         "--wandb", action="store_true", help="save result to wandb", default=False
     )
     parser.add_argument("--dry-run", action="store_true", help="dry run", default=False)
     args = parser.parse_args()
 
-    dataset_type = args.dataset_type
+    # dataset_type = args.dataset_type
     # save results
     save_dir = (
         OUTPUT_DIR / f"test_results_{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}"
@@ -113,16 +121,16 @@ def main():
 
     configs = get_list_of_exp_config()
     for i, config in enumerate(tqdm(configs), 1):
-        config.dataset = dataset_type
+        # config.dataset = dataset_type
         print(f"Config: {config.model_dump(include=config.attr_exp)}")
 
-        results = run_tests_and_eval_by_dataset(dataset_type, config)
+        run_dir = save_dir / f"{i}"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        save_config(config, run_dir)
+
+        results = run_tests_and_eval_by_dataset(config.dataset, config, run_dir)
 
         if not args.dry_run:
-            run_dir = save_dir / f"{i}"
-            run_dir.mkdir(parents=True, exist_ok=True)
-
-            save_config(config, run_dir)
             save_results_to_csv(
                 results, save_path=(run_dir / f"test_results.tsv").as_posix()
             )
@@ -133,6 +141,11 @@ def main():
             averaged_result["piece_count"] = len(results["Piece"])
             averaged_result["count"] = sum([c for c in results["count"]])
             report_results_to_wandb(averaged_result, config)
+
+            results_file = run_dir / "results.json"
+            with open(results_file, "w") as f:
+                json.dump(averaged_result, f, indent=4)
+            print(f"Results saved to: {results_file}")
 
 
 if __name__ == "__main__":

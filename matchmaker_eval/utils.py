@@ -2,9 +2,12 @@ import csv
 from pathlib import Path
 
 import librosa
-from numpy.typing import NDArray
+import matplotlib.pyplot as plt
+import pandas as pd
+import scipy
 import yaml
 from midi2audio import FluidSynth
+from numpy.typing import NDArray
 from pydantic_settings import BaseSettings
 
 SOUND_FONT_PATH = "~/.fluidsynth/MuseScore_General.sf2"
@@ -83,20 +86,21 @@ def initialize_config(**kwargs) -> dict:
 def get_list_of_exp_config():
     experiment_config = load_config(EXP_CONFIG_PATH.as_posix())
     configs = []
-    for sample_rate in experiment_config["sample_rate_exp"]:
-        for frame_rate in experiment_config["frame_rate_exp"]:
-            for window_size in experiment_config["window_size_exp"]:
-                for distance_func in experiment_config["distance_func_exp"]:
-                    config = initialize_config(
-                        algorithm=experiment_config["algorithm"],
-                        sample_rate=sample_rate,
-                        frame_rate=frame_rate,
-                        window_size=window_size,
-                        features=experiment_config["features_exp"],
-                        distance_func=distance_func,
-                    )
-                    configs.append(config)
-                configs.append(config)
+    for dataset in experiment_config["dataset_exp"]:
+        for sample_rate in experiment_config["sample_rate_exp"]:
+            for frame_rate in experiment_config["frame_rate_exp"]:
+                for window_size in experiment_config["window_size_exp"]:
+                    for distance_func in experiment_config["distance_func_exp"]:
+                        config = initialize_config(
+                            algorithm=experiment_config["algorithm"],
+                            sample_rate=sample_rate,
+                            frame_rate=frame_rate,
+                            window_size=window_size,
+                            features=experiment_config["features_exp"],
+                            dataset=dataset,
+                            distance_func=distance_func,
+                        )
+                        configs.append(config)
     return configs
 
 
@@ -131,3 +135,47 @@ def save_nparray_to_csv(array: NDArray, save_path: str):
     with open(save_path, "w") as csvfile:
         writer = csv.writer(csvfile, delimiter="\t")
         writer.writerows(array)
+
+
+def save_score_following_result(
+    model, save_dir, score_ann, target_ann, frame_rate, name=None
+):
+    run_name = name or "results"
+    save_path = save_dir / f"wp_{run_name}.tsv"
+    save_nparray_to_csv(model.warping_path.T, save_path.as_posix())
+
+    dist = scipy.spatial.distance.cdist(
+        model.reference_features,
+        model.input_features[: model.warping_path[1][-1]],
+        metric=model.local_cost_fun,
+    )  # [d, wy]
+    plt.figure(figsize=(15, 15))
+    plt.imshow(dist, aspect="auto", origin="lower", interpolation="nearest")
+    plt.title(
+        f"[{save_dir.name}] \n Matchmaker alignment path with ground-truth labels",
+        fontsize=25,
+    )
+    plt.xlabel("Performance Audio frame", fontsize=15)
+    plt.ylabel("Score Audio frame", fontsize=15)
+
+    # plot online DTW path
+    ref_paths, target_paths = model.warping_path[0], model.warping_path[1]
+    for n in range(len(ref_paths)):
+        plt.plot(
+            target_paths[n], ref_paths[n], ".", color="purple", alpha=0.5, markersize=3
+        )
+
+    # plot ground-truth labels
+    ref_annots = pd.read_csv(filepath_or_buffer=score_ann, delimiter="\t", header=None)[
+        0
+    ]
+    target_annots = pd.read_csv(
+        filepath_or_buffer=target_ann, delimiter="\t", header=None
+    )[0]
+    for i, (ref, target) in enumerate(zip(ref_annots, target_annots)):
+        # if i % 5 != 0:
+        #     continue
+        plt.plot(
+            target * frame_rate, ref * frame_rate, "x", color="r", alpha=1, markersize=3
+        )
+    plt.savefig(save_dir / f"{run_name}.png")
