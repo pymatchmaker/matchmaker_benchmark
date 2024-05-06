@@ -1,13 +1,14 @@
-sample_rate_exp: [16000, 22050]
-frame_rate_exp: [25, 50, 100]
-window_size_exp: [1, 3, 5]
-features_exp:
-  - "chroma"
+sample_rate_exp: [44100]
+frame_rate_exp: [30]
+window_size_exp: [5]
+feature_exp:
+  - "chroma_onset"
+dataset_exp: ["asap"]
 distance_func_exp: 
   # - "euclidean"
   # - "cosine"
   # - "dice"
-  # - "braycurtis"
+  - "braycurtis"
   # - "canberra"
   # - "chebyshev"
   # - "cityblock"
@@ -15,8 +16,8 @@ distance_func_exp:
   # - "jensenshannon"
   # - "minkowski"
   # - "sqeuclidean"
-  - "Euclidean"
-  - "Cosine"
-  - "L1"
-  - "Linf"
-  - "Manhattan"
+  # - "Euclidean"
+  # - "Cosine"
+  # - "L1"
+  # - "Linf"
+  # - "Manhattan"

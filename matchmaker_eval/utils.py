@@ -84,23 +84,27 @@ def initialize_config(**kwargs) -> dict:
 
 
 def get_list_of_exp_config():
+    config = load_config(DEFAULT_CONFIG_PATH.as_posix())
     experiment_config = load_config(EXP_CONFIG_PATH.as_posix())
+    for key in experiment_config.keys():
+        config[key] = experiment_config[key]
+
     configs = []
-    for dataset in experiment_config["dataset_exp"]:
-        for sample_rate in experiment_config["sample_rate_exp"]:
-            for frame_rate in experiment_config["frame_rate_exp"]:
-                for window_size in experiment_config["window_size_exp"]:
-                    for distance_func in experiment_config["distance_func_exp"]:
-                        config = initialize_config(
-                            algorithm=experiment_config["algorithm"],
+    for dataset in config["dataset_exp"]:
+        for sample_rate in config["sample_rate_exp"]:
+            for frame_rate in config["frame_rate_exp"]:
+                for window_size in config["window_size_exp"]:
+                    for distance_func in config["distance_func_exp"]:
+                        exp_config = initialize_config(
+                            algorithm=config["algorithm"],
                             sample_rate=sample_rate,
                             frame_rate=frame_rate,
                             window_size=window_size,
-                            features=experiment_config["features_exp"],
+                            features=config["features_exp"],
                             dataset=dataset,
                             distance_func=distance_func,
                         )
-                        configs.append(config)
+                        configs.append(exp_config)
     return configs
 
 

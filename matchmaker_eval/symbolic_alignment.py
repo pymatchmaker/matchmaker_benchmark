@@ -3,14 +3,17 @@
 """
 Evaluate Symbolic score followers
 """
+from datetime import datetime
 import os
 import glob
+from pathlib import Path
 from typing import List
 import numpy as np
 import partitura as pt
 import copy
 import pandas as pd
 
+import scipy
 from scipy.stats import skew, skewtest, kurtosis
 from scipy.interpolate import interp1d
 
@@ -33,6 +36,7 @@ from matchmaker.prob.hmm import (
     compute_ioi_matrix,
     compute_discrete_pitch_profiles,
 )
+from utils import save_nparray_to_csv, save_score_following_result
 
 from matchmaker.utils.tempo_models import ReactiveTempoModel, KalmanTempoModel
 
@@ -72,7 +76,7 @@ def sanitize_warping_path(wp):
 #     return target_ann
 
 
-def transfer_positions(wp, ref_anns, frame_rate):
+def transfer_positions(wp, ref_anns, frame_rate, is_hmm=False, state_space=None):
     """
     Transfer the positions of the reference annotations to the target annotations using the warping path.
 
@@ -83,7 +87,11 @@ def transfer_positions(wp, ref_anns, frame_rate):
     ref_ann : List[float]
         reference annotations.
     """
-    x, y = wp[0] / frame_rate, wp[1] / frame_rate
+    if is_hmm:
+        x = state_space[wp[0]]  # check if this is correct
+        y = wp[1] / frame_rate
+    else:
+        x, y = wp[0] / frame_rate, wp[1] / frame_rate  # y is different! (state space)
 
     pred_idxs = [np.where(x >= r)[0] for r in ref_anns]
     predicted_targets = [
@@ -138,6 +146,7 @@ def evaluate_performance_oltw_arzt(
     local_cost_fun: str = "Manhattan",
     window_size: int = 100,
     step_size: int = 10,
+    iter: int = 1,
 ) -> None:
 
     if not os.path.exists(os.path.dirname(out_results_fn)):
@@ -337,6 +346,45 @@ def evaluate_performance_oltw_arzt(
         ]
         f.write("\t".join(str_output) + "\n")
 
+    save_score_following_result(
+        score_follower,
+        Path(os.path.dirname(out_results_fn)),
+        score_beats,
+        tracked_beats,
+        1 / polling_period,
+        name=iter,
+    )
+
+
+def save_score_following_result(
+    model, save_dir, score_beats, tracked_beats, frame_rate, name=None
+):
+    run_name = name or "results"
+    save_path = save_dir / f"wp_{run_name}.tsv"
+    save_nparray_to_csv(model.warping_path.T, save_path.as_posix())
+
+    plt.figure(figsize=(15, 15))
+    plt.title(
+        f"[{save_dir.name}] \n Matchmaker alignment path with ground-truth labels",
+        fontsize=25,
+    )
+    plt.xlabel("Performance frame", fontsize=15)
+    plt.ylabel("Score frame", fontsize=15)
+
+    # plot online DTW path
+    ref_paths, target_paths = model.warping_path[0], model.warping_path[1]
+    for n in range(len(ref_paths)):
+        plt.plot(
+            target_paths[n], ref_paths[n], ".", color="purple", alpha=0.5, markersize=3
+        )
+
+    # plot ground-truth labels
+    for i, (ref, target) in enumerate(zip(score_beats, tracked_beats)):
+        plt.plot(
+            target * frame_rate, ref * frame_rate, "x", color="r", alpha=1, markersize=3
+        )
+    plt.savefig(save_dir / f"{run_name}.png")
+
 
 def evaluate_performance_oltw_dixon(
     match_fn: str,
@@ -349,6 +397,7 @@ def evaluate_performance_oltw_dixon(
     tempo_scaling: float = 1.0,
     window_size: int = 5,
     local_cost_fun: str = "cityblock",
+    iter: int = 1,
 ) -> None:
 
     if not os.path.exists(os.path.dirname(out_results_fn)):
@@ -550,6 +599,7 @@ def evaluate_performance_hmm(
     out_results_fn: str,
     remove_insertions: bool = False,
     features: str = "pianoroll",
+    iter: int = 1,
 ) -> None:
 
     if not os.path.exists(os.path.dirname(out_results_fn)):
@@ -693,13 +743,14 @@ def evaluate_performance_hmm(
 
     perf_beats = stime_to_ptime_map(score_beats)
 
-
-    import pdb
-    pdb.set_trace()
+    # import pdb
+    # pdb.set_trace()
     tracked_beats = transfer_positions(
         wp=score_follower.warping_path,
         ref_anns=perf_beats,
         frame_rate=1 / polling_period,
+        is_hmm=True,
+        state_space=score_follower.state_space,  # TODO check if this is correct
     )
     eval_results = evaluate_alignment(
         target_ponsets=perf_beats,
@@ -712,6 +763,15 @@ def evaluate_performance_hmm(
             f"{res:.3f}" for res in eval_results
         ]
         f.write("\t".join(str_output) + "\n")
+
+    save_score_following_result(
+        score_follower,
+        Path(os.path.dirname(out_results_fn)),
+        score_beats,
+        tracked_beats,
+        1 / polling_period,
+        name=iter,
+    )
 
 
 def vienna():
@@ -801,38 +861,31 @@ if __name__ == "__main__":
 
     if algorithm == "dixon":
         if use_score:
-            out_results_fn = os.path.join(
-                "results",
-                f"{dataset}_{algorithm}_{features}_ws{window_size}_{distance}_score.tsv",
+            run_name = (
+                f"{dataset}_{algorithm}_{features}_ws{window_size}_{distance}_score"
             )
         else:
-            out_results_fn = os.path.join(
-                "results",
-                f"{dataset}_{algorithm}_{features}_ws{window_size}_{distance}_noise_{noise:.2f}_tempo_{tempo_scaling:.2f}.tsv",
-            )
+            run_name = f"{dataset}_{algorithm}_{features}_ws{window_size}_{distance}_noise_{noise:.2f}_tempo_{tempo_scaling:.2f}"
     elif algorithm == "arzt":
         if use_score:
-            out_results_fn = os.path.join(
-                "results",
-                f"{dataset}_{algorithm}_{features}_ws{window_size}_ss{step_size}_{distance}_score.tsv",
-            )
+            run_name = f"{dataset}_{algorithm}_{features}_ws{window_size}_ss{step_size}_{distance}_score"
         else:
-            out_results_fn = os.path.join(
-                "results",
-                f"{dataset}_{algorithm}_{features}_ws{window_size}__ss{step_size}_{distance}_noise_{noise:.2f}_tempo_{tempo_scaling:.2f}.tsv",
-            )
+            run_name = f"{dataset}_{algorithm}_{features}_ws{window_size}_ss{step_size}_{distance}_noise_{noise:.2f}_tempo_{tempo_scaling:.2f}"
     elif algorithm == "hmm":
-        out_results_fn = os.path.join(
-            "results",
-            f"{dataset}_{algorithm}_{features}.tsv"
-        )
+        run_name = f"{dataset}_{algorithm}_{features}"
+
+    run_name = f"{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}_{run_name}"
+    if not os.path.exists(f"results/{run_name}"):
+        os.mkdir(f"results/{run_name}")
+
+    out_results_fn = os.path.join(f"results/{run_name}", f"results.tsv")
 
     match_files = get_dataset(dataset)
 
-    for i, match_fn in enumerate(match_files):
+    for i, match_fn in enumerate(match_files, 1):
         print(f"Evaluating {os.path.basename(match_fn)} ...")
 
-        if os.path.basename(match_fn) in("kv457_2_adj.match", "kv280_2_adj.match"):
+        if os.path.basename(match_fn) in ("kv457_2_adj.match", "kv280_2_adj.match"):
             continue
 
         if algorithm == "dixon":
@@ -858,6 +911,7 @@ if __name__ == "__main__":
                 tempo_scaling=tempo_scaling,
                 window_size=window_size,
                 step_size=step_size,
+                iter=i,
             )
         elif algorithm == "hmm":
             evaluate_performance_hmm(
@@ -866,4 +920,5 @@ if __name__ == "__main__":
                 out_results_fn=out_results_fn,
                 features=features,
                 remove_insertions=True,
+                iter=i,
             )

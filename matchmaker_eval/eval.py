@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import scipy
 from matchmaker.dp import OnlineTimeWarpingArzt, OnlineTimeWarpingDixon
+from matchmaker.prob import PitchIOIHMM
 from matchmaker.features.audio import compute_features_from_audio
 from matchmaker.io.audio import MockAudioStream, AudioStream
 from numpy.typing import NDArray
@@ -19,6 +20,7 @@ TOLERANCES = [100, 300, 500, 1000]
 ALGORITHMS = {
     "oltw_dixon": OnlineTimeWarpingDixon,
     "oltw_arzt": OnlineTimeWarpingArzt,
+    "hmm": PitchIOIHMM,
 }
 METRICS = ["mean", "median", "std", "skewness", "kurtosis"] + [
     f"{t}ms" for t in TOLERANCES

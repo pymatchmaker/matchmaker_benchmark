@@ -56,10 +56,10 @@ def main():
     assert midi_path.exists()
 
     config = initialize_config()
-    score_audio_path = Path(
-        "/Users/jiyun/workspace/ismir2024_matchmaker/matchmaker_eval/score_audio.wav"
-    )
-    # score_audio_path = midi_path.with_suffix(".wav")  # "ex_midi_score.wav"
+    # score_audio_path = Path(
+    #     "/Users/jiyun/workspace/ismir2024_matchmaker/matchmaker_eval/score_audio.wav"
+    # )
+    score_audio_path = midi_path.with_suffix(".wav")  # "ex_midi_score.wav"
     if not score_audio_path.exists():
         score_audio_path = convert_score_to_audio(
             midi_path, score_audio_path, config.sample_rate
@@ -80,10 +80,10 @@ def main():
     save_dir.mkdir(parents=True, exist_ok=True)
     save_config(config, save_dir)
 
-    score_beat_ann = "/Users/jiyun/workspace/ismir2024_matchmaker/matchmaker_eval/score_annotations.tsv"
-    perf_beat_ann = "/Users/jiyun/workspace/ismir2024_matchmaker/matchmaker_eval/perf_annotations.tsv"
-    # score_beat_ann = dir_path / f"{midi_path.stem}_annotations.txt"
-    # perf_beat_ann = dir_path / f"{target_audio.stem}_annotations.txt"
+    # score_beat_ann = "/Users/jiyun/workspace/ismir2024_matchmaker/matchmaker_eval/score_annotations.tsv"
+    # perf_beat_ann = "/Users/jiyun/workspace/ismir2024_matchmaker/matchmaker_eval/perf_annotations.tsv"
+    score_beat_ann = dir_path / f"{midi_path.stem}_annotations.txt"
+    perf_beat_ann = dir_path / f"{target_audio.stem}_annotations.txt"
 
     # Run evaluation
     result_stats = run_evaluation(
