@@ -88,10 +88,10 @@ def transfer_positions(wp, ref_anns, frame_rate, is_hmm=False, state_space=None)
         reference annotations.
     """
     if is_hmm:
-        x = state_space[wp[0]]  # check if this is correct
+        x = state_space[wp[0]]
         y = wp[1] / frame_rate
     else:
-        x, y = wp[0] / frame_rate, wp[1] / frame_rate  # y is different! (state space)
+        x, y = wp[0] / frame_rate, wp[1] / frame_rate
 
     pred_idxs = [np.where(x >= r)[0] for r in ref_anns]
     predicted_targets = [
@@ -117,6 +117,7 @@ def evaluate_alignment(target_ponsets, tracked_ponsets):
     lt_300ms = np.sum(abs_asynch[~np.isnan(asynchrony)] <= 300) / len(target_ponsets)
     lt_500ms = np.sum(abs_asynch[~np.isnan(asynchrony)] <= 500) / len(target_ponsets)
     lt_1000ms = np.sum(abs_asynch[~np.isnan(asynchrony)] <= 1000) / len(target_ponsets)
+    lt_2000ms = np.sum(abs_asynch[~np.isnan(asynchrony)] <= 2000) / len(target_ponsets)
     return (
         mean_asynch,
         median_asynch,
@@ -130,6 +131,7 @@ def evaluate_alignment(target_ponsets, tracked_ponsets):
         lt_300ms,
         lt_500ms,
         lt_1000ms,
+        lt_2000ms,
         len(target_ponsets),
     )
 
@@ -357,7 +359,7 @@ def evaluate_performance_oltw_arzt(
 
 
 def save_score_following_result(
-    model, save_dir, score_beats, tracked_beats, frame_rate, name=None
+    model, save_dir, score_beats, tracked_beats, frame_rate, name=None, is_hmm=False
 ):
     run_name = name or "results"
     save_path = save_dir / f"wp_{run_name}.tsv"
@@ -368,21 +370,18 @@ def save_score_following_result(
         f"[{save_dir.name}] \n Matchmaker alignment path with ground-truth labels",
         fontsize=25,
     )
-    plt.xlabel("Performance frame", fontsize=15)
-    plt.ylabel("Score frame", fontsize=15)
+    plt.xlabel("Performance (sec)", fontsize=15)
+    plt.ylabel("Score (sec)", fontsize=15)
 
     # plot online DTW path
-    ref_paths, target_paths = model.warping_path[0], model.warping_path[1]
-    for n in range(len(ref_paths)):
-        plt.plot(
-            target_paths[n], ref_paths[n], ".", color="purple", alpha=0.5, markersize=3
-        )
+    x = model.state_space[model.warping_path[0]]
+    y = model.warping_path[1] / frame_rate
+    for ref, target in zip(x, y):
+        plt.plot(target, ref, ".", color="purple", alpha=0.5, markersize=3)
 
     # plot ground-truth labels
-    for i, (ref, target) in enumerate(zip(score_beats, tracked_beats)):
-        plt.plot(
-            target * frame_rate, ref * frame_rate, "x", color="r", alpha=1, markersize=3
-        )
+    for ref, target in zip(score_beats, tracked_beats):
+        plt.plot(target, ref, "x", color="r", alpha=1, markersize=6)
     plt.savefig(save_dir / f"{run_name}.png")
 
 
@@ -624,6 +623,7 @@ def evaluate_performance_hmm(
                         "300ms",
                         "500ms",
                         "1000ms",
+                        "2000ms",
                         "n_onsets",
                     ]
                 )
@@ -695,16 +695,18 @@ def evaluate_performance_hmm(
         ioi_precision=1,
     )
 
-    transition_matrix = gumbel_transition_matrix(
-        n_states=n_states,
-        inserted_states=True,
+    transition_matrix = (
+        gumbel_transition_matrix(  # TODO another possibilities? (Gaussian/Nakamura)
+            n_states=n_states,
+            inserted_states=True,
+        )
     )
 
     initial_probabilities = gumbel_init_dist(
         n_states=n_states,
     )
 
-    tempo_model = KalmanTempoModel(
+    tempo_model = KalmanTempoModel(  # TODO another possibilities? (LinearSMS, JADAM)
         init_score_onset=unique_sonsets.min(),
         init_beat_period=60 / bpm,
     )
@@ -733,7 +735,11 @@ def evaluate_performance_hmm(
     observations = list(queue.queue)
 
     predicted_positions = np.array(
-        [score_follower(obs[0]) for obs in observations if obs[0] is not None],
+        [
+            score_follower(obs[0], i)
+            for i, obs in enumerate(observations)
+            if obs[0] is not None
+        ],
         dtype=int,
     )
     score_beats = np.arange(
@@ -747,7 +753,7 @@ def evaluate_performance_hmm(
     # pdb.set_trace()
     tracked_beats = transfer_positions(
         wp=score_follower.warping_path,
-        ref_anns=perf_beats,
+        ref_anns=score_beats,
         frame_rate=1 / polling_period,
         is_hmm=True,
         state_space=score_follower.state_space,  # TODO check if this is correct
