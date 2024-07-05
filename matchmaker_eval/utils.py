@@ -4,6 +4,7 @@ from pathlib import Path
 import librosa
 import matplotlib.pyplot as plt
 import pandas as pd
+import partitura
 import scipy
 import yaml
 from midi2audio import FluidSynth
@@ -117,15 +118,27 @@ def save_config(config, save_dir):
         yaml.dump(config_dict, f)
 
 
-def convert_score_to_audio(midi_path: str, save_path: str, sample_rate: int) -> Path:
+def convert_score_to_audio(score_path: str, sample_rate: int) -> Path:
+    file_extension = score_path.suffix
+    # Convert score to MIDI if it is in XML format
+    if file_extension.lower() in {".xml", ".musicxml"}:
+        score = partitura.load_score(str(score_path))
+        tmp_score_path = score_path.parent / "tmp_midi_score.mid"
+        print(f"Saving score as midi: {tmp_score_path}")
+        partitura.save_score_midi(score, tmp_score_path.as_posix())
+        score_path = tmp_score_path
+    elif file_extension.lower() not in {".mid", ".midi"}:
+        raise ValueError("Invalid score file format")
+
     # Convert MIDI to audio
+    score_audio_path = score_path.with_suffix(".wav")
     fs = FluidSynth(SOUND_FONT_PATH, sample_rate=sample_rate)
-    fs.midi_to_audio(midi_path, save_path)
+    fs.midi_to_audio(score_path, score_audio_path)
 
     print(
-        f"Score Audio path: {save_path}, duration: {librosa.get_duration(path=save_path)}"
+        f"Score Audio path: {score_audio_path}, duration (sec): {librosa.get_duration(filename=score_audio_path)}"
     )
-    return save_path
+    return score_audio_path
 
 
 def save_results_to_csv(results: dict, save_path: str):

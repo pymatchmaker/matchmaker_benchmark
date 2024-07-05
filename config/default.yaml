@@ -3,7 +3,7 @@ frame_rate: 30
 chunk_size: 1
 window_size: 5
 features: ["chroma"]
-distance_func: "Euclidean"  # Euclidean for OLTWArzt, euclidean for OLTWDixon
+distance_func: "cityblock"  # Euclidean for OLTWArzt, euclidean for OLTWDixon
 max_run_count: 30
 dataset: "asap"
-algorithm: "oltw_dixon"
+algorithm: "hmm"  # hmm, oltw_dixon, oltw_arzt

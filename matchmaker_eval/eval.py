@@ -1,20 +1,25 @@
 from pathlib import Path
+from typing import Union
 
 import librosa
 import mido
 import numpy as np
 import pandas as pd
+import partitura as pt
 import scipy
+from libfmp.c3 import compute_strict_alignment_path_mask
 from matchmaker.dp import OnlineTimeWarpingArzt, OnlineTimeWarpingDixon
-from matchmaker.prob import PitchIOIHMM
 from matchmaker.features.audio import compute_features_from_audio
-from matchmaker.io.audio import MockAudioStream, AudioStream
+from matchmaker.features.midi import PitchIOIProcessor
+from matchmaker.io.audio import AudioStream, MockAudioStream
+from matchmaker.io.midi import MockFramedMidiStream
+from matchmaker.prob import PitchIOIHMM
+from matchmaker.utils.misc import RECVQueue
 from numpy.typing import NDArray
 from synctoolbox.dtw.mrmsdtw import sync_via_mrmsdtw
 from synctoolbox.feature.dlnco import pitch_onset_features_to_DLNCO
 from synctoolbox.feature.pitch_onset import audio_to_pitch_onset_features
 from utils import MatchmakerEvalConfig
-from libfmp.c3 import compute_strict_alignment_path_mask
 
 TOLERANCES = [100, 300, 500, 1000]
 ALGORITHMS = {
@@ -171,29 +176,31 @@ def regenerate_tempo_adjusted_midi(midi_path: Path, target_duration: float) -> P
 
 
 def run_score_following(
-    score_audio: str, target_audio: str, config: MatchmakerEvalConfig
+    score_audio_path: Path, perf_path: Union[Path, str], config: MatchmakerEvalConfig
 ) -> NDArray[np.float32]:
     """
-    Run score following on the given audio and the target audio.
+    Run score following on the score audio and the performance file.
 
     Parameters
     ----------
-    score_audio : str
+    score_audio_path : Path
         path to the score audio.
-    target_audio : str
-        path to the target audio.
+    perf_path : Path or str
+        path to the performance file (.wav or .mid), or empty string for live performance mode.
 
     Returns
     -------
     warping_path: np.ndarray [shape=(2, T)]
         Resulting warping path with pairs of indices of the reference and target audio.
     """
+    # Extract features from the score audio
     feature_processors, reference_features = compute_features_from_audio(
-        score_audio,
+        str(score_audio_path),
         features=config.features,
         sample_rate=config.sample_rate,
         hop_length=config.hop_length,
     )
+
     algorithm = ALGORITHMS[config.algorithm]
     matchmaker = algorithm(
         reference_features=reference_features,
@@ -204,28 +211,40 @@ def run_score_following(
         frame_rate=config.frame_rate,
     )
 
-    audio_stream = MockAudioStream(
-        sample_rate=config.sample_rate,
-        hop_length=config.hop_length,
-        queue=matchmaker.queue,
-        features=feature_processors,
-        file_path=target_audio,
-        chunk_size=config.chunk_size,
-    )
-
-    # audio_stream = AudioStream(
-    #     sample_rate=config.sample_rate,
-    #     hop_length=config.hop_length,
-    #     queue=matchmaker.queue,
-    #     features=feature_processors,
-    #     chunk_size=config.chunk_size,
-    # )
+    perf_stream = None
+    if perf_path == "":  # live performance mode
+        perf_stream = AudioStream(
+            sample_rate=config.sample_rate,
+            hop_length=config.hop_length,
+            queue=matchmaker.queue,
+            features=feature_processors,
+            chunk_size=config.chunk_size,
+        )
+    elif perf_path.suffix.lower() in {".mid", ".midi"}:
+        match_path = perf_path.with_suffix(".match")
+        performance, alignment, score = pt.load_match(
+            filename=match_path, create_score=True, first_note_at_zero=True
+        )
+        perf_stream = MockFramedMidiStream(
+            file_path=performance,
+            queue=RECVQueue(),
+            features=[PitchIOIProcessor(piano_range=True)],
+        )
+    elif perf_path.suffix.lower() in {".wav"}:
+        perf_stream = MockAudioStream(
+            sample_rate=config.sample_rate,
+            hop_length=config.hop_length,
+            queue=matchmaker.queue,
+            features=feature_processors,
+            file_path=str(perf_path),
+            chunk_size=config.chunk_size,
+        )
 
     # Run score following
-    audio_stream.start()
+    perf_stream.start()
     matchmaker.run()
 
     print(f"=====================oltl run ended=====================")
-    audio_stream.stop()
+    perf_stream.stop()
 
     return matchmaker, matchmaker.warping_path
