@@ -101,7 +101,7 @@ def get_list_of_exp_config():
                             sample_rate=sample_rate,
                             frame_rate=frame_rate,
                             window_size=window_size,
-                            features=config["features_exp"],
+                            features=config["feature_exp"],
                             dataset=dataset,
                             distance_func=distance_func,
                         )
@@ -135,9 +135,9 @@ def convert_score_to_audio(score_path: str, sample_rate: int) -> Path:
     fs = FluidSynth(SOUND_FONT_PATH, sample_rate=sample_rate)
     fs.midi_to_audio(score_path, score_audio_path)
 
-    print(
-        f"Score Audio path: {score_audio_path}, duration (sec): {librosa.get_duration(filename=score_audio_path)}"
-    )
+    # print(
+    #     f"Score Audio path: {score_audio_path}, duration (sec): {librosa.get_duration(path=score_audio_path)}"
+    # )
     return score_audio_path
 
 

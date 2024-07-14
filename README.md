@@ -41,7 +41,22 @@ TBD
 You can run the following command to run inference of a single audio file with a midi file provided on resources.
 
 ```bash
+# If score is in MIDI format, and performance input is an audio file,
 python matchmaker_eval/infer.py --score ./resources/ex_score.mid --perf ./resources/ex_VuV01M.wav --eval
+```
+
+If you want to change the config of the inference, you can change the configurations in `matchmaker_eval/config/default.yaml`.
+
+```bash
+sample_rate: 44100
+frame_rate: 30
+chunk_size: 1
+window_size: 5
+features: ["chroma"]
+distance_func: "cityblock"  # euclidean for OLTWDixon
+max_run_count: 30
+dataset: "asap"
+algorithm: "hmm"  # hmm, oltw_dixon, oltw_arzt
 ```
 
 ## Acknowledgments
