@@ -5,7 +5,6 @@ from pathlib import Path
 
 from eval import run_evaluation, run_score_following
 from utils import (
-    convert_score_to_audio,
     initialize_config,
     save_config,
     save_nparray_to_csv,
@@ -31,6 +30,7 @@ def main():
         "--perf",
         dest="perf_path",
         help="path to performance file (.wav or .mid) or empty for live performance mode",
+        default=DEFAULT_PERF_PATH,
     )
     parser.add_argument(
         "--eval",
@@ -51,14 +51,8 @@ def main():
 
     config = initialize_config()
 
-    # Convert score to audio
-    score_audio_path = convert_score_to_audio(score_path, config.sample_rate)
-
-    print(f"Score path: {score_path}")
-    print(f"Score audio path: {score_audio_path}")
-
     # Run score following & save result
-    model, wp = run_score_following(score_audio_path, perf_path, config)
+    model, wp = run_score_following(score_path, perf_path, config)
     save_dir = (
         OUTPUT_DIR / f"infer_results_{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}"
     )
@@ -97,8 +91,6 @@ def main():
     save_score_following_result(
         model, save_dir, score_beat_ann, perf_beat_ann, config.frame_rate
     )
-
-    score_audio_path.unlink()
 
 
 if __name__ == "__main__":

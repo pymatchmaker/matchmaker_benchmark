@@ -3,6 +3,7 @@ from pathlib import Path
 
 import librosa
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import partitura
 import scipy
@@ -123,10 +124,10 @@ def convert_score_to_audio(score_path: str, sample_rate: int) -> Path:
     # Convert score to MIDI if it is in XML format
     if file_extension.lower() in {".xml", ".musicxml"}:
         score = partitura.load_score(str(score_path))
-        tmp_score_path = score_path.parent / "tmp_midi_score.mid"
-        print(f"Saving score as midi: {tmp_score_path}")
-        partitura.save_score_midi(score, tmp_score_path.as_posix())
-        score_path = tmp_score_path
+        tmp_score_midi_path = score_path.parent / "tmp_midi_score.mid"
+        print(f"Saving score as midi: {tmp_score_midi_path}")
+        partitura.save_score_midi(score, tmp_score_midi_path.as_posix())
+        score_path = tmp_score_midi_path
     elif file_extension.lower() not in {".mid", ".midi"}:
         raise ValueError("Invalid score file format")
 
@@ -139,6 +140,25 @@ def convert_score_to_audio(score_path: str, sample_rate: int) -> Path:
     #     f"Score Audio path: {score_audio_path}, duration (sec): {librosa.get_duration(path=score_audio_path)}"
     # )
     return score_audio_path
+
+
+def create_frame_index_from_onset_sec(onsets_in_sec, frame_rate):
+    """Create a list of indices for each frame based on the MIDI data.
+
+    Args:
+        onsets_in_sec (np.ndarray): sequence of onset times in seconds.
+        frame_rate (float): Frame rate in Hz.
+    """
+    frame_indices = np.floor(onsets_in_sec * frame_rate).astype(int)
+    max_frame_index = frame_indices[-1]
+    index_list = np.zeros(max_frame_index + 1, dtype=int)
+
+    current_index = 0
+    for i, frame_index in enumerate(frame_indices):
+        index_list[current_index : frame_index + 1] = i
+        current_index = frame_index + 1
+
+    return index_list
 
 
 def save_results_to_csv(results: dict, save_path: str):

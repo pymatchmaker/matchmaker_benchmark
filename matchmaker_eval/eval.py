@@ -9,17 +9,30 @@ import partitura as pt
 import scipy
 from libfmp.c3 import compute_strict_alignment_path_mask
 from matchmaker.dp import OnlineTimeWarpingArzt, OnlineTimeWarpingDixon
-from matchmaker.features.audio import compute_features_from_audio
-from matchmaker.features.midi import PitchIOIProcessor
+from matchmaker.features.audio import (
+    compute_features_from_audio,
+    ChromagramIOIProcessor,
+)
 from matchmaker.io.audio import AudioStream, MockAudioStream
 from matchmaker.io.midi import MockFramedMidiStream
-from matchmaker.prob import PitchIOIHMM
+from matchmaker.prob.hmm import (
+    BernoulliGaussianPitchIOIObservationModel,
+    PitchIOIHMM,
+    jiang_transition_matrix_from_sequence,
+    gumbel_init_dist,
+    compute_ioi_matrix,
+)
 from matchmaker.utils.misc import RECVQueue
+from matchmaker.utils.tempo_models import KalmanTempoModel
 from numpy.typing import NDArray
 from synctoolbox.dtw.mrmsdtw import sync_via_mrmsdtw
 from synctoolbox.feature.dlnco import pitch_onset_features_to_DLNCO
 from synctoolbox.feature.pitch_onset import audio_to_pitch_onset_features
-from utils import MatchmakerEvalConfig
+from utils import (
+    MatchmakerEvalConfig,
+    convert_score_to_audio,
+    create_frame_index_from_onset_sec,
+)
 
 TOLERANCES = [100, 300, 500, 1000]
 ALGORITHMS = {
@@ -176,15 +189,15 @@ def regenerate_tempo_adjusted_midi(midi_path: Path, target_duration: float) -> P
 
 
 def run_score_following(
-    score_audio_path: Path, perf_path: Union[Path, str], config: MatchmakerEvalConfig
+    score_path: Path, perf_path: Union[Path, str], config: MatchmakerEvalConfig
 ) -> NDArray[np.float32]:
     """
     Run score following on the score audio and the performance file.
 
     Parameters
     ----------
-    score_audio_path : Path
-        path to the score audio.
+    score_path : Path
+        path to the score file (.mid or .xml).
     perf_path : Path or str
         path to the performance file (.wav or .mid), or empty string for live performance mode.
 
@@ -193,23 +206,74 @@ def run_score_following(
     warping_path: np.ndarray [shape=(2, T)]
         Resulting warping path with pairs of indices of the reference and target audio.
     """
-    # Extract features from the score audio
-    feature_processors, reference_features = compute_features_from_audio(
-        str(score_audio_path),
-        features=config.features,
-        sample_rate=config.sample_rate,
-        hop_length=config.hop_length,
-    )
+    # Convert score to audio
+    score_audio_path = convert_score_to_audio(score_path, config.sample_rate)
 
     algorithm = ALGORITHMS[config.algorithm]
-    matchmaker = algorithm(
-        reference_features=reference_features,
-        local_cost_fun=config.distance_func,
-        window_size=config.window_size,
-        max_run_count=config.max_run_count,
-        frame_per_seg=config.frame_per_seg,
-        frame_rate=config.frame_rate,
-    )
+    queue = RECVQueue()
+    if config.algorithm == "hmm":
+        frame_rate = config.frame_rate
+        onsets_in_sec = np.unique(
+            pt.load_performance_midi(score_path).note_array()["onset_sec"]
+        )
+        index_list = create_frame_index_from_onset_sec(
+            onsets_in_sec, frame_rate
+        )  # [0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7, 8, 8, 9, 9, 9, ...]
+        transition_matrix, state_space = jiang_transition_matrix_from_sequence(
+            index_list, frame_rate, 0.1
+        )
+        n_states = len(state_space)
+
+        feature_processors = [
+            ChromagramIOIProcessor(
+                sample_rate=config.sample_rate, hop_length=config.hop_length
+            )
+        ]
+        ioi_matrix = compute_ioi_matrix(index_list)
+
+        score_chromagram = librosa.feature.chroma_cens(
+            librosa.load(score_audio_path, sr=config.sample_rate)[0],
+            sr=config.sample_rate,
+            hop_length=config.hop_length,
+        ).T[:n_states]
+        observation_model = BernoulliGaussianPitchIOIObservationModel(
+            pitch_profiles=score_chromagram,
+            ioi_matrix=ioi_matrix,
+            ioi_precision=1,
+        )
+        initial_probabilities = gumbel_init_dist(
+            n_states=n_states,
+        )
+        tempo_model = KalmanTempoModel(
+            init_score_onset=np.where(index_list == 1)[0][0],
+            init_beat_period=60 / 120 * frame_rate,
+        )
+        queue = RECVQueue()
+        matchmaker = PitchIOIHMM(
+            observation_model=observation_model,
+            transition_matrix=transition_matrix,
+            score_onsets=index_list,
+            initial_probabilities=initial_probabilities,
+            has_insertions=True,
+            tempo_model=tempo_model,
+        )
+    else:
+        # Extract features from the score audio
+        feature_processors, reference_features = compute_features_from_audio(
+            str(score_audio_path),
+            features=config.features,
+            sample_rate=config.sample_rate,
+            hop_length=config.hop_length,
+        )
+        score_audio_path.unlink()
+        matchmaker = algorithm(
+            reference_features=reference_features,
+            local_cost_fun=config.distance_func,
+            window_size=config.window_size,
+            max_run_count=config.max_run_count,
+            frame_per_seg=config.frame_per_seg,
+            frame_rate=config.frame_rate,
+        )
 
     perf_stream = None
     if perf_path == "":  # live performance mode
@@ -227,22 +291,37 @@ def run_score_following(
         )
         perf_stream = MockFramedMidiStream(
             file_path=performance,
-            queue=RECVQueue(),
-            features=[PitchIOIProcessor(piano_range=True)],
+            queue=queue,
+            features=feature_processors,
         )
     elif perf_path.suffix.lower() in {".wav"}:
         perf_stream = MockAudioStream(
             sample_rate=config.sample_rate,
             hop_length=config.hop_length,
-            queue=matchmaker.queue,
+            queue=queue,
             features=feature_processors,
             file_path=str(perf_path),
             chunk_size=config.chunk_size,
+            include_ftime=True,
         )
 
     # Run score following
     perf_stream.start()
-    matchmaker.run()
+
+    if config.algorithm == "hmm":
+        perf_stream.join()
+        observations = list(queue.queue)
+
+        predicted_positions = np.array(
+            [
+                matchmaker((obs[0], obs[1]), i)
+                for i, obs in enumerate(observations)
+                if obs[0] is not None
+            ],
+            dtype=int,
+        )
+    else:
+        matchmaker.run()
 
     print(f"=====================oltl run ended=====================")
     perf_stream.stop()
