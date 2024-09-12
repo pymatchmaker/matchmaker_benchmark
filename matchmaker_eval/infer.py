@@ -12,7 +12,9 @@ from utils import (
 )
 
 DEFAULT_SCORE_PATH = "./resources/ex_score.mid"
+# DEFAULT_PERF_PATH = ""
 DEFAULT_PERF_PATH = "./resources/ex_VuV01M.wav"
+# DEFAULT_PERF_PATH = "./resources/ex_VuV01M.mid"
 WORKING_DIR = Path(__file__).parent.parent
 OUTPUT_DIR = WORKING_DIR / "output"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -50,6 +52,7 @@ def main():
     )
 
     config = initialize_config()
+    print(f"Config: {config}")
 
     # Run score following & save result
     model, wp = run_score_following(score_path, perf_path, config)

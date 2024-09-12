@@ -7,6 +7,7 @@ from datetime import datetime
 import os
 import glob
 from pathlib import Path
+import time
 from typing import List
 import numpy as np
 import partitura as pt
@@ -712,6 +713,12 @@ def evaluate_performance_hmm(
     )
 
     queue = RECVQueue()
+    midi_stream = MockFramedMidiStream(
+        file_path=performance,
+        queue=queue,
+        polling_period=polling_period,
+        features=features,
+    )
     score_follower = PitchIOIHMM(
         observation_model=observation_model,
         transition_matrix=transition_matrix,
@@ -721,17 +728,24 @@ def evaluate_performance_hmm(
         tempo_model=tempo_model,
     )
 
-    midi_stream = MockFramedMidiStream(
-        file_path=performance,
-        queue=queue,
-        polling_period=polling_period,
-        features=features,
-    )
-
+    before_time = time.time()
     midi_stream.start()
     midi_stream.join()
     # get all outputs of the queue at once
     # observations = np.vstack(list(queue.queue)).astype(np.float32)
+    # run_count = 0
+    # print(f"queue size: {midi_stream.queue.qsize()}")
+    # while not midi_stream.queue.empty():
+    #     print(f"Run count: {run_count}")
+    #     run_count += 1
+    #     observation = midi_stream.queue.get()
+    #     print(f"Observation: {observation}")
+    #     if observation[0] is not None:
+    #         score_follower(observation, run_count)
+    #     print(f"Run count: {run_count}")
+
+    # return
+
     observations = list(queue.queue)
 
     predicted_positions = np.array(
@@ -742,6 +756,9 @@ def evaluate_performance_hmm(
         ],
         dtype=int,
     )
+    after_time = time.time()
+    elapsed_time = after_time - before_time
+    print(f"Elapsed time: {elapsed_time}")
     score_beats = np.arange(
         np.ceil(snote_array["onset_beat"].min()),
         np.floor(snote_array["onset_beat"].max()) + 1,
@@ -811,29 +828,34 @@ def vienna():
 def get_dataset(dataset: str) -> List[str]:
 
     if dataset == "asap":
-        asap_data = pd.read_csv("../data/metadata-asap-test.csv")
+        asap_data = pd.read_csv("./data/metadata-asap-test.csv")
         # asap_pieces = asap_data[asap_data["robust_note_alignment"] > 0][
         #     "midi_performance"
         # ].values.tolist()
         asap_pieces = asap_data["midi_performance"].values.tolist()
+        asap_pieces_id = [p.split("/")[-1].split(".")[0] for p in asap_pieces]
 
-        asap_dir = "/Volumes/Rach3M02/asap-dataset/"
+        # asap_dir = "/Volumes/Rach3M02/asap-dataset/"
+        asap_dir = "/Users/jiyun/workspace/asap-dataset"
 
         match_files = glob.glob(
-            os.path.join("/Volumes/Rach3M02/asap-dataset/**", "*.match"),
+            # os.path.join("/Volumes/Rach3M02/asap-dataset/**", "*.match"),
+            os.path.join("/Users/jiyun/workspace/asap-dataset/**", "*.match"),
             recursive=True,
         )
 
         match_files = [
             mf
             for mf in match_files
-            if mf.replace(asap_dir, "").replace(".match", ".mid") in asap_pieces
+            # if mf.replace(asap_dir, "").replace(".match", ".mid") in asap_pieces
+            if mf.split("/")[-1].split(".")[0] in asap_pieces_id
         ]
 
     if dataset == "vienna":
         match_files = glob.glob(
             os.path.join(
-                "/Users/carlos/Repos/vienna4x22_v100/match",
+                # "/Users/carlos/Repos/vienna4x22_v100/match",
+                "/Users/jiyun/workspace/vienna4x22/match",
                 "*.match",
                 # "/Users/carlos/Repos/batik_plays_mozart_fork/match_adjusted", "*.match"
             )
@@ -842,7 +864,8 @@ def get_dataset(dataset: str) -> List[str]:
     if dataset == "batik":
         match_files = glob.glob(
             os.path.join(
-                "/Users/carlos/Repos/batik_plays_mozart_fork/match_adjusted",
+                # "/Users/carlos/Repos/batik_plays_mozart_fork/match_adjusted",
+                "/Users/jiyun/dataset/Batik_Audio/match_adjusted",
                 "*.match",
             )
         )
@@ -855,7 +878,7 @@ def get_dataset(dataset: str) -> List[str]:
 if __name__ == "__main__":
 
     algorithm = "hmm"
-    dataset = "vienna"
+    dataset = "asap"
     polling_period = 0.01
     window_size = 20
     step_size = 5
@@ -889,10 +912,13 @@ if __name__ == "__main__":
     match_files = get_dataset(dataset)
 
     for i, match_fn in enumerate(match_files, 1):
-        print(f"Evaluating {os.path.basename(match_fn)} ...")
-
         if os.path.basename(match_fn) in ("kv457_2_adj.match", "kv280_2_adj.match"):
             continue
+
+        if "Fugue/bwv_858/VuV01M.match" not in match_fn:
+            continue
+
+        print(f"Evaluating {match_fn} ...")
 
         if algorithm == "dixon":
             evaluate_performance_oltw_dixon(
