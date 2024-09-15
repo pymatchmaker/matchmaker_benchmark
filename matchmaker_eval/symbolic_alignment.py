@@ -731,20 +731,10 @@ def evaluate_performance_hmm(
     before_time = time.time()
     midi_stream.start()
     midi_stream.join()
-    # get all outputs of the queue at once
-    # observations = np.vstack(list(queue.queue)).astype(np.float32)
-    # run_count = 0
-    # print(f"queue size: {midi_stream.queue.qsize()}")
-    # while not midi_stream.queue.empty():
-    #     print(f"Run count: {run_count}")
-    #     run_count += 1
-    #     observation = midi_stream.queue.get()
-    #     print(f"Observation: {observation}")
-    #     if observation[0] is not None:
-    #         score_follower(observation, run_count)
-    #     print(f"Run count: {run_count}")
-
-    # return
+    print(f"Processed {midi_stream.counter} frames")
+    print(
+        f"Average MIDI feature processing time: {np.mean(midi_stream.elapsed_times)}, (median: {np.median(midi_stream.elapsed_times)}), (std: {np.std(midi_stream.elapsed_times)})"
+    )
 
     observations = list(queue.queue)
 
@@ -836,11 +826,12 @@ def get_dataset(dataset: str) -> List[str]:
         asap_pieces_id = [p.split("/")[-1].split(".")[0] for p in asap_pieces]
 
         # asap_dir = "/Volumes/Rach3M02/asap-dataset/"
-        asap_dir = "/Users/jiyun/workspace/asap-dataset"
 
         match_files = glob.glob(
             # os.path.join("/Volumes/Rach3M02/asap-dataset/**", "*.match"),
-            os.path.join("/Users/jiyun/workspace/asap-dataset/**", "*.match"),
+            os.path.join(
+                os.path.expanduser("~/workspace/asap-dataset"), "**", "*.match"
+            ),
             recursive=True,
         )
 
@@ -855,9 +846,8 @@ def get_dataset(dataset: str) -> List[str]:
         match_files = glob.glob(
             os.path.join(
                 # "/Users/carlos/Repos/vienna4x22_v100/match",
-                "/Users/jiyun/workspace/vienna4x22/match",
+                os.path.expanduser("~/workspace/vienna4x22/match"),
                 "*.match",
-                # "/Users/carlos/Repos/batik_plays_mozart_fork/match_adjusted", "*.match"
             )
         )
 
@@ -865,7 +855,7 @@ def get_dataset(dataset: str) -> List[str]:
         match_files = glob.glob(
             os.path.join(
                 # "/Users/carlos/Repos/batik_plays_mozart_fork/match_adjusted",
-                "/Users/jiyun/dataset/Batik_Audio/match_adjusted",
+                os.path.expanduser("~/dataset/Batik_Audio/match_adjusted"),
                 "*.match",
             )
         )

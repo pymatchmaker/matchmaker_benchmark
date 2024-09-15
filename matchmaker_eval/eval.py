@@ -229,7 +229,6 @@ def run_score_following(
             include_ftime=True,
         )
     elif perf_path.suffix.lower() in {".mid", ".midi"}:
-        # performance = pt.load_performance_midi(perf_path)
         perf_stream = MockFramedMidiStream(
             file_path=str(perf_path),
             features=[
@@ -250,7 +249,7 @@ def run_score_following(
     print(f"=====================matchmaker run started=====================")
     perf_stream.start()
     start_time = time.time()
-    perf_stream.join()
+    # perf_stream.join()
     print(f"Start time: {start_time}")
     queue = perf_stream.queue  # take the queue from the stream
 
