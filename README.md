@@ -29,7 +29,8 @@ cd ../matchmaker
 pip install -e .
 
 # Install soundfont for fluidsynth
-wget ftp://ftp.osuosl.org/pub/musescore/soundfont/MuseScore_General/MuseScore_General.sf2 ~/.fluidsynth/
+mkdir -p ~/soundfonts/sf2
+wget ftp://ftp.osuosl.org/pub/musescore/soundfont/MuseScore_General/MuseScore_General.sf2 ~/soundfonts/sf2/
 ```
 
 ### Setting up the datasets
@@ -53,7 +54,7 @@ frame_rate: 30
 chunk_size: 1
 window_size: 5
 features: ["chroma"]
-distance_func: "cityblock"  # euclidean for OLTWDixon
+distance_func: "euclidean"
 max_run_count: 30
 dataset: "asap"
 algorithm: "hmm"  # hmm, oltw_dixon, oltw_arzt

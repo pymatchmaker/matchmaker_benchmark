@@ -1,18 +1,28 @@
 import csv
 from pathlib import Path
 
-import librosa
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import partitura
+import partitura as pt
 import scipy
 import yaml
+from matchmaker.prob.hmm import (
+    BernoulliGaussianPitchIOIObservationModel,
+    PitchIOIHMM,
+    compute_ioi_matrix,
+    gumbel_init_dist,
+    gumbel_transition_matrix,
+    compute_discrete_pitch_profiles,
+)
+from matchmaker.features.midi import PitchIOIProcessor
+from matchmaker.utils.tempo_models import KalmanTempoModel
 from midi2audio import FluidSynth
 from numpy.typing import NDArray
 from pydantic_settings import BaseSettings
 
-SOUND_FONT_PATH = "~/.fluidsynth/MuseScore_General.sf2"
+SOUND_FONT_PATH = "~/soundfonts/sf2/MuseScore_General.sf2"
 WORKING_DIR = Path(__file__).parent.parent
 DEFAULT_CONFIG_PATH = WORKING_DIR / "config/default.yaml"
 EXP_CONFIG_PATH = WORKING_DIR / "config/experiment.yaml"
@@ -216,3 +226,62 @@ def save_score_following_result(
             target * frame_rate, ref * frame_rate, "x", color="r", alpha=1, markersize=3
         )
     plt.savefig(save_dir / f"{run_name}.png")
+
+
+def build_matchmaker_hmm(score_path):
+    bpm = 100
+
+    snote_array = pt.load_score_midi(score_path).note_array()
+    unique_sonsets = np.unique(snote_array["onset_beat"])
+
+    unique_sonset_idxs = [
+        np.where(snote_array["onset_beat"] == ui)[0] for ui in unique_sonsets
+    ]
+
+    chord_pitches = [snote_array["pitch"][uix] for uix in unique_sonset_idxs]
+
+    pitch_profiles = compute_discrete_pitch_profiles(
+        chord_pitches=chord_pitches,
+        piano_range=True,
+        inserted_states=True,
+    )
+
+    ioi_matrix = compute_ioi_matrix(
+        unique_onsets=unique_sonsets,
+        inserted_states=True,
+    )
+
+    state_space = ioi_matrix[0]
+    n_states = len(state_space)
+
+    observation_model = BernoulliGaussianPitchIOIObservationModel(
+        pitch_profiles=pitch_profiles,
+        ioi_matrix=ioi_matrix,
+        ioi_precision=1,
+    )
+
+    transition_matrix = (
+        gumbel_transition_matrix(  # TODO another possibilities? (Gaussian/Nakamura)
+            n_states=n_states,
+            inserted_states=True,
+        )
+    )
+
+    initial_probabilities = gumbel_init_dist(
+        n_states=n_states,
+    )
+
+    tempo_model = KalmanTempoModel(  # TODO another possibilities? (LinearSMS, JADAM)
+        init_score_onset=unique_sonsets.min(),
+        init_beat_period=60 / bpm,
+    )
+
+    matchmaker = PitchIOIHMM(
+        observation_model=observation_model,
+        transition_matrix=transition_matrix,
+        score_onsets=state_space,
+        initial_probabilities=initial_probabilities,
+        has_insertions=True,
+        tempo_model=tempo_model,
+    )
+    return matchmaker

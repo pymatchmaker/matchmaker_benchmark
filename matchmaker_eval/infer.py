@@ -50,6 +50,7 @@ def main():
     )
 
     config = initialize_config()
+    print(f"Config: {config}")
 
     # Run score following & save result
     model, wp = run_score_following(score_path, perf_path, config)
