@@ -25,7 +25,7 @@ from matchmaker.features.midi import (
     PitchClassPianoRollProcessor,
     PitchIOIProcessor,
 )
-from matchmaker.io.midi import MockFramedMidiStream, POLLING_PERIOD
+from matchmaker.io.midi import MidiStream, POLLING_PERIOD
 from matchmaker.utils.misc import RECVQueue
 from matchmaker.dp.oltw_arzt import OnlineTimeWarpingArzt
 from matchmaker.dp.oltw_dixon import OnlineTimeWarpingDixon
@@ -662,71 +662,30 @@ def evaluate_performance_hmm(
     )
 
     if features == "pianoroll":
-        features = [
-            PitchIOIProcessor(piano_range=True),
-        ]
+        processor = PitchIOIProcessor(piano_range=True)
     elif features == "pitchclass":
-        features = [PitchIOIProcessor()]
+        processor = PitchIOIProcessor()
 
-    unique_sonsets = np.unique(snote_array["onset_beat"])
+    (
+        observation_model,
+        transition_matrix,
+        state_space,
+        initial_probabilities,
+        tempo_model,
+    ) = preprocess_score(score=score)
 
-    unique_sonset_idxs = [
-        np.where(snote_array["onset_beat"] == ui)[0] for ui in unique_sonsets
-    ]
-
-    chord_pitches = [snote_array["pitch"][uix] for uix in unique_sonset_idxs]
-
-    pitch_profiles = compute_discrete_pitch_profiles(
-        chord_pitches=chord_pitches,
-        piano_range=True,
-        inserted_states=True,
-    )
-
-    ioi_matrix = compute_ioi_matrix(
-        unique_onsets=unique_sonsets,
-        inserted_states=True,
-    )
-
-    state_space = ioi_matrix[0]
-    n_states = len(state_space)
-
-    observation_model = BernoulliGaussianPitchIOIObservationModel(
-        pitch_profiles=pitch_profiles,
-        ioi_matrix=ioi_matrix,
-        ioi_precision=1,
-    )
-
-    transition_matrix = (
-        gumbel_transition_matrix(  # TODO another possibilities? (Gaussian/Nakamura)
-            n_states=n_states,
-            inserted_states=True,
-        )
-    )
-
-    initial_probabilities = gumbel_init_dist(
-        n_states=n_states,
-    )
-
-    tempo_model = KalmanTempoModel(  # TODO another possibilities? (LinearSMS, JADAM)
-        init_score_onset=unique_sonsets.min(),
-        init_beat_period=60 / bpm,
-    )
-
-    queue = RECVQueue()
-    midi_stream = MockFramedMidiStream(
+    midi_stream = MidiStream(
+        processor=processor,
         file_path=performance,
-        queue=queue,
-        polling_period=polling_period,
-        features=features,
     )
-    score_follower = PitchIOIHMM(
-        observation_model=observation_model,
-        transition_matrix=transition_matrix,
-        score_onsets=state_space,
-        initial_probabilities=initial_probabilities,
-        has_insertions=True,
-        tempo_model=tempo_model,
-    )
+
+    with midi_stream as stream:
+        score_follower = PitchIOIHMM(
+            reference_features=state_space,
+            queue=stream.queue,
+        )
+        for current_position in score_follower.run():
+            print(current_position)
 
     before_time = time.time()
     midi_stream.start()
@@ -780,6 +739,53 @@ def evaluate_performance_hmm(
         tracked_beats,
         1 / polling_period,
         name=iter,
+    )
+
+
+def preprocess_score(score) -> np.ndarray:
+    snote_array = score.note_array()
+    unique_sonsets = np.unique(snote_array["onset_beat"])
+    unique_sonset_idxs = [
+        np.where(snote_array["onset_beat"] == ui)[0] for ui in unique_sonsets
+    ]
+    chord_pitches = [snote_array["pitch"][uix] for uix in unique_sonset_idxs]
+    pitch_profiles = compute_discrete_pitch_profiles(
+        chord_pitches=chord_pitches,
+        piano_range=True,
+        inserted_states=True,
+    )
+    ioi_matrix = compute_ioi_matrix(
+        unique_onsets=unique_sonsets,
+        inserted_states=True,
+    )
+
+    # observation model
+    observation_model = BernoulliGaussianPitchIOIObservationModel(
+        pitch_profiles=pitch_profiles,
+        ioi_matrix=ioi_matrix,
+        ioi_precision=1,
+    )
+
+    # tempo model
+    tempo_model = KalmanTempoModel(
+        init_score_onset=unique_sonsets.min(),
+        init_beat_period=60 / 100,
+    )
+    transition_matrix = gumbel_transition_matrix(
+        n_states=len(ioi_matrix[0]),
+        inserted_states=True,
+    )
+    state_space = ioi_matrix[0]
+    initial_probabilities = gumbel_init_dist(
+        n_states=len(ioi_matrix[0]),
+    )
+
+    return (
+        observation_model,
+        transition_matrix,
+        state_space,
+        initial_probabilities,
+        tempo_model,
     )
 
 
@@ -863,7 +869,7 @@ def get_dataset(dataset: str) -> List[str]:
 
 if __name__ == "__main__":
 
-    algorithm = "hmm"
+    method = "hmm"
     dataset = "asap"
     polling_period = 0.01
     window_size = 20
@@ -874,20 +880,18 @@ if __name__ == "__main__":
     tempo_scaling = 1.0
     features = "pianoroll"
 
-    if algorithm == "dixon":
+    if method == "dixon":
         if use_score:
-            run_name = (
-                f"{dataset}_{algorithm}_{features}_ws{window_size}_{distance}_score"
-            )
+            run_name = f"{dataset}_{method}_{features}_ws{window_size}_{distance}_score"
         else:
-            run_name = f"{dataset}_{algorithm}_{features}_ws{window_size}_{distance}_noise_{noise:.2f}_tempo_{tempo_scaling:.2f}"
-    elif algorithm == "arzt":
+            run_name = f"{dataset}_{method}_{features}_ws{window_size}_{distance}_noise_{noise:.2f}_tempo_{tempo_scaling:.2f}"
+    elif method == "arzt":
         if use_score:
-            run_name = f"{dataset}_{algorithm}_{features}_ws{window_size}_ss{step_size}_{distance}_score"
+            run_name = f"{dataset}_{method}_{features}_ws{window_size}_ss{step_size}_{distance}_score"
         else:
-            run_name = f"{dataset}_{algorithm}_{features}_ws{window_size}_ss{step_size}_{distance}_noise_{noise:.2f}_tempo_{tempo_scaling:.2f}"
-    elif algorithm == "hmm":
-        run_name = f"{dataset}_{algorithm}_{features}"
+            run_name = f"{dataset}_{method}_{features}_ws{window_size}_ss{step_size}_{distance}_noise_{noise:.2f}_tempo_{tempo_scaling:.2f}"
+    elif method == "hmm":
+        run_name = f"{dataset}_{method}_{features}"
 
     run_name = f"{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}_{run_name}"
     if not os.path.exists(f"results/{run_name}"):
@@ -906,7 +910,7 @@ if __name__ == "__main__":
 
         print(f"Evaluating {match_fn} ...")
 
-        if algorithm == "dixon":
+        if method == "dixon":
             evaluate_performance_oltw_dixon(
                 match_fn=match_fn,
                 polling_period=polling_period,
@@ -918,7 +922,7 @@ if __name__ == "__main__":
                 local_cost_fun=distance,
                 window_size=window_size,
             )
-        elif algorithm == "arzt":
+        elif method == "arzt":
             evaluate_performance_oltw_arzt(
                 match_fn=match_fn,
                 polling_period=polling_period,
@@ -931,7 +935,7 @@ if __name__ == "__main__":
                 step_size=step_size,
                 iter=i,
             )
-        elif algorithm == "hmm":
+        elif method == "hmm":
             evaluate_performance_hmm(
                 match_fn=match_fn,
                 polling_period=polling_period,

@@ -1,5 +1,6 @@
 import csv
 from pathlib import Path
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,12 +12,11 @@ import yaml
 from matchmaker.prob.hmm import (
     BernoulliGaussianPitchIOIObservationModel,
     PitchIOIHMM,
+    compute_discrete_pitch_profiles,
     compute_ioi_matrix,
     gumbel_init_dist,
     gumbel_transition_matrix,
-    compute_discrete_pitch_profiles,
 )
-from matchmaker.features.midi import PitchIOIProcessor
 from matchmaker.utils.tempo_models import KalmanTempoModel
 from midi2audio import FluidSynth
 from numpy.typing import NDArray
@@ -31,26 +31,38 @@ EXP_CONFIG_PATH = WORKING_DIR / "config/experiment.yaml"
 class MatchmakerEvalConfig(BaseSettings):
     sample_rate: int
     frame_rate: int
-    chunk_size: int
     window_size: int
-    features: list[str]
+    feature_type: str
     distance_func: str
-    dataset: str
-    algorithm: str
+    method: str
     hop_length: int
     n_fft: int
-    frame_per_seg: int
     max_run_count: int
+    dataset: Optional[str] = None  # for experiment
+
+    # attributes for inference
+    attr_infer: list[str] = [
+        "sample_rate",
+        "frame_rate",
+        "window_size",
+        "feature_type",
+        "distance_func",
+        "method",
+        "hop_length",
+        "n_fft",
+    ]
 
     # attributes for experiment (for logging purpose)
     attr_exp: list[str] = [
         "sample_rate",
+        "hop_length",
+        "n_fft",
         "frame_rate",
         "window_size",
-        "features",
+        "feature_type",
         "distance_func",
         "dataset",
-        "algorithm",
+        "method",
     ]
 
 
@@ -65,31 +77,27 @@ def initialize_config(**kwargs) -> dict:
 
     sample_rate = kwargs.get("sample_rate", default_config["sample_rate"])
     frame_rate = kwargs.get("frame_rate", default_config["frame_rate"])
-    chunk_size = kwargs.get("chunk_size", default_config["chunk_size"])
     window_size = kwargs.get("window_size", default_config["window_size"])
-    features = kwargs.get("features", default_config["features"])
+    feature_type = kwargs.get("feature_type", default_config["feature_type"])
     distance_func = kwargs.get("distance_func", default_config["distance_func"])
     max_run_count = kwargs.get("max_run_count", default_config["max_run_count"])
-    dataset = kwargs.get("dataset", default_config["dataset"])
-    algorithm = kwargs.get("algorithm", default_config["algorithm"])
+    method = kwargs.get("method", default_config["method"])
+    dataset = kwargs.get("dataset")
 
     hop_length = sample_rate // frame_rate
     n_fft = 2 * hop_length
-    frame_per_seg = chunk_size
 
     # initialize config
     conf = MatchmakerEvalConfig(
         sample_rate=sample_rate,
         frame_rate=frame_rate,
-        chunk_size=chunk_size,
         window_size=window_size,
-        features=features,
+        feature_type=feature_type,
         distance_func=distance_func,
         dataset=dataset,
-        algorithm=algorithm,
+        method=method,
         hop_length=hop_length,
         n_fft=n_fft,
-        frame_per_seg=frame_per_seg,
         max_run_count=max_run_count,
     )
     return conf
@@ -107,15 +115,16 @@ def get_list_of_exp_config():
             for frame_rate in config["frame_rate_exp"]:
                 for window_size in config["window_size_exp"]:
                     for distance_func in config["distance_func_exp"]:
-                        exp_config = initialize_config(
-                            algorithm=config["algorithm"],
-                            sample_rate=sample_rate,
-                            frame_rate=frame_rate,
-                            window_size=window_size,
-                            features=config["feature_exp"],
-                            dataset=dataset,
-                            distance_func=distance_func,
-                        )
+                        for feature_type in config["feature_type_exp"]:
+                            exp_config = initialize_config(
+                                method=config["method"],
+                                sample_rate=sample_rate,
+                                frame_rate=frame_rate,
+                                window_size=window_size,
+                                feature_type=feature_type,
+                                dataset=dataset,
+                                distance_func=distance_func,
+                            )
                         configs.append(exp_config)
     return configs
 
@@ -124,7 +133,9 @@ def save_config(config, save_dir):
     config_path = save_dir / "config.yaml"
     with open(config_path, "w") as f:
         config_dict = {
-            k: v for k, v in config.__dict__.items() if not k.startswith("__")
+            k: v
+            for k, v in config.__dict__.items()
+            if not k.startswith("__") and not k.startswith("attr_")
         }
         yaml.dump(config_dict, f)
 
@@ -185,7 +196,7 @@ def save_nparray_to_csv(array: NDArray, save_path: str):
 
 
 def save_score_following_result(
-    model, save_dir, score_ann, target_ann, frame_rate, name=None
+    model, save_dir, score_annots, perf_ann_path: Path, frame_rate, name=None
 ):
     run_name = name or "results"
     save_path = save_dir / f"wp_{run_name}.tsv"
@@ -194,7 +205,7 @@ def save_score_following_result(
     dist = scipy.spatial.distance.cdist(
         model.reference_features,
         model.input_features[: model.warping_path[1][-1]],
-        metric=model.local_cost_fun,
+        metric=model.distance_func,
     )  # [d, wy]
     plt.figure(figsize=(15, 15))
     plt.imshow(dist, aspect="auto", origin="lower", interpolation="nearest")
@@ -213,13 +224,10 @@ def save_score_following_result(
         )
 
     # plot ground-truth labels
-    ref_annots = pd.read_csv(filepath_or_buffer=score_ann, delimiter="\t", header=None)[
-        0
-    ]
-    target_annots = pd.read_csv(
-        filepath_or_buffer=target_ann, delimiter="\t", header=None
+    perf_annots = pd.read_csv(
+        filepath_or_buffer=perf_ann_path, delimiter="\t", header=None
     )[0]
-    for i, (ref, target) in enumerate(zip(ref_annots, target_annots)):
+    for i, (ref, target) in enumerate(zip(score_annots, perf_annots)):
         # if i % 5 != 0:
         #     continue
         plt.plot(

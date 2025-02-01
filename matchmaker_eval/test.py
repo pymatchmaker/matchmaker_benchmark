@@ -1,12 +1,12 @@
 import argparse
+import json
 from collections import defaultdict
 from datetime import datetime
-import json
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from eval import METRICS, run_evaluation, run_offline_alignment, run_score_following
+from eval import METRICS, run_score_following
 from tabulate import tabulate
 from tqdm import tqdm
 from utils import (
@@ -14,7 +14,6 @@ from utils import (
     get_list_of_exp_config,
     save_config,
     save_results_to_csv,
-    save_score_following_result,
 )
 
 import wandb
@@ -37,9 +36,9 @@ def report_results_to_wandb(averaged_result: dict, config: MatchmakerEvalConfig)
     wandb.init(
         entity="matchmaker",
         project="matchmaker",
-        group="online-dp",
+        group=config.method,
         config=config.model_dump(include=config.attr_exp),
-        name=f"online-dp-{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}",
+        name=f"{config.method}-{config.dataset}-{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}",
     )
     wandb.log(averaged_result, step=None)
     wandb.finish()
@@ -53,27 +52,14 @@ def run_tests_and_eval_by_dataset(
     results = defaultdict(list)
     for i, row in enumerate(metadata.itertuples(), 1):
         print(row)
-        score_audio = dataset_dir / row.audio_score
-        target_audio = dataset_dir / row.audio_performance
-        score_beat_ann = dataset_dir / row.midi_score_annotations
-        target_beat_ann = dataset_dir / row.performance_annotations
+        score_xml = dataset_dir / row.xml_score
+        perf_audio = dataset_dir / row.audio_performance
+        perf_beat_ann = dataset_dir / row.performance_annotations
 
         try:
-            # Run score following & evaluation
-            model, wp = run_score_following(
-                score_audio.as_posix(), target_audio.as_posix(), config
+            result, wp = run_score_following(
+                score_xml, perf_audio, perf_beat_ann, config, verbose=False
             )
-
-            save_score_following_result(
-                model, run_dir, score_beat_ann, target_beat_ann, config.frame_rate, i
-            )
-            result = run_evaluation(
-                model.warping_path, score_beat_ann, target_beat_ann, config.frame_rate
-            )
-            # wp = run_offline_alignment(score_audio, target_audio, config)
-            # result = run_evaluation(
-            #     wp, score_beat_ann, target_beat_ann, config.frame_rate
-            # )
         except Exception as e:
             print(f"Error: {e}")
             continue
@@ -84,7 +70,7 @@ def run_tests_and_eval_by_dataset(
 
         # add metadata to results
         results["Piece"].append(row.title)
-        results["Name"].append(target_audio.stem)
+        results["Name"].append(perf_audio.stem)
         results["Difficulty"].append(row.difficulty)
 
         # add config to results
@@ -101,18 +87,9 @@ def run_tests_and_eval_by_dataset(
     return results
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    # parser.add_argument(
-    #     "--dataset-type", type=str, help="Type of dataset", default="asap"
-    # )
-    parser.add_argument(
-        "--wandb", action="store_true", help="save result to wandb", default=False
-    )
-    parser.add_argument("--dry-run", action="store_true", help="dry run", default=False)
-    args = parser.parse_args()
-
-    # dataset_type = args.dataset_type
+def main(args):
+    dataset_type = args.dataset
+    method = args.method
     # save results
     save_dir = (
         OUTPUT_DIR / f"test_results_{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}"
@@ -121,7 +98,8 @@ def main():
 
     configs = get_list_of_exp_config()
     for i, config in enumerate(tqdm(configs), 1):
-        # config.dataset = dataset_type
+        config.dataset = dataset_type
+        config.method = method
         print(f"Config: {config.model_dump(include=config.attr_exp)}")
 
         run_dir = save_dir / f"{i}"
@@ -149,4 +127,26 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Testing Matchmaker with different methods and datasets. For further configs, use config/experiment.yaml"
+    )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        choices=["asap", "vienna", "batik"],
+        default="asap",
+        help="Dataset to use (asap, vienna, or batik)",
+    )
+    parser.add_argument(
+        "--method",
+        type=str,
+        choices=["hmm", "dixon", "arzt"],
+        default="arzt",
+        help="Method to use (hmm, dixon, or arzt)",
+    )
+    parser.add_argument(
+        "--wandb", action="store_true", help="save result to wandb", default=False
+    )
+    parser.add_argument("--dry-run", action="store_true", help="dry run", default=False)
+    args = parser.parse_args()
+    main(args)

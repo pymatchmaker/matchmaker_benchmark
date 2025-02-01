@@ -1,9 +1,9 @@
-sample_rate_exp: [44100]
+sample_rate_exp: [22050]
 frame_rate_exp: [30]
 window_size_exp: [5]
-feature_exp:
+feature_type_exp:
   - "chroma"
-dataset_exp: ["asap"]  # asap, vienna, batik
+dataset_exp: ["batik"]  # asap, vienna, batik
 distance_func_exp: 
   # - "euclidean"
   # - "cosine"

@@ -1,9 +1,7 @@
 sample_rate: 44100
 frame_rate: 30
-chunk_size: 1  # hop_size
 window_size: 5
-features: ["chroma"]
-distance_func: "Euclidean"
+feature_type: "chroma"
+distance_func: "Manhattan"
 max_run_count: 30
-dataset: "asap"
-algorithm: "oltw_arzt"  # hmm, oltw_dixon, oltw_arzt
+method: "arzt"  # hmm, dixon, arzt

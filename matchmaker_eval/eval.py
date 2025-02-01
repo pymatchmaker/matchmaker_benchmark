@@ -1,3 +1,4 @@
+import json
 import time
 from pathlib import Path
 from typing import Union
@@ -8,36 +9,40 @@ import numpy as np
 import pandas as pd
 import partitura as pt
 import scipy
-from libfmp.c3 import compute_strict_alignment_path_mask
-from matchmaker.dp import OnlineTimeWarpingArzt, OnlineTimeWarpingDixon
-from matchmaker.features.audio import (
-    ChromagramIOIProcessor,
-    compute_features_from_audio,
-)
-from matchmaker.features.midi import PitchIOIProcessor
-from matchmaker.io.audio import AudioStream, MockAudioStream
-from matchmaker.io.midi import MockFramedMidiStream
-from matchmaker.prob.hmm import (
-    PitchIOIHMM,
-    jiang_transition_matrix_from_sequence,
-)
+
+# from libfmp.c3 import compute_strict_alignment_path_mask
+from matchmaker import Matchmaker
+
+# from matchmaker.dp import OnlineTimeWarpingArzt, OnlineTimeWarpingDixon
+# from matchmaker.features.audio import (
+#     ChromagramIOIProcessor,
+#     compute_features_from_audio,
+# )
+# from matchmaker.features.midi import PitchIOIProcessor
+# from matchmaker.io.audio import AudioStream, MockAudioStream
+# from matchmaker.io.midi import MockFramedMidiStream
+# from matchmaker.prob.hmm import (
+#     PitchIOIHMM,
+#     jiang_transition_matrix_from_sequence,
+# )
 from numpy.typing import NDArray
-from synctoolbox.dtw.mrmsdtw import sync_via_mrmsdtw
-from synctoolbox.feature.dlnco import pitch_onset_features_to_DLNCO
-from synctoolbox.feature.pitch_onset import audio_to_pitch_onset_features
-from utils import (
-    MatchmakerEvalConfig,
-    convert_score_to_audio,
-    create_frame_index_from_onset_sec,
-    build_matchmaker_hmm,
-)
+
+# from synctoolbox.dtw.mrmsdtw import sync_via_mrmsdtw
+# from synctoolbox.feature.dlnco import pitch_onset_features_to_DLNCO
+# from synctoolbox.feature.pitch_onset import audio_to_pitch_onset_features
+from utils import MatchmakerEvalConfig
+
+#     convert_score_to_audio,
+#     create_frame_index_from_onset_sec,
+#     build_matchmaker_hmm,
+# )
 
 TOLERANCES = [100, 300, 500, 1000]
-ALGORITHMS = {
-    "oltw_dixon": OnlineTimeWarpingDixon,
-    "oltw_arzt": OnlineTimeWarpingArzt,
-    "hmm": PitchIOIHMM,
-}
+# ALGORITHMS = {
+#     "oltw_dixon": OnlineTimeWarpingDixon,
+#     "oltw_arzt": OnlineTimeWarpingArzt,
+#     "hmm": PitchIOIHMM,
+# }
 METRICS = ["mean", "median", "std", "skewness", "kurtosis"] + [
     f"{t}ms" for t in TOLERANCES
 ]
@@ -104,7 +109,7 @@ def run_offline_alignment(
         input_feature_rate=config.frame_rate,
         verbose=False,
     )
-    wp = compute_strict_alignment_path_mask(wp.T).T
+    # wp = compute_strict_alignment_path_mask(wp.T).T
     return wp
 
 
@@ -120,7 +125,7 @@ def transfer_positions(wp, ref_anns):
         reference annotations.
     """
     x, y = wp[0], wp[1]
-    predicted_targets = [y[np.where(x >= r)[0][0]] for r in ref_anns]
+    predicted_targets = np.array([y[np.where(x >= r)[0][0]] for r in ref_anns])
     return predicted_targets
 
 
@@ -187,7 +192,11 @@ def regenerate_tempo_adjusted_midi(midi_path: Path, target_duration: float) -> P
 
 
 def run_score_following(
-    score_path: Path, perf_path: Union[Path, str], config: MatchmakerEvalConfig
+    score_path: Path,
+    perf_path: Union[Path, str],
+    perf_beat_ann: Path,
+    config: MatchmakerEvalConfig,
+    verbose: bool = True,
 ) -> NDArray[np.float32]:
     """
     Run score following on the score audio and the performance file.
@@ -204,85 +213,21 @@ def run_score_following(
     warping_path: np.ndarray [shape=(2, T)]
         Resulting warping path with pairs of indices of the reference and target audio.
     """
-    algorithm = ALGORITHMS[config.algorithm]
-    if config.algorithm == "hmm":
-        matchmaker = build_matchmaker_hmm(score_path)
-    else:
-        # Convert score to audio
-        score_audio_path = convert_score_to_audio(score_path, config.sample_rate)
-        # Extract features from the score audio
-        feature_processors, reference_features = compute_features_from_audio(
-            str(score_audio_path),
-            features=config.features,
-            sample_rate=config.sample_rate,
-            hop_length=config.hop_length,
-        )
-        score_audio_path.unlink()
+    mm = Matchmaker(
+        score_file=score_path,
+        performance_file=perf_path,
+        input_type="audio",
+        method=config.method,
+        distance_func=config.distance_func,
+        frame_rate=config.frame_rate,
+        sample_rate=config.sample_rate,
+        feature_type=config.feature_type,
+    )
 
-    perf_stream = None
-    if perf_path == "":  # live performance mode
-        perf_stream = AudioStream(
-            sample_rate=config.sample_rate,
-            hop_length=config.hop_length,
-            features=feature_processors,
-            chunk_size=config.chunk_size,
-            include_ftime=True,
-        )
-    elif perf_path.suffix.lower() in {".mid", ".midi"}:
-        perf_stream = MockFramedMidiStream(
-            file_path=str(perf_path),
-            features=[
-                PitchIOIProcessor(piano_range=True),
-            ],
-        )
-    elif perf_path.suffix.lower() in {".wav"}:
-        perf_stream = MockAudioStream(
-            sample_rate=config.sample_rate,
-            hop_length=config.hop_length,
-            features=feature_processors,
-            file_path=str(perf_path),
-            chunk_size=config.chunk_size,
-            include_ftime=True,
-        )
+    for current_position in mm.run():
+        if verbose:
+            print(f"Current position: {current_position}")
 
-    # Run score following
-    print(f"=====================matchmaker run started=====================")
-    perf_stream.start()
-    start_time = time.time()
-    # perf_stream.join()
-    print(f"Start time: {start_time}")
-    queue = perf_stream.queue  # take the queue from the stream
-
-    # if config.algorithm != "oltw_dixon":
-    #     perf_stream.join()
-
-    if config.algorithm != "hmm":
-        matchmaker = algorithm(
-            reference_features=reference_features,
-            queue=perf_stream.queue,
-            local_cost_fun=config.distance_func,
-            window_size=config.window_size,
-            max_run_count=config.max_run_count,
-            frame_per_seg=config.frame_per_seg,
-            frame_rate=config.frame_rate,
-            perf_stream=perf_stream,
-        )
-        matchmaker.run()
-
-    else:
-        observations = list(queue.queue)
-        predicted_positions = np.array(
-            [
-                matchmaker((obs[0], obs[1]), i)
-                for i, obs in enumerate(observations)
-                if obs[0] is not None
-            ],
-            dtype=int,
-        )
-
-    end_time = time.time()
-    print(f"End time: {end_time}, Elapsed time: {end_time - start_time}")
-    # perf_stream.stop()
-    print(f"=====================oltl run ended=====================")
-
-    return matchmaker, matchmaker.warping_path
+    results = mm.run_evaluation(perf_beat_ann)
+    print(f"RESULTS: {json.dumps(results, indent=4)}")
+    return results, mm.score_follower.wp
