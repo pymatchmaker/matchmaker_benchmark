@@ -230,4 +230,4 @@ def run_score_following(
 
     results = mm.run_evaluation(perf_beat_ann)
     print(f"RESULTS: {json.dumps(results, indent=4)}")
-    return results, mm.score_follower.wp
+    return results, mm.score_follower.warping_path
