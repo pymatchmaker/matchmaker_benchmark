@@ -63,17 +63,21 @@ def run_tests_and_eval_by_dataset(
     results = defaultdict(list)
     for i, row in enumerate(metadata.itertuples(), 1):
         print(row)
-        score_xml = dataset_dir / row.xml_score_adjusted
+        score_xml = dataset_dir / row.xml_score
         score_midi = dataset_dir / row.midi_score
         perf_audio = dataset_dir / row.audio_performance
         perf_beat_ann = dataset_dir / row.performance_annotations
 
-        result, mm = run_score_following(
-            score_xml,
-            perf_audio,
-            perf_beat_ann,
-            config,
-        )
+        try:
+            result, mm = run_score_following(
+                score_xml,
+                perf_audio,
+                perf_beat_ann,
+                config,
+            )
+        except Exception as e:
+            print(f"Error: {e}")
+            continue
 
         if result["count"] < 10:  # remove outliers
             print(f"Outlier: result({result})")
