@@ -1,5 +1,6 @@
 import json
 import time
+import traceback
 from pathlib import Path
 from typing import Union
 
@@ -9,108 +10,79 @@ import numpy as np
 import pandas as pd
 import partitura as pt
 import scipy
-
-# from libfmp.c3 import compute_strict_alignment_path_mask
 from matchmaker import Matchmaker
-
-# from matchmaker.dp import OnlineTimeWarpingArzt, OnlineTimeWarpingDixon
-# from matchmaker.features.audio import (
-#     ChromagramIOIProcessor,
-#     compute_features_from_audio,
-# )
-# from matchmaker.features.midi import PitchIOIProcessor
-# from matchmaker.io.audio import AudioStream, MockAudioStream
-# from matchmaker.io.midi import MockFramedMidiStream
-# from matchmaker.prob.hmm import (
-#     PitchIOIHMM,
-#     jiang_transition_matrix_from_sequence,
-# )
 from numpy.typing import NDArray
-
-# from synctoolbox.dtw.mrmsdtw import sync_via_mrmsdtw
-# from synctoolbox.feature.dlnco import pitch_onset_features_to_DLNCO
-# from synctoolbox.feature.pitch_onset import audio_to_pitch_onset_features
 from utils import MatchmakerEvalConfig
 
-#     convert_score_to_audio,
-#     create_frame_index_from_onset_sec,
-#     build_matchmaker_hmm,
-# )
-
-TOLERANCES = [100, 300, 500, 1000]
-# ALGORITHMS = {
-#     "oltw_dixon": OnlineTimeWarpingDixon,
-#     "oltw_arzt": OnlineTimeWarpingArzt,
-#     "hmm": PitchIOIHMM,
-# }
+TOLERANCES = [30, 50, 100, 300, 500, 1000, 2000]
 METRICS = ["mean", "median", "std", "skewness", "kurtosis"] + [
     f"{t}ms" for t in TOLERANCES
 ]
 
 
-def _get_DLNCO_features_from_audio(audio, feature_sequence_length, Fs, feature_rate):
-    f_pitch_onset = audio_to_pitch_onset_features(f_audio=audio, Fs=Fs)
-    f_DLNCO = pitch_onset_features_to_DLNCO(
-        f_peaks=f_pitch_onset,
-        feature_rate=feature_rate,
-        feature_sequence_length=feature_sequence_length,
-        visualize=False,
-    )
+# def _get_DLNCO_features_from_audio(audio, feature_sequence_length, Fs, feature_rate):
+#     f_pitch_onset = audio_to_pitch_onset_features(f_audio=audio, Fs=Fs)
+#     f_DLNCO = pitch_onset_features_to_DLNCO(
+#         f_peaks=f_pitch_onset,
+#         feature_rate=feature_rate,
+#         feature_sequence_length=feature_sequence_length,
+#         visualize=False,
+#     )
 
-    return f_DLNCO
+#     return f_DLNCO
 
 
-def run_offline_alignment(
-    score_audio_path: Path, ref_audio_path: Path, config, same_feature=False
-):
-    # read audio
-    audio_1, _ = librosa.load(score_audio_path.as_posix(), sr=config.sample_rate)
-    audio_2, _ = librosa.load(ref_audio_path.as_posix(), sr=config.sample_rate)
+# def run_offline_alignment(
+#     score_audio_path: Path, ref_audio_path: Path, config, same_feature=False
+# ):
+#     # read audio
+#     audio_1, _ = librosa.load(score_audio_path.as_posix(), sr=config.sample_rate)
+#     audio_2, _ = librosa.load(ref_audio_path.as_posix(), sr=config.sample_rate)
 
-    if same_feature:
-        # extract chroma stft features
-        f_chroma_librosa_1 = librosa.feature.chroma_stft(
-            y=audio_1,
-            sr=config.sample_rate,
-            hop_length=config.hop_length,
-        )
-        f_chroma_librosa_2 = librosa.feature.chroma_stft(
-            y=audio_2,
-            sr=config.sample_rate,
-            hop_length=config.hop_length,
-        )
-        f_DLNCO_1, f_DLNCO_2 = None, None
-    else:
-        # extract chroma cens features
-        f_chroma_librosa_1 = librosa.feature.chroma_cens(
-            y=audio_1,
-            sr=config.sample_rate,
-            hop_length=config.hop_length,
-        )
-        f_chroma_librosa_2 = librosa.feature.chroma_cens(
-            y=audio_2,
-            sr=config.sample_rate,
-            hop_length=config.hop_length,
-        )
-        # generate DLNCO features
-        f_DLNCO_1 = _get_DLNCO_features_from_audio(
-            audio_1, f_chroma_librosa_1.shape[1], config.sample_rate, config.frame_rate
-        )
+#     if same_feature:
+#         # extract chroma stft features
+#         f_chroma_librosa_1 = librosa.feature.chroma_stft(
+#             y=audio_1,
+#             sr=config.sample_rate,
+#             hop_length=config.hop_length,
+#         )
+#         f_chroma_librosa_2 = librosa.feature.chroma_stft(
+#             y=audio_2,
+#             sr=config.sample_rate,
+#             hop_length=config.hop_length,
+#         )
+#         f_DLNCO_1, f_DLNCO_2 = None, None
+#     else:
+#         # extract chroma cens features
+#         f_chroma_librosa_1 = librosa.feature.chroma_cens(
+#             y=audio_1,
+#             sr=config.sample_rate,
+#             hop_length=config.hop_length,
+#         )
+#         f_chroma_librosa_2 = librosa.feature.chroma_cens(
+#             y=audio_2,
+#             sr=config.sample_rate,
+#             hop_length=config.hop_length,
+#         )
+#         # generate DLNCO features
+#         f_DLNCO_1 = _get_DLNCO_features_from_audio(
+#             audio_1, f_chroma_librosa_1.shape[1], config.sample_rate, config.frame_rate
+#         )
 
-        f_DLNCO_2 = _get_DLNCO_features_from_audio(
-            audio_2, f_chroma_librosa_2.shape[1], config.sample_rate, config.frame_rate
-        )
+#         f_DLNCO_2 = _get_DLNCO_features_from_audio(
+#             audio_2, f_chroma_librosa_2.shape[1], config.sample_rate, config.frame_rate
+#         )
 
-    wp = sync_via_mrmsdtw(
-        f_chroma1=f_chroma_librosa_1,
-        f_onset1=f_DLNCO_1,
-        f_chroma2=f_chroma_librosa_2,
-        f_onset2=f_DLNCO_2,
-        input_feature_rate=config.frame_rate,
-        verbose=False,
-    )
-    # wp = compute_strict_alignment_path_mask(wp.T).T
-    return wp
+#     wp = sync_via_mrmsdtw(
+#         f_chroma1=f_chroma_librosa_1,
+#         f_onset1=f_DLNCO_1,
+#         f_chroma2=f_chroma_librosa_2,
+#         f_onset2=f_DLNCO_2,
+#         input_feature_rate=config.frame_rate,
+#         verbose=False,
+#     )
+#     # wp = compute_strict_alignment_path_mask(wp.T).T
+#     return wp
 
 
 def transfer_positions(wp, ref_anns):
@@ -196,7 +168,6 @@ def run_score_following(
     perf_path: Union[Path, str],
     perf_beat_ann: Path,
     config: MatchmakerEvalConfig,
-    verbose: bool = True,
 ) -> NDArray[np.float32]:
     """
     Run score following on the score audio and the performance file.
@@ -222,12 +193,16 @@ def run_score_following(
         frame_rate=config.frame_rate,
         sample_rate=config.sample_rate,
         feature_type=config.feature_type,
+        wait=False,
     )
 
-    for current_position in mm.run():
-        if verbose:
-            print(f"Current position: {current_position}")
+    try:
+        alignment_positions = list(mm.run())
+    except Exception as e:
+        print(f"Error: {e}")
+        traceback.print_exc()
+        mm._has_run = True
 
     results = mm.run_evaluation(perf_beat_ann)
     print(f"RESULTS: {json.dumps(results, indent=4)}")
-    return results, mm.score_follower.warping_path
+    return results, mm

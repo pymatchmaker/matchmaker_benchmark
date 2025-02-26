@@ -1,4 +1,4 @@
-sample_rate_exp: [22050]
+sample_rate_exp: [44100]
 frame_rate_exp: [30]
 window_size_exp: [5]
 feature_type_exp:
@@ -16,8 +16,8 @@ distance_func_exp:
   # - "jensenshannon"
   # - "minkowski"
   # - "sqeuclidean"
-  # - "Euclidean"
+  - "Euclidean"
   # - "Cosine"
   # - "L1"
   # - "Linf"
-  - "Manhattan"
+  # - "Manhattan"

@@ -8,12 +8,12 @@ import partitura as pt
 import numpy as np
 
 from partitura.musicanalysis.performance_codec import get_time_maps_from_alignment
-from matchmaker import EXAMPLE_MATCH
 
+MATCH_FILEPATH = "resources/ex_VuV01M_match.match"
 
 if __name__ == "__main__":
 
-    match_fn = EXAMPLE_MATCH
+    match_fn = MATCH_FILEPATH
 
     # Load performance, score and alignment info
     # from match file. The performed MIDI files are aligned with
@@ -30,7 +30,7 @@ if __name__ == "__main__":
     snote_array = score.note_array()
 
     # Get interp1d object that map time in the performance
-    # in seconds to time in the score in beats and the 
+    # in seconds to time in the score in beats and the
     # other way around
     ptime_to_stime_map, stime_to_ptime_map = get_time_maps_from_alignment(
         ppart_or_note_array=pnote_array,
@@ -47,5 +47,3 @@ if __name__ == "__main__":
     beats = np.arange(start_beat, end_beat + 1)
 
     performed_beat_times = stime_to_ptime_map(beats)
-
-

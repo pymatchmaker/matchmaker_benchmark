@@ -3,6 +3,7 @@ import json
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -14,6 +15,7 @@ from utils import (
     get_list_of_exp_config,
     save_config,
     save_results_to_csv,
+    save_score_following_result,
 )
 
 import wandb
@@ -45,26 +47,35 @@ def report_results_to_wandb(averaged_result: dict, config: MatchmakerEvalConfig)
 
 
 def run_tests_and_eval_by_dataset(
-    dataset_type: str, config: MatchmakerEvalConfig, run_dir: Path
+    dataset_type: str,
+    config: MatchmakerEvalConfig,
+    run_dir: Optional[Path] = None,
+    dry_run: bool = False,
 ):
+    if run_dir is None and not dry_run:
+        raise ValueError("run_dir must be provided if not dry_run")
+
+    if not dry_run:
+        run_dir.mkdir(parents=True, exist_ok=True)
+
     dataset_dir = DATASET_DIR[dataset_type]
     metadata = pd.read_csv(METADATA_PATH[dataset_type])
     results = defaultdict(list)
     for i, row in enumerate(metadata.itertuples(), 1):
         print(row)
-        score_xml = dataset_dir / row.xml_score
+        score_xml = dataset_dir / row.xml_score_adjusted
+        score_midi = dataset_dir / row.midi_score
         perf_audio = dataset_dir / row.audio_performance
         perf_beat_ann = dataset_dir / row.performance_annotations
 
-        try:
-            result, wp = run_score_following(
-                score_xml, perf_audio, perf_beat_ann, config, verbose=False
-            )
-        except Exception as e:
-            print(f"Error: {e}")
-            continue
+        result, mm = run_score_following(
+            score_xml,
+            perf_audio,
+            perf_beat_ann,
+            config,
+        )
 
-        if result["count"] == 0:  # remove outliers
+        if result["count"] < 10:  # remove outliers
             print(f"Outlier: result({result})")
             continue
 
@@ -83,6 +94,18 @@ def run_tests_and_eval_by_dataset(
 
         print("Results")
         print(tabulate(results, headers="keys", tablefmt="fancy_grid", showindex=True))
+
+        # save plot results
+        score_annots = mm.build_score_annotations()
+        if not dry_run:
+            save_score_following_result(
+                mm.score_follower,
+                run_dir,
+                score_annots,
+                perf_beat_ann,
+                config.frame_rate,
+                name=i,
+            )
     print(tabulate(results, headers="keys", tablefmt="fancy_grid", showindex=True))
     return results
 
@@ -90,40 +113,50 @@ def run_tests_and_eval_by_dataset(
 def main(args):
     dataset_type = args.dataset
     method = args.method
+    dry_run = args.dry_run
+    wandb = args.wandb
+
     # save results
-    save_dir = (
-        OUTPUT_DIR / f"test_results_{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}"
-    )
-    save_dir.mkdir(parents=True, exist_ok=True)
+    if not dry_run:
+        save_dir = (
+            OUTPUT_DIR / f"test_results_{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}"
+        )
+        save_dir.mkdir(parents=True, exist_ok=True)
 
     configs = get_list_of_exp_config()
+    run_dir = None
     for i, config in enumerate(tqdm(configs), 1):
         config.dataset = dataset_type
         config.method = method
         print(f"Config: {config.model_dump(include=config.attr_exp)}")
 
         run_dir = save_dir / f"{i}"
-        run_dir.mkdir(parents=True, exist_ok=True)
-        save_config(config, run_dir)
+        results = run_tests_and_eval_by_dataset(
+            config.dataset, config, run_dir, dry_run
+        )
 
-        results = run_tests_and_eval_by_dataset(config.dataset, config, run_dir)
+        if not dry_run:
+            save_config(config, run_dir)
 
-        if not args.dry_run:
+            # save individual results
             save_results_to_csv(
                 results, save_path=(run_dir / f"test_results.tsv").as_posix()
             )
-        if args.wandb:
+
+            # save averaged results
             averaged_result = {
                 k: f"{np.mean(v):.4f}" for k, v in results.items() if k in METRICS
             }
             averaged_result["piece_count"] = len(results["Piece"])
             averaged_result["count"] = sum([c for c in results["count"]])
-            report_results_to_wandb(averaged_result, config)
-
             results_file = run_dir / "results.json"
             with open(results_file, "w") as f:
                 json.dump(averaged_result, f, indent=4)
             print(f"Results saved to: {results_file}")
+
+        if not dry_run and wandb:
+            # report averaged results to wandb
+            report_results_to_wandb(averaged_result, config)
 
 
 if __name__ == "__main__":
@@ -145,8 +178,14 @@ if __name__ == "__main__":
         help="Method to use (hmm, dixon, or arzt)",
     )
     parser.add_argument(
-        "--wandb", action="store_true", help="save result to wandb", default=False
+        "--dry-run",
+        action="store_true",
+        help="dry run (without saving or reporting results)",
+        default=False,
     )
-    parser.add_argument("--dry-run", action="store_true", help="dry run", default=False)
+    parser.add_argument(
+        "--wandb", action="store_true", help="report results to wandb", default=False
+    )
     args = parser.parse_args()
+
     main(args)

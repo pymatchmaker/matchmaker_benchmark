@@ -3,7 +3,6 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from eval import run_evaluation, run_score_following
 from matchmaker import Matchmaker
 from utils import (
     initialize_config,
@@ -102,7 +101,7 @@ def main():
         json.dump(results, f, indent=4)
     print(f"Results saved to: {results_file}")
 
-    score_annots = mm._build_ref_annots()
+    score_annots = mm.build_score_annotations()
     save_score_following_result(
         mm.score_follower, save_dir, score_annots, perf_annots_path, config.frame_rate
     )
