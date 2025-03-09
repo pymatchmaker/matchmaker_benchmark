@@ -1,639 +1,639 @@
-file,TPDD_Henle,TPDD_combined,TPDD_pianolib,TPDD_Henle_reduced,TPDD_combined_reduced,TPDD_pianolib_reduced
-data/Bach/bwv_806_1.musicxml,7,6,-1,3,2,-1
-data/Bach/bwv_807_1.musicxml,7,6,-1,3,2,-1
-data/Bach/bwv_811_1.musicxml,7,6,-1,3,2,-1
-data/Bach/bwv_816_7.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_846_Fugue.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_848_Fugue.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_854_Fugue.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_856_Fugue.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_857_Fugue.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_858_Fugue.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_860_Fugue.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_862_Fugue.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_863_Fugue.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_864_Fugue.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_865_Fugue.musicxml,7,6,-1,3,2,-1
-data/Bach/bwv_866_Fugue.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_867_Fugue.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_868_Fugue.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_870_Fugue.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_873_Fugue.musicxml,7,6,-1,3,2,-1
-data/Bach/bwv_874_Fugue.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_875_Fugue.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_876_Fugue.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_880_Fugue.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_883_Fugue.musicxml,7,6,-1,3,2,-1
-data/Bach/bwv_884_Fugue.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_885_Fugue.musicxml,7,6,-1,3,2,-1
-data/Bach/bwv_887_Fugue.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_888_Fugue.musicxml,7,6,-1,3,2,-1
-data/Bach/bwv_889_Fugue.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_891_Fugue.musicxml,7,6,-1,3,2,-1
-data/Bach/bwv_892_Fugue.musicxml,7,6,-1,3,2,-1
-data/Bach/bwv_893_Fugue.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_846_Prelude.musicxml,2,1,-1,1,1,-1
-data/Bach/bwv_848_Prelude.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_854_Prelude.musicxml,4,3,-1,2,1,-1
-data/Bach/bwv_856_Prelude.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_857_Prelude.musicxml,4,3,-1,2,1,-1
-data/Bach/bwv_858_Prelude.musicxml,4,3,-1,2,1,-1
-data/Bach/bwv_860_Prelude.musicxml,4,3,-1,2,1,-1
-data/Bach/bwv_862_Prelude.musicxml,4,3,-1,2,1,-1
-data/Bach/bwv_863_Prelude.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_864_Prelude.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_865_Prelude.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_866_Prelude.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_867_Prelude.musicxml,4,3,-1,2,1,-1
-data/Bach/bwv_868_Prelude.musicxml,4,3,-1,2,1,-1
-data/Bach/bwv_870_Prelude.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_873_Prelude.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_874_Prelude.musicxml,7,6,-1,3,2,-1
-data/Bach/bwv_875_Prelude.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_876_Prelude.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_880_Prelude.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_883_Prelude.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_884_Prelude.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_885_Prelude.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_887_Prelude.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_888_Prelude.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_889_Prelude.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_891_Prelude.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_892_Prelude.musicxml,6,5,-1,2,2,-1
-data/Bach/bwv_893_Prelude.musicxml,5,4,-1,2,2,-1
-data/Bach/bwv_971.musicxml,7,6,-1,3,2,-1
-data/Balakirev/op_18.musicxml,9,8,-1,3,3,-1
-data/Bartok/sz_107_vol_1_1.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_2.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_3.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_4.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_5.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_6.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_7.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_8.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_9.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_10.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_11.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_12.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_13.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_14.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_15.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_16.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_17.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_18.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_19.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_20.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_21.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_22.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_23.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_24.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_25.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_26.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_27.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_28.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_29.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_30.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_31.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_32.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_33.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_34.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_35.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_1_36.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_37.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_38.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_39.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_40.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_41.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_42.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_45.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_46.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_47.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_48.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_49.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_50.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_51.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_52.musicxml,1,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_53.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_54.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_56.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_57.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_58.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_59.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_60.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_61.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_62.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_63.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_2_64.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_2_66.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_3_67.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_3_69.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_3_70.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_3_71.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_3_72.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_3_73.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_3_74.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_3_75.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_3_76.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_3_77.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_3_78.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_3_79.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_3_80.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_3_81.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_3_82.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_3_83.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_3_84.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_3_85.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_3_86.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_3_87.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_3_88.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_3_89.musicxml,2,1,-1,1,1,-1
-data/Bartok/sz_107_vol_3_90.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_3_91.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_3_92.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_3_93.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_3_94.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_3_95.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_3_96.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_4_97.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_4_98.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_4_99.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_4_100.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_4_101.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_4_102.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_4_103.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_4_104.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_4_105.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_4_106.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_4_107.musicxml,3,2,-1,1,1,-1
-data/Bartok/sz_107_vol_4_108.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_4_109.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_4_110.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_4_111.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_4_112.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_4_113.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_4_114.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_4_115.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_4_116.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_4_117.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_4_118.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_4_119.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_4_120.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_4_121.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_5_122.musicxml,6,5,-1,2,2,-1
-data/Bartok/sz_107_vol_5_123.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_5_124.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_5_125.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_5_126.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_5_128.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_5_129.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_5_130.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_5_131.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_5_132.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_5_133.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_5_134.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_5_135.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_5_136.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_5_137.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_5_138.musicxml,6,5,-1,2,2,-1
-data/Bartok/sz_107_vol_5_139.musicxml,4,3,-1,2,1,-1
-data/Bartok/sz_107_vol_6_140.musicxml,7,6,-1,3,2,-1
-data/Bartok/sz_107_vol_6_141.musicxml,7,6,-1,3,2,-1
-data/Bartok/sz_107_vol_6_142.musicxml,7,6,-1,3,2,-1
-data/Bartok/sz_107_vol_6_143.musicxml,5,4,-1,2,2,-1
-data/Bartok/sz_107_vol_6_144.musicxml,6,5,-1,2,2,-1
-data/Bartok/sz_107_vol_6_145.musicxml,7,6,-1,3,2,-1
-data/Bartok/sz_107_vol_6_146.musicxml,8,7,-1,3,3,-1
-data/Bartok/sz_107_vol_6_147.musicxml,7,6,-1,3,2,-1
-data/Bartok/sz_107_vol_6_148.musicxml,6,5,-1,2,2,-1
-data/Bartok/sz_107_vol_6_149.musicxml,6,5,-1,2,2,-1
-data/Bartok/sz_107_vol_6_150.musicxml,7,6,-1,3,2,-1
-data/Bartok/sz_107_vol_6_151.musicxml,7,6,-1,3,2,-1
-data/Bartok/sz_107_vol_6_152.musicxml,7,6,-1,3,2,-1
-data/Bartok/sz_107_vol_6_153.musicxml,7,6,-1,3,2,-1
-data/Beethoven/op002_no1_mv1.musicxml,6,5,4,2,2,2
-data/Beethoven/op002_no1_mv2.musicxml,6,5,4,2,2,2
-data/Beethoven/op002_no1_mv3.musicxml,6,5,4,2,2,2
-data/Beethoven/op002_no1_mv4.musicxml,6,5,5,2,2,2
-data/Beethoven/op002_no2_mv1.musicxml,7,7,6,3,3,2
-data/Beethoven/op002_no2_mv2.musicxml,7,6,5,3,2,2
-data/Beethoven/op002_no2_mv3.musicxml,7,5,4,3,2,2
-data/Beethoven/op002_no2_mv4.musicxml,7,6,5,3,2,2
-data/Beethoven/op002_no3_mv1.musicxml,7,7,6,3,3,2
-data/Beethoven/op002_no3_mv2.musicxml,7,5,4,3,2,2
-data/Beethoven/op002_no3_mv3.musicxml,7,7,6,3,3,2
-data/Beethoven/op002_no3_mv4.musicxml,7,7,7,3,3,3
-data/Beethoven/op007_mv1.musicxml,8,8,7,3,3,3
-data/Beethoven/op007_mv2.musicxml,8,6,5,3,2,2
-data/Beethoven/op007_mv3.musicxml,8,6,5,3,2,2
-data/Beethoven/op007_mv4.musicxml,8,7,6,3,3,2
-data/Beethoven/op010_no1_mv1.musicxml,7,5,4,3,2,2
-data/Beethoven/op010_no1_mv2.musicxml,7,6,5,3,2,2
-data/Beethoven/op010_no1_mv3.musicxml,7,6,5,3,2,2
-data/Beethoven/op010_no2_mv1.musicxml,7,6,5,3,2,2
-data/Beethoven/op010_no2_mv2.musicxml,7,5,4,3,2,2
-data/Beethoven/op010_no2_mv3.musicxml,7,6,5,3,2,2
-data/Beethoven/op010_no3_mv1.musicxml,7,7,6,3,3,2
-data/Beethoven/op010_no3_mv2.musicxml,7,6,5,3,2,2
-data/Beethoven/op010_no3_mv3.musicxml,7,5,4,3,2,2
-data/Beethoven/op010_no3_mv4.musicxml,7,7,6,3,3,2
-data/Beethoven/op013_mv1.musicxml,7,7,6,3,3,2
-data/Beethoven/op013_mv2.musicxml,7,5,4,3,2,2
-data/Beethoven/op013_mv3.musicxml,7,6,5,3,2,2
-data/Beethoven/op014_no1_mv1.musicxml,6,5,5,2,2,2
-data/Beethoven/op014_no1_mv2.musicxml,6,5,4,2,2,2
-data/Beethoven/op014_no1_mv3.musicxml,6,5,5,2,2,2
-data/Beethoven/op014_no2_mv1.musicxml,6,5,5,2,2,2
-data/Beethoven/op014_no2_mv2.musicxml,6,4,3,2,2,1
-data/Beethoven/op014_no2_mv3.musicxml,6,5,5,2,2,2
-data/Beethoven/op022_mv1.musicxml,7,7,6,3,3,2
-data/Beethoven/op022_mv2.musicxml,7,6,5,3,2,2
-data/Beethoven/op022_mv3.musicxml,7,5,4,3,2,2
-data/Beethoven/op022_mv4.musicxml,7,7,6,3,3,2
-data/Beethoven/op026_mv1.musicxml,7,6,5,3,2,2
-data/Beethoven/op026_mv2.musicxml,7,6,5,3,2,2
-data/Beethoven/op026_mv3.musicxml,5,4,4,2,2,2
-data/Beethoven/op026_mv4.musicxml,7,7,6,3,3,2
-data/Beethoven/op027_no1_mv1.musicxml,8,7,6,3,3,2
-data/Beethoven/op027_no1_mv2.musicxml,8,6,4,3,2,2
-data/Beethoven/op027_no1_mv3.musicxml,8,6,5,3,2,2
-data/Beethoven/op027_no1_mv4.musicxml,8,8,7,3,3,3
-data/Beethoven/op027_no2_mv1.musicxml,4,3,3,2,1,1
-data/Beethoven/op027_no2_mv2.musicxml,7,5,4,3,2,2
-data/Beethoven/op027_no2_mv3.musicxml,7,7,6,3,3,2
-data/Beethoven/op028_mv1.musicxml,7,6,5,3,2,2
-data/Beethoven/op028_mv2.musicxml,7,6,5,3,2,2
-data/Beethoven/op028_mv3.musicxml,7,5,4,3,2,2
-data/Beethoven/op028_mv4.musicxml,7,7,6,3,3,2
-data/Beethoven/op031_no1_mv1.musicxml,8,7,6,3,3,2
-data/Beethoven/op031_no1_mv2.musicxml,8,7,6,3,3,2
-data/Beethoven/op031_no1_mv3.musicxml,8,8,7,3,3,3
-data/Beethoven/op031_no2_mv1.musicxml,8,7,6,3,3,2
-data/Beethoven/op031_no2_mv2.musicxml,8,6,5,3,2,2
-data/Beethoven/op031_no2_mv3.musicxml,8,6,5,3,2,2
-data/Beethoven/op031_no3_mv1.musicxml,7,7,6,3,3,2
-data/Beethoven/op031_no3_mv2.musicxml,7,7,7,3,3,3
-data/Beethoven/op031_no3_mv3.musicxml,7,5,4,3,2,2
-data/Beethoven/op031_no3_mv4.musicxml,7,7,6,3,3,2
-data/Beethoven/op049_no1_mv1.musicxml,3,3,3,1,1,1
-data/Beethoven/op049_no1_mv2.musicxml,3,3,4,1,1,2
-data/Beethoven/op049_no2_mv1.musicxml,3,3,3,1,1,1
-data/Beethoven/op049_no2_mv2.musicxml,3,3,3,1,1,1
-data/Beethoven/op053_mv1.musicxml,9,8,7,3,3,3
-data/Beethoven/op053_mv2.musicxml,9,6,4,3,2,2
-data/Beethoven/op053_mv3.musicxml,9,9,8,3,3,3
-data/Beethoven/op054_mv1.musicxml,7,7,6,3,3,2
-data/Beethoven/op054_mv2.musicxml,7,7,7,3,3,3
-data/Beethoven/op057_mv1.musicxml,9,8,7,3,3,3
-data/Beethoven/op057_mv2.musicxml,9,7,5,3,3,2
-data/Beethoven/op057_mv3.musicxml,9,9,8,3,3,3
-data/Beethoven/op078_mv1.musicxml,7,6,5,3,2,2
-data/Beethoven/op078_mv2.musicxml,7,7,7,3,3,3
-data/Beethoven/op079_mv1.musicxml,7,6,5,3,2,2
-data/Beethoven/op079_mv2.musicxml,7,5,3,3,2,1
-data/Beethoven/op079_mv3.musicxml,7,5,4,3,2,2
-data/Beethoven/op081_mv1.musicxml,8,8,7,3,3,3
-data/Beethoven/op081_mv2.musicxml,8,6,5,3,2,2
-data/Beethoven/op081_mv3.musicxml,8,8,7,3,3,3
-data/Beethoven/op090_mv1.musicxml,7,7,6,3,3,2
-data/Beethoven/op090_mv2.musicxml,7,7,6,3,3,2
-data/Beethoven/op101_mv1.musicxml,9,8,6,3,3,2
-data/Beethoven/op101_mv2.musicxml,9,8,7,3,3,3
-data/Beethoven/op101_mv3.musicxml,9,7,5,3,3,2
-data/Beethoven/op101_mv4.musicxml,9,9,8,3,3,3
-data/Beethoven/op106_mv1.musicxml,9,9,8,3,3,3
-data/Beethoven/op106_mv2.musicxml,9,8,7,3,3,3
-data/Beethoven/op106_mv3.musicxml,9,8,7,3,3,3
-data/Beethoven/op106_mv4.musicxml,9,9,9,3,3,3
-data/Beethoven/op109_mv1.musicxml,8,7,6,3,3,2
-data/Beethoven/op109_mv2.musicxml,8,7,6,3,3,2
-data/Beethoven/op109_mv3.musicxml,8,8,8,3,3,3
-data/Beethoven/op110_mv1.musicxml,8,8,7,3,3,3
-data/Beethoven/op110_mv2.musicxml,8,8,7,3,3,3
-data/Beethoven/op110_mv3.musicxml,8,8,7,3,3,3
-data/Beethoven/op110_mv4.musicxml,8,8,7,3,3,3
-data/Beethoven/op111_mv1.musicxml,9,9,8,3,3,3
-data/Beethoven/op111_mv2.musicxml,9,9,8,3,3,3
-data/Brahms/op_118_6.musicxml,7,6,-1,3,2,-1
-data/Chopin/op01.musicxml,7,7,7,3,3,3
-data/Chopin/op04_mv1.musicxml,8,8,8,3,3,3
-data/Chopin/op04_mv2.musicxml,8,7,6,3,3,2
-data/Chopin/op04_mv3.musicxml,8,6,5,3,2,2
-data/Chopin/op04_mv4.musicxml,8,8,8,3,3,3
-data/Chopin/op05.musicxml,8,8,7,3,3,3
-data/Chopin/op06_no1.musicxml,5,5,5,2,2,2
-data/Chopin/op06_no2.musicxml,5,4,4,2,2,2
-data/Chopin/op06_no3.musicxml,5,5,5,2,2,2
-data/Chopin/op06_no4.musicxml,5,4,4,2,2,2
-data/Chopin/op07_no1.musicxml,5,4,4,2,2,2
-data/Chopin/op07_no2.musicxml,5,4,3,2,2,1
-data/Chopin/op07_no3.musicxml,5,5,5,2,2,2
-data/Chopin/op07_no4.musicxml,5,4,4,2,2,2
-data/Chopin/op07_no5.musicxml,4,3,3,2,1,1
-data/Chopin/op09_no1.musicxml,6,5,5,2,2,2
-data/Chopin/op09_no2.musicxml,6,5,4,2,2,2
-data/Chopin/op09_no3.musicxml,7,7,6,3,3,2
-data/Chopin/op10_no1.musicxml,9,9,8,3,3,3
-data/Chopin/op10_no10.musicxml,7,8,8,3,3,3
-data/Chopin/op10_no11.musicxml,7,8,8,3,3,3
-data/Chopin/op10_no12.musicxml,8,8,7,3,3,3
-data/Chopin/op10_no2.musicxml,8,9,9,3,3,3
-data/Chopin/op10_no3.musicxml,7,7,7,3,3,3
-data/Chopin/op10_no4.musicxml,8,8,8,3,3,3
-data/Chopin/op10_no5.musicxml,7,7,7,3,3,3
-data/Chopin/op10_no6.musicxml,7,6,5,3,2,2
-data/Chopin/op10_no7.musicxml,7,8,8,3,3,3
-data/Chopin/op10_no8.musicxml,8,8,8,3,3,3
-data/Chopin/op10_no9.musicxml,6,6,6,2,2,2
-data/Chopin/op12_intro.musicxml,7,7,7,3,3,3
-data/Chopin/op12_vars.musicxml,7,7,7,3,3,3
-data/Chopin/op15_no1.musicxml,6,6,6,2,2,2
-data/Chopin/op15_no2.musicxml,6,6,6,2,2,2
-data/Chopin/op15_no3.musicxml,5,4,4,2,2,2
-data/Chopin/op16.musicxml,8,8,8,3,3,3
-data/Chopin/op17_no1.musicxml,5,5,5,2,2,2
-data/Chopin/op17_no2.musicxml,5,4,4,2,2,2
-data/Chopin/op17_no3.musicxml,5,4,4,2,2,2
-data/Chopin/op17_no4.musicxml,5,4,4,2,2,2
-data/Chopin/op18.musicxml,6,6,6,2,2,2
-data/Chopin/op19.musicxml,7,7,6,3,3,2
-data/Chopin/op20.musicxml,8,8,7,3,3,3
-data/Chopin/op23.musicxml,8,8,8,3,3,3
-data/Chopin/op24_no1.musicxml,5,4,4,2,2,2
-data/Chopin/op24_no2.musicxml,4,3,3,2,1,1
-data/Chopin/op24_no3.musicxml,5,4,4,2,2,2
-data/Chopin/op24_no4.musicxml,6,5,5,2,2,2
-data/Chopin/op25_no1.musicxml,6,6,6,2,2,2
-data/Chopin/op25_no10.musicxml,9,9,8,3,3,3
-data/Chopin/op25_no11.musicxml,9,9,9,3,3,3
-data/Chopin/op25_no2.musicxml,7,7,6,3,3,2
-data/Chopin/op25_no3.musicxml,7,7,7,3,3,3
-data/Chopin/op25_no4.musicxml,8,8,8,3,3,3
-data/Chopin/op25_no5.musicxml,8,8,7,3,3,3
-data/Chopin/op25_no6.musicxml,9,9,9,3,3,3
-data/Chopin/op25_no7.musicxml,7,7,6,3,3,2
-data/Chopin/op25_no8.musicxml,8,9,9,3,3,3
-data/Chopin/op25_no9.musicxml,7,7,7,3,3,3
-data/Chopin/op26_no1.musicxml,6,5,5,2,2,2
-data/Chopin/op26_no2.musicxml,6,6,6,2,2,2
-data/Chopin/op27_no1.musicxml,6,6,6,2,2,2
-data/Chopin/op27_no2.musicxml,6,6,6,2,2,2
-data/Chopin/op28_no1.musicxml,6,6,6,2,2,2
-data/Chopin/op28_no10.musicxml,7,7,7,3,3,3
-data/Chopin/op28_no11.musicxml,7,7,6,3,3,2
-data/Chopin/op28_no12.musicxml,8,8,8,3,3,3
-data/Chopin/op28_no13.musicxml,6,5,4,2,2,2
-data/Chopin/op28_no14.musicxml,7,6,5,3,2,2
-data/Chopin/op28_no15.musicxml,5,4,4,2,2,2
-data/Chopin/op28_no16.musicxml,8,8,8,3,3,3
-data/Chopin/op28_no17.musicxml,7,6,5,3,2,2
-data/Chopin/op28_no18.musicxml,7,7,6,3,3,2
-data/Chopin/op28_no19.musicxml,7,8,8,3,3,3
-data/Chopin/op28_no2.musicxml,5,4,3,2,2,1
-data/Chopin/op28_no20.musicxml,4,3,3,2,1,1
-data/Chopin/op28_no21.musicxml,6,6,6,2,2,2
-data/Chopin/op28_no22.musicxml,7,7,7,3,3,3
-data/Chopin/op28_no23.musicxml,6,6,6,2,2,2
-data/Chopin/op28_no24.musicxml,9,9,8,3,3,3
-data/Chopin/op28_no3.musicxml,7,7,7,3,3,3
-data/Chopin/op28_no4.musicxml,4,3,2,2,1,1
-data/Chopin/op28_no5.musicxml,7,8,8,3,3,3
-data/Chopin/op28_no6.musicxml,4,3,3,2,1,1
-data/Chopin/op28_no7.musicxml,4,3,2,2,1,1
-data/Chopin/op28_no8.musicxml,8,8,8,3,3,3
-data/Chopin/op28_no9.musicxml,5,4,3,2,2,1
-data/Chopin/op29.musicxml,7,7,6,3,3,2
-data/Chopin/op30_no1.musicxml,5,4,4,2,2,2
-data/Chopin/op30_no2.musicxml,5,5,5,2,2,2
-data/Chopin/op30_no3.musicxml,6,5,5,2,2,2
-data/Chopin/op30_no4.musicxml,6,6,6,2,2,2
-data/Chopin/op32_no1.musicxml,5,5,5,2,2,2
-data/Chopin/op32_no2.musicxml,6,6,6,2,2,2
-data/Chopin/op33_no1.musicxml,5,4,4,2,2,2
-data/Chopin/op33_no2.musicxml,5,5,5,2,2,2
-data/Chopin/op33_no3.musicxml,4,3,3,2,1,1
-data/Chopin/op33_no4.musicxml,6,5,5,2,2,2
-data/Chopin/op34_no1.musicxml,6,6,6,2,2,2
-data/Chopin/op34_no2.musicxml,5,4,4,2,2,2
-data/Chopin/op34_no3.musicxml,6,5,5,2,2,2
-data/Chopin/op35_mv1.musicxml,9,9,8,3,3,3
-data/Chopin/op35_mv2.musicxml,9,9,8,3,3,3
-data/Chopin/op35_mv3.musicxml,4,5,5,2,2,2
-data/Chopin/op35_mv4.musicxml,9,9,8,3,3,3
-data/Chopin/op36.musicxml,7,7,7,3,3,3
-data/Chopin/op37_no1.musicxml,5,4,4,2,2,2
-data/Chopin/op37_no2.musicxml,6,6,6,2,2,2
-data/Chopin/op38.musicxml,8,8,8,3,3,3
-data/Chopin/op39.musicxml,8,8,8,3,3,3
-data/Chopin/op40_no1.musicxml,5,6,6,2,2,2
-data/Chopin/op40_no2.musicxml,6,5,5,2,2,2
-data/Chopin/op41_no1.musicxml,5,5,5,2,2,2
-data/Chopin/op41_no2.musicxml,6,5,4,2,2,2
-data/Chopin/op41_no3.musicxml,6,5,5,2,2,2
-data/Chopin/op41_no4.musicxml,6,5,5,2,2,2
-data/Chopin/op42.musicxml,7,7,6,3,3,2
-data/Chopin/op43.musicxml,7,7,7,3,3,3
-data/Chopin/op44.musicxml,7,7,7,3,3,3
-data/Chopin/op45.musicxml,6,6,6,2,2,2
-data/Chopin/op46.musicxml,8,9,9,3,3,3
-data/Chopin/op47.musicxml,8,8,8,3,3,3
-data/Chopin/op48_no1.musicxml,7,7,7,3,3,3
-data/Chopin/op48_no2.musicxml,6,5,5,2,2,2
-data/Chopin/op49.musicxml,8,8,8,3,3,3
-data/Chopin/op50_no1.musicxml,6,5,5,2,2,2
-data/Chopin/op50_no2.musicxml,6,5,4,2,2,2
-data/Chopin/op50_no3.musicxml,6,5,5,2,2,2
-data/Chopin/op51.musicxml,7,7,7,3,3,3
-data/Chopin/op52.musicxml,9,9,9,3,3,3
-data/Chopin/op53.musicxml,8,8,8,3,3,3
-data/Chopin/op54.musicxml,8,8,8,3,3,3
-data/Chopin/op55_no1.musicxml,6,5,5,2,2,2
-data/Chopin/op55_no2.musicxml,6,6,6,2,2,2
-data/Chopin/op56_no1.musicxml,7,7,6,3,3,2
-data/Chopin/op56_no2.musicxml,6,5,5,2,2,2
-data/Chopin/op56_no3.musicxml,6,6,6,2,2,2
-data/Chopin/op57.musicxml,7,7,6,3,3,2
-data/Chopin/op58_mv1.musicxml,9,9,8,3,3,3
-data/Chopin/op58_mv2.musicxml,9,8,7,3,3,3
-data/Chopin/op58_mv3.musicxml,9,7,5,3,3,2
-data/Chopin/op58_mv4.musicxml,9,9,8,3,3,3
-data/Chopin/op59_no1.musicxml,6,5,5,2,2,2
-data/Chopin/op59_no2.musicxml,6,5,5,2,2,2
-data/Chopin/op59_no3.musicxml,7,7,6,3,3,2
-data/Chopin/op60.musicxml,8,8,8,3,3,3
-data/Chopin/op61.musicxml,8,8,8,3,3,3
-data/Chopin/op62_no1.musicxml,6,6,6,2,2,2
-data/Chopin/op62_no2.musicxml,6,6,6,2,2,2
-data/Chopin/op63_no1.musicxml,6,5,5,2,2,2
-data/Chopin/op63_no2.musicxml,5,4,4,2,2,2
-data/Chopin/op63_no3.musicxml,6,5,4,2,2,2
-data/Chopin/op64_no1.musicxml,6,5,4,2,2,2
-data/Chopin/op64_no2.musicxml,6,5,5,2,2,2
-data/Chopin/op64_no3.musicxml,6,5,5,2,2,2
-data/Chopin/op69_no1_Fontana.musicxml,-1,5,4,-1,2,2
-data/Chopin/op72_no1.musicxml,-1,5,4,-1,2,2
-data/Debussy/L_75_2.musicxml,6,5,-1,2,2,-1
-data/Debussy/L_75_3.musicxml,5,4,-1,2,2,-1
-data/Debussy/L_75_4.musicxml,6,5,-1,2,2,-1
-data/Debussy/L_100_1.musicxml,7,6,-1,3,2,-1
-data/Debussy/L_100_2.musicxml,7,6,-1,3,2,-1
-data/Debussy/L_100_3.musicxml,7,6,-1,3,2,-1
-data/Debussy/L_106.musicxml,8,7,-1,3,3,-1
-data/Debussy/L_110_1.musicxml,5,4,-1,2,2,-1
-data/Debussy/L_110_2.musicxml,7,6,-1,3,2,-1
-data/Debussy/L_110_3.musicxml,8,7,-1,3,3,-1
-data/Debussy/L_117_2.musicxml,6,5,-1,2,2,-1
-data/Debussy/L_117_3.musicxml,7,6,-1,3,2,-1
-data/Debussy/L_117_5.musicxml,7,6,-1,3,2,-1
-data/Debussy/L_123_3.musicxml,7,6,-1,3,2,-1
-data/Debussy/L_123_4.musicxml,7,6,-1,3,2,-1
-data/Debussy/L_123_5.musicxml,6,5,-1,2,2,-1
-data/Debussy/L_123_6.musicxml,7,6,-1,3,2,-1
-data/Debussy/L_123_10.musicxml,6,5,-1,2,2,-1
-data/Debussy/L_123_12.musicxml,9,8,-1,3,3,-1
-data/Debussy/L_136_1.musicxml,8,7,-1,3,3,-1
-data/Debussy/L_136_2.musicxml,8,7,-1,3,3,-1
-data/Debussy/L_136_3.musicxml,8,7,-1,3,3,-1
-data/Debussy/L_136_4.musicxml,8,7,-1,3,3,-1
-data/Glinka/no_10.musicxml,6,5,-1,2,2,-1
-data/Haydn/hob_xvi_6_mv1.musicxml,5,4,-1,2,2,-1
-data/Haydn/hob_xvi_31_mv1.musicxml,6,5,-1,2,2,-1
-data/Haydn/hob_xvi_32_mv1.musicxml,6,5,-1,2,2,-1
-data/Haydn/hob_xvi_39_mv1.musicxml,6,5,-1,2,2,-1
-data/Haydn/hob_xvi_39_mv2.musicxml,6,5,-1,2,2,-1
-data/Haydn/hob_xvi_39_mv3.musicxml,6,5,-1,2,2,-1
-data/Haydn/hob_xvi_46_mv1.musicxml,6,5,-1,2,2,-1
-data/Haydn/hob_xvi_48_mv1.musicxml,6,5,-1,2,2,-1
-data/Haydn/hob_xvi_48_mv2.musicxml,6,5,-1,2,2,-1
-data/Haydn/hob_xvi_49_mv1.musicxml,5,4,-1,2,2,-1
-data/Haydn/hob_xvi_50_mv1_no_repeat.musicxml,6,5,-1,2,2,-1
-data/Liszt/S_139_1.musicxml,7,6,-1,3,2,-1
-data/Liszt/S_139_2.musicxml,8,7,-1,3,3,-1
-data/Liszt/S_139_3.musicxml,6,5,-1,2,2,-1
-data/Liszt/S_139_4.musicxml,9,8,-1,3,3,-1
-data/Liszt/S_139_5.musicxml,9,8,-1,3,3,-1
-data/Liszt/S_139_7.musicxml,9,8,-1,3,3,-1
-data/Liszt/S_139_9.musicxml,8,7,-1,3,3,-1
-data/Liszt/S_139_10.musicxml,9,8,-1,3,3,-1
-data/Liszt/S_139_11.musicxml,8,7,-1,3,3,-1
-data/Liszt/S_144_2.musicxml,8,7,-1,3,3,-1
-data/Liszt/S_145_1.musicxml,7,6,-1,3,2,-1
-data/Liszt/S_145_2.musicxml,7,6,-1,3,2,-1
-data/Liszt/S_162_1.musicxml,7,6,-1,3,2,-1
-data/Liszt/S_162_3.musicxml,8,7,-1,3,3,-1
-data/Liszt/S_171.musicxml,8,7,-1,3,3,-1
-data/Liszt/S_173_7.musicxml,7,6,-1,3,2,-1
-data/Liszt/S_178.musicxml,9,8,-1,3,3,-1
-data/Liszt/S_244_6.musicxml,9,8,-1,3,3,-1
-data/Liszt/S_514.musicxml,9,8,-1,3,3,-1
-data/Mozart/K279_1.musicxml,6,5,5,2,2,2
-data/Mozart/K279_2.musicxml,6,4,3,2,2,1
-data/Mozart/K279_3.musicxml,6,5,4,2,2,2
-data/Mozart/K280_1.musicxml,5,4,4,2,2,2
-data/Mozart/K280_2.musicxml,5,4,3,2,2,1
-data/Mozart/K280_3.musicxml,5,4,4,2,2,2
-data/Mozart/K281_1.musicxml,6,5,5,2,2,2
-data/Mozart/K281_2.musicxml,6,4,3,2,2,1
-data/Mozart/K281_3.musicxml,6,5,5,2,2,2
-data/Mozart/K282_1.musicxml,4,3,3,2,1,1
-data/Mozart/K282_2.musicxml,5,4,3,2,2,1
-data/Mozart/K282_3.musicxml,5,4,4,2,2,2
-data/Mozart/K283_1.musicxml,5,4,4,2,2,2
-data/Mozart/K283_2.musicxml,5,4,3,2,2,1
-data/Mozart/K283_3.musicxml,5,5,5,2,2,2
-data/Mozart/K284_1.musicxml,6,5,5,2,2,2
-data/Mozart/K284_2.musicxml,6,5,4,2,2,2
-data/Mozart/K284_3.musicxml,6,5,5,2,2,2
-data/Mozart/K309_1.musicxml,5,4,4,2,2,2
-data/Mozart/K309_2.musicxml,5,4,4,2,2,2
-data/Mozart/K309_3.musicxml,5,5,5,2,2,2
-data/Mozart/K310_1.musicxml,7,7,6,3,3,2
-data/Mozart/K310_2.musicxml,7,6,5,3,2,2
-data/Mozart/K310_3.musicxml,7,7,6,3,3,2
-data/Mozart/K311_1.musicxml,6,5,5,2,2,2
-data/Mozart/K311_2.musicxml,6,5,4,2,2,2
-data/Mozart/K311_3.musicxml,6,5,5,2,2,2
-data/Mozart/K330_1.musicxml,6,5,5,2,2,2
-data/Mozart/K330_2.musicxml,5,4,4,2,2,2
-data/Mozart/K330_3.musicxml,6,5,5,2,2,2
-data/Mozart/K331_1.musicxml,6,5,5,2,2,2
-data/Mozart/K331_2.musicxml,5,4,4,2,2,2
-data/Mozart/K331_3.musicxml,6,4,3,2,2,1
-data/Mozart/K332_1.musicxml,6,5,5,2,2,2
-data/Mozart/K332_2.musicxml,6,5,4,2,2,2
-data/Mozart/K332_3.musicxml,6,5,5,2,2,2
-data/Mozart/K333_1.musicxml,6,5,5,2,2,2
-data/Mozart/K333_2.musicxml,6,5,4,2,2,2
-data/Mozart/K333_3.musicxml,6,5,4,2,2,2
-data/Mozart/K457_1.musicxml,6,5,5,2,2,2
-data/Mozart/K457_2.musicxml,6,5,5,2,2,2
-data/Mozart/K457_3.musicxml,6,5,5,2,2,2
-data/Mozart/K475.musicxml,6,5,-1,2,2,-1
-data/Mozart/K511.musicxml,6,5,-1,2,2,-1
-data/Mozart/K533_1.musicxml,7,7,6,3,3,2
-data/Mozart/K533_2.musicxml,7,5,4,3,2,2
-data/Mozart/K533_3.musicxml,7,5,4,3,2,2
-data/Mozart/K545_1.musicxml,4,3,3,2,1,1
-data/Mozart/K545_2.musicxml,5,3,2,2,1,1
-data/Mozart/K545_3.musicxml,4,3,3,2,1,1
-data/Mozart/K570_1.musicxml,6,5,4,2,2,2
-data/Mozart/K570_2.musicxml,6,5,4,2,2,2
-data/Mozart/K570_3.musicxml,5,4,4,2,2,2
-data/Mozart/K576_1.musicxml,7,7,6,3,3,2
-data/Mozart/K576_2.musicxml,7,5,4,3,2,2
-data/Mozart/K576_3.musicxml,7,7,7,3,3,3
-data/Rachmaninoff/op_3_1.musicxml,5,4,-1,2,2,-1
-data/Rachmaninoff/op_16_1.musicxml,6,5,-1,2,2,-1
-data/Rachmaninoff/op_16_2.musicxml,8,7,-1,3,3,-1
-data/Rachmaninoff/op_16_3.musicxml,4,3,-1,2,1,-1
-data/Rachmaninoff/op_16_4.musicxml,8,7,-1,3,3,-1
-data/Rachmaninoff/op_16_5.musicxml,4,3,-1,2,1,-1
-data/Rachmaninoff/op_16_6.musicxml,7,6,-1,3,2,-1
-data/Rachmaninoff/op_23_2.musicxml,8,7,-1,3,3,-1
-data/Rachmaninoff/op_23_4.musicxml,7,6,-1,3,2,-1
-data/Rachmaninoff/op_23_6.musicxml,7,6,-1,3,2,-1
-data/Rachmaninoff/op_32_5.musicxml,8,7,-1,3,3,-1
-data/Rachmaninoff/op_32_10.musicxml,7,6,-1,3,2,-1
-data/Rachmaninoff/op_32_12.musicxml,7,6,-1,3,2,-1
-data/Rachmaninoff/op_39_5.musicxml,9,8,-1,3,3,-1
-data/Rachmaninoff/op_39_6.musicxml,9,8,-1,3,3,-1
-data/Ravel/M_19.musicxml,6,5,-1,2,2,-1
-data/Ravel/M_30.musicxml,8,7,-1,3,3,-1
-data/Ravel/M_43_3.musicxml,8,7,-1,3,3,-1
-data/Ravel/M_43_4.musicxml,9,8,-1,3,3,-1
-data/Ravel/M_55_2.musicxml,8,7,-1,3,3,-1
-data/Ravel/M_55_3.musicxml,9,8,-1,3,3,-1
-data/Ravel/M_68_6.musicxml,8,7,-1,3,3,-1
-data/Ravel/M_72.musicxml,7,6,-1,3,2,-1
-data/Schubert/D_664_1.musicxml,6,5,-1,2,2,-1
-data/Schubert/D_664_2.musicxml,6,5,-1,2,2,-1
-data/Schubert/D_664_3.musicxml,6,5,-1,2,2,-1
-data/Schubert/D_760.musicxml,9,8,-1,3,3,-1
-data/Schubert/D_780_1.musicxml,6,5,-1,2,2,-1
-data/Schubert/D_780_3.musicxml,5,4,-1,2,2,-1
-data/Schubert/D_840_1.musicxml,7,6,-1,3,2,-1
-data/Schubert/D_850_1.musicxml,8,7,-1,3,3,-1
-data/Schubert/D_850_3.musicxml,8,7,-1,3,3,-1
-data/Schubert/D_894_1.musicxml,7,6,-1,3,2,-1
-data/Schubert/D_894_2.musicxml,7,6,-1,3,2,-1
-data/Schubert/D_894_3.musicxml,7,6,-1,3,2,-1
-data/Schubert/D_894_4.musicxml,7,6,-1,3,2,-1
-data/Schubert/D_899_1.musicxml,6,5,-1,2,2,-1
-data/Schubert/D_899_2.musicxml,6,5,-1,2,2,-1
-data/Schubert/D_899_3.musicxml,6,5,-1,2,2,-1
-data/Schubert/D_899_4_no_repeat.musicxml,6,5,-1,2,2,-1
-data/Schubert/D_935_1.musicxml,7,6,-1,3,2,-1
-data/Schubert/D_935_3.musicxml,6,5,-1,2,2,-1
-data/Schubert/D_935_4.musicxml,8,7,-1,3,3,-1
-data/Schubert/D_959_2.musicxml,8,7,-1,3,3,-1
-data/Schubert/D_959_3.musicxml,8,7,-1,3,3,-1
-data/Schumann/op_1.musicxml,7,6,-1,3,2,-1
-data/Schumann/op_7.musicxml,9,8,-1,3,3,-1
-data/Schumann/op_16_1.musicxml,8,7,-1,3,3,-1
-data/Schumann/op_16_2.musicxml,8,7,-1,3,3,-1
-data/Schumann/op_16_4.musicxml,8,7,-1,3,3,-1
-data/Schumann/op_16_5.musicxml,8,7,-1,3,3,-1
-data/Schumann/op_16_6.musicxml,8,7,-1,3,3,-1
-data/Schumann/op_16_7.musicxml,8,7,-1,3,3,-1
-data/Schumann/op_18.musicxml,6,5,-1,2,2,-1
-data/Scarlatti/K_27.musicxml,5,4,-1,2,2,-1
-data/Scriabin/op_8_11.musicxml,6,5,-1,2,2,-1
+file                                         ,TPDD_Henle ,TPDD_combined ,TPDD_pianolib ,TPDD_Henle_reduced ,TPDD_combined_reduced ,TPDD_pianolib_reduced
+data/Bach/bwv_806_1.musicxml                 ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bach/bwv_807_1.musicxml                 ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bach/bwv_811_1.musicxml                 ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bach/bwv_816_7.musicxml                 ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_846_Fugue.musicxml             ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_848_Fugue.musicxml             ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_854_Fugue.musicxml             ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_856_Fugue.musicxml             ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_857_Fugue.musicxml             ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_858_Fugue.musicxml             ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_860_Fugue.musicxml             ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_862_Fugue.musicxml             ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_863_Fugue.musicxml             ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_864_Fugue.musicxml             ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_865_Fugue.musicxml             ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bach/bwv_866_Fugue.musicxml             ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_867_Fugue.musicxml             ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_868_Fugue.musicxml             ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_870_Fugue.musicxml             ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_873_Fugue.musicxml             ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bach/bwv_874_Fugue.musicxml             ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_875_Fugue.musicxml             ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_876_Fugue.musicxml             ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_880_Fugue.musicxml             ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_883_Fugue.musicxml             ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bach/bwv_884_Fugue.musicxml             ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_885_Fugue.musicxml             ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bach/bwv_887_Fugue.musicxml             ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_888_Fugue.musicxml             ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bach/bwv_889_Fugue.musicxml             ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_891_Fugue.musicxml             ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bach/bwv_892_Fugue.musicxml             ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bach/bwv_893_Fugue.musicxml             ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_846_Prelude.musicxml           ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bach/bwv_848_Prelude.musicxml           ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_854_Prelude.musicxml           ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bach/bwv_856_Prelude.musicxml           ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_857_Prelude.musicxml           ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bach/bwv_858_Prelude.musicxml           ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bach/bwv_860_Prelude.musicxml           ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bach/bwv_862_Prelude.musicxml           ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bach/bwv_863_Prelude.musicxml           ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_864_Prelude.musicxml           ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_865_Prelude.musicxml           ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_866_Prelude.musicxml           ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_867_Prelude.musicxml           ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bach/bwv_868_Prelude.musicxml           ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bach/bwv_870_Prelude.musicxml           ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_873_Prelude.musicxml           ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_874_Prelude.musicxml           ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bach/bwv_875_Prelude.musicxml           ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_876_Prelude.musicxml           ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_880_Prelude.musicxml           ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_883_Prelude.musicxml           ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_884_Prelude.musicxml           ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_885_Prelude.musicxml           ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_887_Prelude.musicxml           ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_888_Prelude.musicxml           ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_889_Prelude.musicxml           ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_891_Prelude.musicxml           ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_892_Prelude.musicxml           ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_893_Prelude.musicxml           ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bach/bwv_971.musicxml                   ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Balakirev/op_18.musicxml                ,9          ,            8 ,-1            ,3                  ,                    3 ,-1
+data/Bartok/sz_107_vol_1_1.musicxml          ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_2.musicxml          ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_3.musicxml          ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_4.musicxml          ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_5.musicxml          ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_6.musicxml          ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_7.musicxml          ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_8.musicxml          ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_9.musicxml          ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_10.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_11.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_12.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_13.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_14.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_15.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_16.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_17.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_18.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_19.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_20.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_21.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_22.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_23.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_24.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_25.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_26.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_27.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_28.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_29.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_30.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_31.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_32.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_33.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_34.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_35.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_1_36.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_37.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_38.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_39.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_40.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_41.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_42.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_45.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_46.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_47.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_48.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_49.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_50.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_51.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_52.musicxml         ,1          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_53.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_54.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_56.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_57.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_58.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_59.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_60.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_61.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_62.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_63.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_64.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_2_66.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_67.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_69.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_70.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_71.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_72.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_73.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_74.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_75.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_76.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_77.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_78.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_79.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_80.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_81.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_82.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_83.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_84.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_85.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_86.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_87.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_88.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_89.musicxml         ,2          ,            1 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_90.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_91.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_92.musicxml         ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_93.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_94.musicxml         ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_95.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_3_96.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_97.musicxml         ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_98.musicxml         ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_99.musicxml         ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_100.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_101.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_102.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_4_103.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_4_104.musicxml        ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_105.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_106.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_107.musicxml        ,3          ,            2 ,-1            ,1                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_108.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_4_109.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_110.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_4_111.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_112.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_113.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_114.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_115.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_116.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_117.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_4_118.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_119.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_4_120.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_4_121.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_5_122.musicxml        ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_5_123.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_5_124.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_5_125.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_5_126.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_5_128.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_5_129.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_5_130.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_5_131.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_5_132.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_5_133.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_5_134.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_5_135.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_5_136.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_5_137.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_5_138.musicxml        ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_5_139.musicxml        ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Bartok/sz_107_vol_6_140.musicxml        ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bartok/sz_107_vol_6_141.musicxml        ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bartok/sz_107_vol_6_142.musicxml        ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bartok/sz_107_vol_6_143.musicxml        ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_6_144.musicxml        ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_6_145.musicxml        ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bartok/sz_107_vol_6_146.musicxml        ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Bartok/sz_107_vol_6_147.musicxml        ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bartok/sz_107_vol_6_148.musicxml        ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_6_149.musicxml        ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Bartok/sz_107_vol_6_150.musicxml        ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bartok/sz_107_vol_6_151.musicxml        ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bartok/sz_107_vol_6_152.musicxml        ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Bartok/sz_107_vol_6_153.musicxml        ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Beethoven/op002_no1_mv1.musicxml        ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Beethoven/op002_no1_mv2.musicxml        ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Beethoven/op002_no1_mv3.musicxml        ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Beethoven/op002_no1_mv4.musicxml        ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Beethoven/op002_no2_mv1.musicxml        ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op002_no2_mv2.musicxml        ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op002_no2_mv3.musicxml        ,7          ,            5 ,4             ,3                  ,                    2 ,2
+data/Beethoven/op002_no2_mv4.musicxml        ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op002_no3_mv1.musicxml        ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op002_no3_mv2.musicxml        ,7          ,            5 ,4             ,3                  ,                    2 ,2
+data/Beethoven/op002_no3_mv3.musicxml        ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op002_no3_mv4.musicxml        ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op007_mv1.musicxml            ,8          ,            8 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op007_mv2.musicxml            ,8          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op007_mv3.musicxml            ,8          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op007_mv4.musicxml            ,8          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op010_no1_mv1.musicxml        ,7          ,            5 ,4             ,3                  ,                    2 ,2
+data/Beethoven/op010_no1_mv2.musicxml        ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op010_no1_mv3.musicxml        ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op010_no2_mv1.musicxml        ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op010_no2_mv2.musicxml        ,7          ,            5 ,4             ,3                  ,                    2 ,2
+data/Beethoven/op010_no2_mv3.musicxml        ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op010_no3_mv1.musicxml        ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op010_no3_mv2.musicxml        ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op010_no3_mv3.musicxml        ,7          ,            5 ,4             ,3                  ,                    2 ,2
+data/Beethoven/op010_no3_mv4.musicxml        ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op013_mv1.musicxml            ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op013_mv2.musicxml            ,7          ,            5 ,4             ,3                  ,                    2 ,2
+data/Beethoven/op013_mv3.musicxml            ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op014_no1_mv1.musicxml        ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Beethoven/op014_no1_mv2.musicxml        ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Beethoven/op014_no1_mv3.musicxml        ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Beethoven/op014_no2_mv1.musicxml        ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Beethoven/op014_no2_mv2.musicxml        ,6          ,            4 ,3             ,2                  ,                    2 ,1
+data/Beethoven/op014_no2_mv3.musicxml        ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Beethoven/op022_mv1.musicxml            ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op022_mv2.musicxml            ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op022_mv3.musicxml            ,7          ,            5 ,4             ,3                  ,                    2 ,2
+data/Beethoven/op022_mv4.musicxml            ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op026_mv1.musicxml            ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op026_mv2.musicxml            ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op026_mv3.musicxml            ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Beethoven/op026_mv4.musicxml            ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op027_no1_mv1.musicxml        ,8          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op027_no1_mv2.musicxml        ,8          ,            6 ,4             ,3                  ,                    2 ,2
+data/Beethoven/op027_no1_mv3.musicxml        ,8          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op027_no1_mv4.musicxml        ,8          ,            8 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op027_no2_mv1.musicxml        ,4          ,            3 ,3             ,2                  ,                    1 ,1
+data/Beethoven/op027_no2_mv2.musicxml        ,7          ,            5 ,4             ,3                  ,                    2 ,2
+data/Beethoven/op027_no2_mv3.musicxml        ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op028_mv1.musicxml            ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op028_mv2.musicxml            ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op028_mv3.musicxml            ,7          ,            5 ,4             ,3                  ,                    2 ,2
+data/Beethoven/op028_mv4.musicxml            ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op031_no1_mv1.musicxml        ,8          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op031_no1_mv2.musicxml        ,8          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op031_no1_mv3.musicxml        ,8          ,            8 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op031_no2_mv1.musicxml        ,8          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op031_no2_mv2.musicxml        ,8          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op031_no2_mv3.musicxml        ,8          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op031_no3_mv1.musicxml        ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op031_no3_mv2.musicxml        ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op031_no3_mv3.musicxml        ,7          ,            5 ,4             ,3                  ,                    2 ,2
+data/Beethoven/op031_no3_mv4.musicxml        ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op049_no1_mv1.musicxml        ,3          ,            3 ,3             ,1                  ,                    1 ,1
+data/Beethoven/op049_no1_mv2.musicxml        ,3          ,            3 ,4             ,1                  ,                    1 ,2
+data/Beethoven/op049_no2_mv1.musicxml        ,3          ,            3 ,3             ,1                  ,                    1 ,1
+data/Beethoven/op049_no2_mv2.musicxml        ,3          ,            3 ,3             ,1                  ,                    1 ,1
+data/Beethoven/op053_mv1.musicxml            ,9          ,            8 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op053_mv2.musicxml            ,9          ,            6 ,4             ,3                  ,                    2 ,2
+data/Beethoven/op053_mv3.musicxml            ,9          ,            9 ,8             ,3                  ,                    3 ,3
+data/Beethoven/op054_mv1.musicxml            ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op054_mv2.musicxml            ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op057_mv1.musicxml            ,9          ,            8 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op057_mv2.musicxml            ,9          ,            7 ,5             ,3                  ,                    3 ,2
+data/Beethoven/op057_mv3.musicxml            ,9          ,            9 ,8             ,3                  ,                    3 ,3
+data/Beethoven/op078_mv1.musicxml            ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op078_mv2.musicxml            ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op079_mv1.musicxml            ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op079_mv2.musicxml            ,7          ,            5 ,3             ,3                  ,                    2 ,1
+data/Beethoven/op079_mv3.musicxml            ,7          ,            5 ,4             ,3                  ,                    2 ,2
+data/Beethoven/op081_mv1.musicxml            ,8          ,            8 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op081_mv2.musicxml            ,8          ,            6 ,5             ,3                  ,                    2 ,2
+data/Beethoven/op081_mv3.musicxml            ,8          ,            8 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op090_mv1.musicxml            ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op090_mv2.musicxml            ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op101_mv1.musicxml            ,9          ,            8 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op101_mv2.musicxml            ,9          ,            8 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op101_mv3.musicxml            ,9          ,            7 ,5             ,3                  ,                    3 ,2
+data/Beethoven/op101_mv4.musicxml            ,9          ,            9 ,8             ,3                  ,                    3 ,3
+data/Beethoven/op106_mv1.musicxml            ,9          ,            9 ,8             ,3                  ,                    3 ,3
+data/Beethoven/op106_mv2.musicxml            ,9          ,            8 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op106_mv3.musicxml            ,9          ,            8 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op106_mv4.musicxml            ,9          ,            9 ,9             ,3                  ,                    3 ,3
+data/Beethoven/op109_mv1.musicxml            ,8          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op109_mv2.musicxml            ,8          ,            7 ,6             ,3                  ,                    3 ,2
+data/Beethoven/op109_mv3.musicxml            ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Beethoven/op110_mv1.musicxml            ,8          ,            8 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op110_mv2.musicxml            ,8          ,            8 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op110_mv3.musicxml            ,8          ,            8 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op110_mv4.musicxml            ,8          ,            8 ,7             ,3                  ,                    3 ,3
+data/Beethoven/op111_mv1.musicxml            ,9          ,            9 ,8             ,3                  ,                    3 ,3
+data/Beethoven/op111_mv2.musicxml            ,9          ,            9 ,8             ,3                  ,                    3 ,3
+data/Brahms/op_118_6.musicxml                ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Chopin/op01.musicxml                    ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Chopin/op04_mv1.musicxml                ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op04_mv2.musicxml                ,8          ,            7 ,6             ,3                  ,                    3 ,2
+data/Chopin/op04_mv3.musicxml                ,8          ,            6 ,5             ,3                  ,                    2 ,2
+data/Chopin/op04_mv4.musicxml                ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op05.musicxml                    ,8          ,            8 ,7             ,3                  ,                    3 ,3
+data/Chopin/op06_no1.musicxml                ,5          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op06_no2.musicxml                ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Chopin/op06_no3.musicxml                ,5          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op06_no4.musicxml                ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Chopin/op07_no1.musicxml                ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Chopin/op07_no2.musicxml                ,5          ,            4 ,3             ,2                  ,                    2 ,1
+data/Chopin/op07_no3.musicxml                ,5          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op07_no4.musicxml                ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Chopin/op07_no5.musicxml                ,4          ,            3 ,3             ,2                  ,                    1 ,1
+data/Chopin/op09_no1.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op09_no2.musicxml                ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Chopin/op09_no3.musicxml                ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Chopin/op10_no1.musicxml                ,9          ,            9 ,8             ,3                  ,                    3 ,3
+data/Chopin/op10_no10.musicxml               ,7          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op10_no11.musicxml               ,7          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op10_no12.musicxml               ,8          ,            8 ,7             ,3                  ,                    3 ,3
+data/Chopin/op10_no2.musicxml                ,8          ,            9 ,9             ,3                  ,                    3 ,3
+data/Chopin/op10_no3.musicxml                ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Chopin/op10_no4.musicxml                ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op10_no5.musicxml                ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Chopin/op10_no6.musicxml                ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Chopin/op10_no7.musicxml                ,7          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op10_no8.musicxml                ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op10_no9.musicxml                ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op12_intro.musicxml              ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Chopin/op12_vars.musicxml               ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Chopin/op15_no1.musicxml                ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op15_no2.musicxml                ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op15_no3.musicxml                ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Chopin/op16.musicxml                    ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op17_no1.musicxml                ,5          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op17_no2.musicxml                ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Chopin/op17_no3.musicxml                ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Chopin/op17_no4.musicxml                ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Chopin/op18.musicxml                    ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op19.musicxml                    ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Chopin/op20.musicxml                    ,8          ,            8 ,7             ,3                  ,                    3 ,3
+data/Chopin/op23.musicxml                    ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op24_no1.musicxml                ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Chopin/op24_no2.musicxml                ,4          ,            3 ,3             ,2                  ,                    1 ,1
+data/Chopin/op24_no3.musicxml                ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Chopin/op24_no4.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op25_no1.musicxml                ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op25_no10.musicxml               ,9          ,            9 ,8             ,3                  ,                    3 ,3
+data/Chopin/op25_no11.musicxml               ,9          ,            9 ,9             ,3                  ,                    3 ,3
+data/Chopin/op25_no2.musicxml                ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Chopin/op25_no3.musicxml                ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Chopin/op25_no4.musicxml                ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op25_no5.musicxml                ,8          ,            8 ,7             ,3                  ,                    3 ,3
+data/Chopin/op25_no6.musicxml                ,9          ,            9 ,9             ,3                  ,                    3 ,3
+data/Chopin/op25_no7.musicxml                ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Chopin/op25_no8.musicxml                ,8          ,            9 ,9             ,3                  ,                    3 ,3
+data/Chopin/op25_no9.musicxml                ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Chopin/op26_no1.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op26_no2.musicxml                ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op27_no1.musicxml                ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op27_no2.musicxml                ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op28_no1.musicxml                ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op28_no10.musicxml               ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Chopin/op28_no11.musicxml               ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Chopin/op28_no12.musicxml               ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op28_no13.musicxml               ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Chopin/op28_no14.musicxml               ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Chopin/op28_no15.musicxml               ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Chopin/op28_no16.musicxml               ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op28_no17.musicxml               ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Chopin/op28_no18.musicxml               ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Chopin/op28_no19.musicxml               ,7          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op28_no2.musicxml                ,5          ,            4 ,3             ,2                  ,                    2 ,1
+data/Chopin/op28_no20.musicxml               ,4          ,            3 ,3             ,2                  ,                    1 ,1
+data/Chopin/op28_no21.musicxml               ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op28_no22.musicxml               ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Chopin/op28_no23.musicxml               ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op28_no24.musicxml               ,9          ,            9 ,8             ,3                  ,                    3 ,3
+data/Chopin/op28_no3.musicxml                ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Chopin/op28_no4.musicxml                ,4          ,            3 ,2             ,2                  ,                    1 ,1
+data/Chopin/op28_no5.musicxml                ,7          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op28_no6.musicxml                ,4          ,            3 ,3             ,2                  ,                    1 ,1
+data/Chopin/op28_no7.musicxml                ,4          ,            3 ,2             ,2                  ,                    1 ,1
+data/Chopin/op28_no8.musicxml                ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op28_no9.musicxml                ,5          ,            4 ,3             ,2                  ,                    2 ,1
+data/Chopin/op29.musicxml                    ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Chopin/op30_no1.musicxml                ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Chopin/op30_no2.musicxml                ,5          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op30_no3.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op30_no4.musicxml                ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op32_no1.musicxml                ,5          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op32_no2.musicxml                ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op33_no1.musicxml                ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Chopin/op33_no2.musicxml                ,5          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op33_no3.musicxml                ,4          ,            3 ,3             ,2                  ,                    1 ,1
+data/Chopin/op33_no4.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op34_no1.musicxml                ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op34_no2.musicxml                ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Chopin/op34_no3.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op35_mv1.musicxml                ,9          ,            9 ,8             ,3                  ,                    3 ,3
+data/Chopin/op35_mv2.musicxml                ,9          ,            9 ,8             ,3                  ,                    3 ,3
+data/Chopin/op35_mv3.musicxml                ,4          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op35_mv4.musicxml                ,9          ,            9 ,8             ,3                  ,                    3 ,3
+data/Chopin/op36.musicxml                    ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Chopin/op37_no1.musicxml                ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Chopin/op37_no2.musicxml                ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op38.musicxml                    ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op39.musicxml                    ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op40_no1.musicxml                ,5          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op40_no2.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op41_no1.musicxml                ,5          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op41_no2.musicxml                ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Chopin/op41_no3.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op41_no4.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op42.musicxml                    ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Chopin/op43.musicxml                    ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Chopin/op44.musicxml                    ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Chopin/op45.musicxml                    ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op46.musicxml                    ,8          ,            9 ,9             ,3                  ,                    3 ,3
+data/Chopin/op47.musicxml                    ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op48_no1.musicxml                ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Chopin/op48_no2.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op49.musicxml                    ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op50_no1.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op50_no2.musicxml                ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Chopin/op50_no3.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op51.musicxml                    ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Chopin/op52.musicxml                    ,9          ,            9 ,9             ,3                  ,                    3 ,3
+data/Chopin/op53.musicxml                    ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op54.musicxml                    ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op55_no1.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op55_no2.musicxml                ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op56_no1.musicxml                ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Chopin/op56_no2.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op56_no3.musicxml                ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op57.musicxml                    ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Chopin/op58_mv1.musicxml                ,9          ,            9 ,8             ,3                  ,                    3 ,3
+data/Chopin/op58_mv2.musicxml                ,9          ,            8 ,7             ,3                  ,                    3 ,3
+data/Chopin/op58_mv3.musicxml                ,9          ,            7 ,5             ,3                  ,                    3 ,2
+data/Chopin/op58_mv4.musicxml                ,9          ,            9 ,8             ,3                  ,                    3 ,3
+data/Chopin/op59_no1.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op59_no2.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op59_no3.musicxml                ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Chopin/op60.musicxml                    ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op61.musicxml                    ,8          ,            8 ,8             ,3                  ,                    3 ,3
+data/Chopin/op62_no1.musicxml                ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op62_no2.musicxml                ,6          ,            6 ,6             ,2                  ,                    2 ,2
+data/Chopin/op63_no1.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op63_no2.musicxml                ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Chopin/op63_no3.musicxml                ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Chopin/op64_no1.musicxml                ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Chopin/op64_no2.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op64_no3.musicxml                ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Chopin/op69_no1_Fontana.musicxml        ,-1         ,            5 ,4             ,-1                 ,                    2 ,2
+data/Chopin/op72_no1.musicxml                ,-1         ,            5 ,4             ,-1                 ,                    2 ,2
+data/Debussy/L_75_2.musicxml                 ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Debussy/L_75_3.musicxml                 ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Debussy/L_75_4.musicxml                 ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Debussy/L_100_1.musicxml                ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Debussy/L_100_2.musicxml                ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Debussy/L_100_3.musicxml                ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Debussy/L_106.musicxml                  ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Debussy/L_110_1.musicxml                ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Debussy/L_110_2.musicxml                ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Debussy/L_110_3.musicxml                ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Debussy/L_117_2.musicxml                ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Debussy/L_117_3.musicxml                ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Debussy/L_117_5.musicxml                ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Debussy/L_123_3.musicxml                ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Debussy/L_123_4.musicxml                ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Debussy/L_123_5.musicxml                ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Debussy/L_123_6.musicxml                ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Debussy/L_123_10.musicxml               ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Debussy/L_123_12.musicxml               ,9          ,            8 ,-1            ,3                  ,                    3 ,-1
+data/Debussy/L_136_1.musicxml                ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Debussy/L_136_2.musicxml                ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Debussy/L_136_3.musicxml                ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Debussy/L_136_4.musicxml                ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Glinka/no_10.musicxml                   ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Haydn/hob_xvi_6_mv1.musicxml            ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Haydn/hob_xvi_31_mv1.musicxml           ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Haydn/hob_xvi_32_mv1.musicxml           ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Haydn/hob_xvi_39_mv1.musicxml           ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Haydn/hob_xvi_39_mv2.musicxml           ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Haydn/hob_xvi_39_mv3.musicxml           ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Haydn/hob_xvi_46_mv1.musicxml           ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Haydn/hob_xvi_48_mv1.musicxml           ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Haydn/hob_xvi_48_mv2.musicxml           ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Haydn/hob_xvi_49_mv1.musicxml           ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Haydn/hob_xvi_50_mv1_no_repeat.musicxml ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Liszt/S_139_1.musicxml                  ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Liszt/S_139_2.musicxml                  ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Liszt/S_139_3.musicxml                  ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Liszt/S_139_4.musicxml                  ,9          ,            8 ,-1            ,3                  ,                    3 ,-1
+data/Liszt/S_139_5.musicxml                  ,9          ,            8 ,-1            ,3                  ,                    3 ,-1
+data/Liszt/S_139_7.musicxml                  ,9          ,            8 ,-1            ,3                  ,                    3 ,-1
+data/Liszt/S_139_9.musicxml                  ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Liszt/S_139_10.musicxml                 ,9          ,            8 ,-1            ,3                  ,                    3 ,-1
+data/Liszt/S_139_11.musicxml                 ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Liszt/S_144_2.musicxml                  ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Liszt/S_145_1.musicxml                  ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Liszt/S_145_2.musicxml                  ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Liszt/S_162_1.musicxml                  ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Liszt/S_162_3.musicxml                  ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Liszt/S_171.musicxml                    ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Liszt/S_173_7.musicxml                  ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Liszt/S_178.musicxml                    ,9          ,            8 ,-1            ,3                  ,                    3 ,-1
+data/Liszt/S_244_6.musicxml                  ,9          ,            8 ,-1            ,3                  ,                    3 ,-1
+data/Liszt/S_514.musicxml                    ,9          ,            8 ,-1            ,3                  ,                    3 ,-1
+data/Mozart/K279_1.musicxml                  ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K279_2.musicxml                  ,6          ,            4 ,3             ,2                  ,                    2 ,1
+data/Mozart/K279_3.musicxml                  ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Mozart/K280_1.musicxml                  ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Mozart/K280_2.musicxml                  ,5          ,            4 ,3             ,2                  ,                    2 ,1
+data/Mozart/K280_3.musicxml                  ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Mozart/K281_1.musicxml                  ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K281_2.musicxml                  ,6          ,            4 ,3             ,2                  ,                    2 ,1
+data/Mozart/K281_3.musicxml                  ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K282_1.musicxml                  ,4          ,            3 ,3             ,2                  ,                    1 ,1
+data/Mozart/K282_2.musicxml                  ,5          ,            4 ,3             ,2                  ,                    2 ,1
+data/Mozart/K282_3.musicxml                  ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Mozart/K283_1.musicxml                  ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Mozart/K283_2.musicxml                  ,5          ,            4 ,3             ,2                  ,                    2 ,1
+data/Mozart/K283_3.musicxml                  ,5          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K284_1.musicxml                  ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K284_2.musicxml                  ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Mozart/K284_3.musicxml                  ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K309_1.musicxml                  ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Mozart/K309_2.musicxml                  ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Mozart/K309_3.musicxml                  ,5          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K310_1.musicxml                  ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Mozart/K310_2.musicxml                  ,7          ,            6 ,5             ,3                  ,                    2 ,2
+data/Mozart/K310_3.musicxml                  ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Mozart/K311_1.musicxml                  ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K311_2.musicxml                  ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Mozart/K311_3.musicxml                  ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K330_1.musicxml                  ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K330_2.musicxml                  ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Mozart/K330_3.musicxml                  ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K331_1.musicxml                  ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K331_2.musicxml                  ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Mozart/K331_3.musicxml                  ,6          ,            4 ,3             ,2                  ,                    2 ,1
+data/Mozart/K332_1.musicxml                  ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K332_2.musicxml                  ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Mozart/K332_3.musicxml                  ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K333_1.musicxml                  ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K333_2.musicxml                  ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Mozart/K333_3.musicxml                  ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Mozart/K457_1.musicxml                  ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K457_2.musicxml                  ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K457_3.musicxml                  ,6          ,            5 ,5             ,2                  ,                    2 ,2
+data/Mozart/K475.musicxml                    ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Mozart/K511.musicxml                    ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Mozart/K533_1.musicxml                  ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Mozart/K533_2.musicxml                  ,7          ,            5 ,4             ,3                  ,                    2 ,2
+data/Mozart/K533_3.musicxml                  ,7          ,            5 ,4             ,3                  ,                    2 ,2
+data/Mozart/K545_1.musicxml                  ,4          ,            3 ,3             ,2                  ,                    1 ,1
+data/Mozart/K545_2.musicxml                  ,5          ,            3 ,2             ,2                  ,                    1 ,1
+data/Mozart/K545_3.musicxml                  ,4          ,            3 ,3             ,2                  ,                    1 ,1
+data/Mozart/K570_1.musicxml                  ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Mozart/K570_2.musicxml                  ,6          ,            5 ,4             ,2                  ,                    2 ,2
+data/Mozart/K570_3.musicxml                  ,5          ,            4 ,4             ,2                  ,                    2 ,2
+data/Mozart/K576_1.musicxml                  ,7          ,            7 ,6             ,3                  ,                    3 ,2
+data/Mozart/K576_2.musicxml                  ,7          ,            5 ,4             ,3                  ,                    2 ,2
+data/Mozart/K576_3.musicxml                  ,7          ,            7 ,7             ,3                  ,                    3 ,3
+data/Rachmaninoff/op_3_1.musicxml            ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Rachmaninoff/op_16_1.musicxml           ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Rachmaninoff/op_16_2.musicxml           ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Rachmaninoff/op_16_3.musicxml           ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Rachmaninoff/op_16_4.musicxml           ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Rachmaninoff/op_16_5.musicxml           ,4          ,            3 ,-1            ,2                  ,                    1 ,-1
+data/Rachmaninoff/op_16_6.musicxml           ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Rachmaninoff/op_23_2.musicxml           ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Rachmaninoff/op_23_4.musicxml           ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Rachmaninoff/op_23_6.musicxml           ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Rachmaninoff/op_32_5.musicxml           ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Rachmaninoff/op_32_10.musicxml          ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Rachmaninoff/op_32_12.musicxml          ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Rachmaninoff/op_39_5.musicxml           ,9          ,            8 ,-1            ,3                  ,                    3 ,-1
+data/Rachmaninoff/op_39_6.musicxml           ,9          ,            8 ,-1            ,3                  ,                    3 ,-1
+data/Ravel/M_19.musicxml                     ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Ravel/M_30.musicxml                     ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Ravel/M_43_3.musicxml                   ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Ravel/M_43_4.musicxml                   ,9          ,            8 ,-1            ,3                  ,                    3 ,-1
+data/Ravel/M_55_2.musicxml                   ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Ravel/M_55_3.musicxml                   ,9          ,            8 ,-1            ,3                  ,                    3 ,-1
+data/Ravel/M_68_6.musicxml                   ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Ravel/M_72.musicxml                     ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Schubert/D_664_1.musicxml               ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Schubert/D_664_2.musicxml               ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Schubert/D_664_3.musicxml               ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Schubert/D_760.musicxml                 ,9          ,            8 ,-1            ,3                  ,                    3 ,-1
+data/Schubert/D_780_1.musicxml               ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Schubert/D_780_3.musicxml               ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Schubert/D_840_1.musicxml               ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Schubert/D_850_1.musicxml               ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Schubert/D_850_3.musicxml               ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Schubert/D_894_1.musicxml               ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Schubert/D_894_2.musicxml               ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Schubert/D_894_3.musicxml               ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Schubert/D_894_4.musicxml               ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Schubert/D_899_1.musicxml               ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Schubert/D_899_2.musicxml               ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Schubert/D_899_3.musicxml               ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Schubert/D_899_4_no_repeat.musicxml     ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Schubert/D_935_1.musicxml               ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Schubert/D_935_3.musicxml               ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Schubert/D_935_4.musicxml               ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Schubert/D_959_2.musicxml               ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Schubert/D_959_3.musicxml               ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Schumann/op_1.musicxml                  ,7          ,            6 ,-1            ,3                  ,                    2 ,-1
+data/Schumann/op_7.musicxml                  ,9          ,            8 ,-1            ,3                  ,                    3 ,-1
+data/Schumann/op_16_1.musicxml               ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Schumann/op_16_2.musicxml               ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Schumann/op_16_4.musicxml               ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Schumann/op_16_5.musicxml               ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Schumann/op_16_6.musicxml               ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Schumann/op_16_7.musicxml               ,8          ,            7 ,-1            ,3                  ,                    3 ,-1
+data/Schumann/op_18.musicxml                 ,6          ,            5 ,-1            ,2                  ,                    2 ,-1
+data/Scarlatti/K_27.musicxml                 ,5          ,            4 ,-1            ,2                  ,                    2 ,-1
+data/Scriabin/op_8_11.musicxml               ,6          ,            5 ,-1            ,2                  ,                    2 ,-1

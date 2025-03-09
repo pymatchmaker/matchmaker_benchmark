@@ -55,8 +55,6 @@ class MatchmakerEvalConfig(BaseSettings):
     # attributes for experiment (for logging purpose)
     attr_exp: list[str] = [
         "sample_rate",
-        "hop_length",
-        "n_fft",
         "frame_rate",
         "window_size",
         "feature_type",

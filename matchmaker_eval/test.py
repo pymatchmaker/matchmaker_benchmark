@@ -27,7 +27,7 @@ DATASET_DIR = {
     "vienna": Path("/Users/jiyun/workspace/vienna4x22"),
 }
 METADATA_PATH = {
-    "asap": WORKING_DIR / "data/metadata-asap-test.csv",
+    "asap": WORKING_DIR / "data/metadata-asap.csv",
     "batik": WORKING_DIR / "data/metadata-batik.csv",
     "vienna": WORKING_DIR / "data/metadata-vienna.csv",
 }
@@ -84,6 +84,7 @@ def run_tests_and_eval_by_dataset(
             continue
 
         # add metadata to results
+        results["Index"].append(i)
         results["Piece"].append(row.title)
         results["Name"].append(perf_audio.stem)
         results["Difficulty"].append(row.difficulty)
@@ -134,7 +135,7 @@ def main(args):
         config.method = method
         print(f"Config: {config.model_dump(include=config.attr_exp)}")
 
-        run_dir = save_dir / f"{i}"
+        run_dir = save_dir / f"{i}" if not dry_run else None
         results = run_tests_and_eval_by_dataset(
             config.dataset, config, run_dir, dry_run
         )
@@ -153,7 +154,7 @@ def main(args):
             }
             averaged_result["piece_count"] = len(results["Piece"])
             averaged_result["count"] = sum([c for c in results["count"]])
-            results_file = run_dir / "results.json"
+            results_file = run_dir / "summary_results.json"
             with open(results_file, "w") as f:
                 json.dump(averaged_result, f, indent=4)
             print(f"Results saved to: {results_file}")
