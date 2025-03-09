@@ -14,7 +14,7 @@ from matchmaker import Matchmaker
 from numpy.typing import NDArray
 from utils import MatchmakerEvalConfig
 
-TOLERANCES = [30, 50, 100, 300, 500, 1000, 2000]
+TOLERANCES = [10, 30, 50, 100, 300, 500, 1000, 2000]
 METRICS = ["mean", "median", "std", "skewness", "kurtosis"] + [
     f"{t}ms" for t in TOLERANCES
 ]
@@ -203,6 +203,6 @@ def run_score_following(
         traceback.print_exc()
         mm._has_run = True
 
-    results = mm.run_evaluation(perf_beat_ann)
+    results = mm.run_evaluation(perf_beat_ann, tolerances=TOLERANCES)
     print(f"RESULTS: {json.dumps(results, indent=4)}")
     return results, mm

@@ -22,7 +22,7 @@ import wandb
 
 WORKING_DIR = Path(__file__).parent.parent
 DATASET_DIR = {
-    "asap": Path("/Users/jiyun/workspace/asap-dataset"),
+    "asap": Path("/Users/jiyun/workspace/asap-dataset-matchmaker"),
     "batik": Path("/Users/jiyun/dataset/Batik_Audio"),
     "vienna": Path("/Users/jiyun/workspace/vienna4x22"),
 }
