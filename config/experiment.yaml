@@ -1,9 +1,8 @@
+dataset_exp: ["asap", "vienna", "batik"]  # asap, vienna, batik
+method_exp: ["arzt", "dixon"]
 sample_rate_exp: [44100]
 frame_rate_exp: [30]
 window_size_exp: [5]
-feature_type_exp:
-  - "chroma"
-dataset_exp: ["batik"]  # asap, vienna, batik
 distance_func_exp: 
   # - "euclidean"
   # - "cosine"
@@ -17,7 +16,9 @@ distance_func_exp:
   # - "minkowski"
   # - "sqeuclidean"
   - "Euclidean"
-  # - "Cosine"
+  - "Cosine"
   # - "L1"
   # - "Linf"
   # - "Manhattan"
+feature_type_exp:
+  - "chroma"

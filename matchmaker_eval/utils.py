@@ -108,20 +108,21 @@ def get_list_of_exp_config():
         config[key] = experiment_config[key]
 
     configs = []
-    for dataset in config["dataset_exp"]:
-        for sample_rate in config["sample_rate_exp"]:
-            for frame_rate in config["frame_rate_exp"]:
-                for window_size in config["window_size_exp"]:
-                    for distance_func in config["distance_func_exp"]:
-                        for feature_type in config["feature_type_exp"]:
-                            exp_config = initialize_config(
-                                method=config["method"],
-                                sample_rate=sample_rate,
-                                frame_rate=frame_rate,
-                                window_size=window_size,
-                                feature_type=feature_type,
-                                dataset=dataset,
-                                distance_func=distance_func,
+    for dataset in config["dataset_exp"]:   
+        for method in config["method_exp"]:
+            for sample_rate in config["sample_rate_exp"]:
+                for frame_rate in config["frame_rate_exp"]:
+                    for window_size in config["window_size_exp"]:
+                        for distance_func in config["distance_func_exp"]:
+                            for feature_type in config["feature_type_exp"]:
+                                exp_config = initialize_config(
+                                    method=method,
+                                    sample_rate=sample_rate,
+                                    frame_rate=frame_rate,
+                                    window_size=window_size,
+                                    feature_type=feature_type,
+                                    dataset=dataset,
+                                    distance_func=distance_func,
                             )
                         configs.append(exp_config)
     return configs

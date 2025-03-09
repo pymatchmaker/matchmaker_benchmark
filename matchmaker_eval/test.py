@@ -22,9 +22,9 @@ import wandb
 
 WORKING_DIR = Path(__file__).parent.parent
 DATASET_DIR = {
-    "asap": Path("/Users/jiyun/workspace/asap-dataset-matchmaker"),
-    "batik": Path("/Users/jiyun/dataset/Batik_Audio"),
-    "vienna": Path("/Users/jiyun/workspace/vienna4x22"),
+    "asap": Path("/home/jiyun/data/asap-dataset-matchmaker"),
+    "batik": Path("/home/jiyun/data/Batik_Audio"),
+    "vienna": Path("/home/jiyun/data/vienna4x22"),
 }
 METADATA_PATH = {
     "asap": WORKING_DIR / "data/metadata-asap.csv",
@@ -131,8 +131,10 @@ def main(args):
     configs = get_list_of_exp_config()
     run_dir = None
     for i, config in enumerate(tqdm(configs), 1):
-        config.dataset = dataset_type
-        config.method = method
+        if dataset_type:
+            config.dataset = dataset_type
+        if method:
+            config.method = method
         print(f"Config: {config.model_dump(include=config.attr_exp)}")
 
         run_dir = save_dir / f"{i}" if not dry_run else None
