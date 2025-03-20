@@ -108,7 +108,7 @@ def get_list_of_exp_config():
         config[key] = experiment_config[key]
 
     configs = []
-    for dataset in config["dataset_exp"]:   
+    for dataset in config["dataset_exp"]:
         for method in config["method_exp"]:
             for sample_rate in config["sample_rate_exp"]:
                 for frame_rate in config["frame_rate_exp"]:
@@ -123,7 +123,7 @@ def get_list_of_exp_config():
                                     feature_type=feature_type,
                                     dataset=dataset,
                                     distance_func=distance_func,
-                            )
+                                )
                         configs.append(exp_config)
     return configs
 
@@ -200,7 +200,7 @@ def save_score_following_result(
     ref_paths, target_paths = model.warping_path[0], model.warping_path[1]
     for n in range(len(ref_paths)):
         plt.plot(
-            target_paths[n], ref_paths[n], ".", color="purple", alpha=0.5, markersize=3
+            target_paths[n], ref_paths[n], ".", color="lime", alpha=0.5, markersize=3
         )
 
     # plot ground-truth labels
@@ -208,8 +208,6 @@ def save_score_following_result(
         filepath_or_buffer=perf_ann_path, delimiter="\t", header=None
     )[0]
     for i, (ref, target) in enumerate(zip(score_annots, perf_annots)):
-        # if i % 5 != 0:
-        #     continue
         plt.plot(
             target * frame_rate, ref * frame_rate, "x", color="r", alpha=1, markersize=3
         )

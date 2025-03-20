@@ -14,7 +14,7 @@ from matchmaker import Matchmaker
 from numpy.typing import NDArray
 from utils import MatchmakerEvalConfig
 
-TOLERANCES = [10, 30, 50, 100, 300, 500, 1000, 2000]
+TOLERANCES = [50, 100, 300, 500, 1000, 2000]
 METRICS = ["mean", "median", "std", "skewness", "kurtosis"] + [
     f"{t}ms" for t in TOLERANCES
 ]
@@ -85,54 +85,58 @@ METRICS = ["mean", "median", "std", "skewness", "kurtosis"] + [
 #     return wp
 
 
-def transfer_positions(wp, ref_anns):
-    """
-    Transfer the positions of the reference annotations to the target annotations using the warping path.
+# def transfer_positions(wp, ref_anns):
+#     """
+#     Transfer the positions of the reference annotations to the target annotations using the warping path.
 
-    Parameters
-    ----------
-    wp : np.array with shape (2, T)
-        array of warping path.
-    ref_ann : List[float]
-        reference annotations.
-    """
-    x, y = wp[0], wp[1]
-    predicted_targets = np.array([y[np.where(x >= r)[0][0]] for r in ref_anns])
-    return predicted_targets
+#     Parameters
+#     ----------
+#     wp : np.array with shape (2, T)
+#         array of warping path.
+#     ref_ann : List[float]
+#         reference annotations.
+#     """
+#     # positions_1_transferred_to_2 = scipy.interpolate.interp1d(
+#     #     wp[0], wp[1], kind="linear"
+#     # )(ref_anns)
+#     # return positions_1_transferred_to_2
+#     x, y = wp[0], wp[1]
+#     predicted_targets = np.array([y[np.where(x >= r)[0][0]] for r in ref_anns])
+#     return predicted_targets
 
 
-def run_evaluation(wp, ref_ann, target_ann, frame_rate):
-    ref_annots = np.rint(
-        pd.read_csv(filepath_or_buffer=ref_ann, delimiter="\t", header=None)[0]
-        * frame_rate
-    )
-    target_annots = np.rint(
-        pd.read_csv(filepath_or_buffer=target_ann, delimiter="\t", header=None)[0]
-        * frame_rate
-    )
+# def run_evaluation(wp, ref_ann, target_ann, frame_rate):
+#     ref_annots = np.rint(
+#         pd.read_csv(filepath_or_buffer=ref_ann, delimiter="\t", header=None)[0]
+#         * frame_rate
+#     )
+#     target_annots = np.rint(
+#         pd.read_csv(filepath_or_buffer=target_ann, delimiter="\t", header=None)[0]
+#         * frame_rate
+#     )
 
-    target_annots_predicted = transfer_positions(wp, ref_annots)
-    errors_in_delay = (
-        (target_annots - target_annots_predicted) / frame_rate * 1000
-    )  # in milliseconds
+#     target_annots_predicted = transfer_positions(wp, ref_annots)
+#     errors_in_delay = (
+#         (target_annots - target_annots_predicted) / frame_rate * 1000
+#     )  # in milliseconds
 
-    absolute_errors_in_delay = np.abs(errors_in_delay)
-    filtered_abs_errors_in_delay = absolute_errors_in_delay[
-        absolute_errors_in_delay <= TOLERANCES[-1]
-    ]
+#     absolute_errors_in_delay = np.abs(errors_in_delay)
+#     filtered_abs_errors_in_delay = absolute_errors_in_delay[
+#         absolute_errors_in_delay <= TOLERANCES[-1]
+#     ]
 
-    results = {
-        "mean": float(f"{np.mean(filtered_abs_errors_in_delay):.4f}"),
-        "median": float(f"{np.median(filtered_abs_errors_in_delay):.4f}"),
-        "std": float(f"{np.std(filtered_abs_errors_in_delay):.4f}"),
-        "skewness": float(f"{scipy.stats.skew(filtered_abs_errors_in_delay):.4f}"),
-        "kurtosis": float(f"{scipy.stats.kurtosis(filtered_abs_errors_in_delay):.4f}"),
-    }
-    for tau in TOLERANCES:
-        results[f"{tau}ms"] = float(f"{np.mean(absolute_errors_in_delay <= tau):.4f}")
+#     results = {
+#         "mean": float(f"{np.mean(filtered_abs_errors_in_delay):.4f}"),
+#         "median": float(f"{np.median(filtered_abs_errors_in_delay):.4f}"),
+#         "std": float(f"{np.std(filtered_abs_errors_in_delay):.4f}"),
+#         "skewness": float(f"{scipy.stats.skew(filtered_abs_errors_in_delay):.4f}"),
+#         "kurtosis": float(f"{scipy.stats.kurtosis(filtered_abs_errors_in_delay):.4f}"),
+#     }
+#     for tau in TOLERANCES:
+#         results[f"{tau}ms"] = float(f"{np.mean(absolute_errors_in_delay <= tau):.4f}")
 
-    results["count"] = len(filtered_abs_errors_in_delay)
-    return results
+#     results["count"] = len(filtered_abs_errors_in_delay)
+#     return results
 
 
 def regenerate_tempo_adjusted_midi(midi_path: Path, target_duration: float) -> Path:
@@ -203,6 +207,6 @@ def run_score_following(
         traceback.print_exc()
         mm._has_run = True
 
-    results = mm.run_evaluation(perf_beat_ann, tolerances=TOLERANCES)
+    results = mm.run_evaluation(perf_beat_ann, tolerances=TOLERANCES, debug=True)
     print(f"RESULTS: {json.dumps(results, indent=4)}")
     return results, mm
