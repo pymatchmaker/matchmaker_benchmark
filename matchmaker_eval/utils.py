@@ -214,53 +214,51 @@ def save_score_following_result(
     plt.savefig(save_dir / f"{run_name}.png")
 
 
-def plot_and_save_score_following_result(
-    wp,
-    ref_features,
-    input_features,
-    distance_func,
-    save_dir,
-    score_annots,
-    perf_ann_path: Path,
-    frame_rate,
-    name=None,
-):
-    run_name = name or "results"
-    save_path = save_dir / f"wp_{run_name}.tsv"
-    save_nparray_to_csv(wp.T, save_path.as_posix())
+# def plot_and_save_score_following_result(
+#     wp,
+#     ref_features,
+#     input_features,
+#     distance_func,
+#     save_dir,
+#     score_annots,
+#     perf_ann_path: Path,
+#     frame_rate,
+#     name=None,
+# ):
+#     run_name = name or "results"
+#     save_path = save_dir / f"wp_{run_name}.tsv"
+#     save_nparray_to_csv(wp.T, save_path.as_posix())
 
-    dist = scipy.spatial.distance.cdist(
-        ref_features,
-        input_features[: wp[1][-1]],
-        metric=distance_func,
-    )  # [d, wy]
-    plt.figure(figsize=(15, 15))
-    plt.imshow(dist, aspect="auto", origin="lower", interpolation="nearest")
-    plt.title(
-        f"[{save_dir.name}] \n Matchmaker alignment path with ground-truth labels",
-        fontsize=25,
-    )
-    plt.xlabel("Performance Audio frame", fontsize=15)
-    plt.ylabel("Score Audio frame", fontsize=15)
+#     dist = scipy.spatial.distance.cdist(
+#         ref_features,
+#         input_features[: wp[1][-1]],
+#         metric=distance_func,
+#     )  # [d, wy]
+#     plt.figure(figsize=(15, 15))
+#     plt.imshow(dist, aspect="auto", origin="lower", interpolation="nearest")
+#     plt.title(
+#         f"[{save_dir.name}] \n Matchmaker alignment path with ground-truth labels",
+#         fontsize=25,
+#     )
+#     plt.xlabel("Performance Audio frame", fontsize=15)
+#     plt.ylabel("Score Audio frame", fontsize=15)
 
-    # plot online DTW path
-    ref_paths, target_paths = wp[0], wp[1]
-    for n in range(len(ref_paths)):
-        plt.plot(
-            target_paths[n], ref_paths[n], ".", color="purple", alpha=0.5, markersize=3
-        )
+#     # plot online DTW path
+#     ref_paths, target_paths = wp[0], wp[1]
+#     for n in range(len(ref_paths)):
+#         plt.plot(
+#             target_paths[n], ref_paths[n], ".", color="purple", alpha=0.5, markersize=3
+#         )
 
-    # plot ground-truth labels
-    perf_annots = pd.read_csv(
-        filepath_or_buffer=perf_ann_path, delimiter="\t", header=None
-    )[0]
-    for i, (ref, target) in enumerate(zip(score_annots, perf_annots)):
-        # if i % 5 != 0:
-        #     continue
-        plt.plot(
-            target * frame_rate, ref * frame_rate, "x", color="r", alpha=1, markersize=3
-        )
-    plt.savefig(save_dir / f"{run_name}.png")
+#     # plot ground-truth labels
+#     perf_annots = pd.read_csv(
+#         filepath_or_buffer=perf_ann_path, delimiter="\t", header=None
+#     )[0]
+#     for i, (ref, target) in enumerate(zip(score_annots, perf_annots)):
+#         plt.plot(
+#             target * frame_rate, ref * frame_rate, "x", color="r", alpha=1, markersize=3
+#         )
+#     plt.savefig(save_dir / f"{run_name}.png")
 
 
 def build_matchmaker_hmm(score_path):

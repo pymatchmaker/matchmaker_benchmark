@@ -61,6 +61,7 @@ def run_tests_and_eval_by_dataset(
     dataset_dir = DATASET_DIR[dataset_type]
     metadata = pd.read_csv(METADATA_PATH[dataset_type])
     results = defaultdict(list)
+    use_musical_beat = dataset_type == "asap"
     for i, row in enumerate(metadata.itertuples(), 1):
         print(row)
         score_xml = dataset_dir / row.xml_score
@@ -69,18 +70,18 @@ def run_tests_and_eval_by_dataset(
         perf_beat_ann = dataset_dir / row.performance_annotations
 
         try:
-            result, mm = run_score_following(
+            result = run_score_following(
                 score_xml,
                 perf_audio,
                 perf_beat_ann,
                 config,
+                use_musical_beat,
+                dry_run=dry_run,
+                save_dir=run_dir,
+                run_name=f"{i}",
             )
         except Exception as e:
             print(f"Error: {e}")
-            continue
-
-        if result["count"] < 10:  # remove outliers
-            print(f"Outlier: result({result})")
             continue
 
         # add metadata to results
@@ -100,17 +101,6 @@ def run_tests_and_eval_by_dataset(
         print("Results")
         print(tabulate(results, headers="keys", tablefmt="fancy_grid", showindex=True))
 
-        # save plot results
-        score_annots = mm.build_score_annotations()
-        if not dry_run:
-            save_score_following_result(
-                mm.score_follower,
-                run_dir,
-                score_annots,
-                perf_beat_ann,
-                config.frame_rate,
-                name=i,
-            )
     print(tabulate(results, headers="keys", tablefmt="fancy_grid", showindex=True))
     return results
 
@@ -180,9 +170,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--method",
         type=str,
-        choices=["hmm", "dixon", "arzt"],
+        choices=["hmm", "dixon", "arzt", "offline"],
         default="arzt",
-        help="Method to use (hmm, dixon, or arzt)",
+        help="Method to use (hmm, dixon, arzt, or offline)",
     )
     parser.add_argument(
         "--dry-run",

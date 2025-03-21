@@ -2,7 +2,7 @@ import json
 import time
 import traceback
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import librosa
 import mido
@@ -172,6 +172,10 @@ def run_score_following(
     perf_path: Union[Path, str],
     perf_beat_ann: Path,
     config: MatchmakerEvalConfig,
+    use_musical_beat: bool = False,
+    dry_run: bool = False,
+    save_dir: Optional[Path] = None,
+    run_name: str = "",
 ) -> NDArray[np.float32]:
     """
     Run score following on the score audio and the performance file.
@@ -203,10 +207,17 @@ def run_score_following(
     try:
         alignment_positions = list(mm.run())
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error: {type(e)}, {e}")
         traceback.print_exc()
         mm._has_run = True
 
-    results = mm.run_evaluation(perf_beat_ann, tolerances=TOLERANCES, debug=True)
+    results = mm.run_evaluation(
+        perf_beat_ann,
+        tolerances=TOLERANCES,
+        musical_beat=use_musical_beat,
+        debug=not dry_run,
+        save_dir=save_dir,
+        run_name=run_name,
+    )
     print(f"RESULTS: {json.dumps(results, indent=4)}")
-    return results, mm
+    return results
