@@ -11,7 +11,11 @@ import pandas as pd
 import partitura as pt
 import scipy
 from matchmaker import Matchmaker
+from matchmaker.utils.eval import get_evaluation_results
 from numpy.typing import NDArray
+from synctoolbox.dtw.mrmsdtw import sync_via_mrmsdtw
+from synctoolbox.feature.dlnco import pitch_onset_features_to_DLNCO
+from synctoolbox.feature.pitch_onset import audio_to_pitch_onset_features
 from utils import MatchmakerEvalConfig
 
 TOLERANCES = [50, 100, 300, 500, 1000, 2000]
@@ -20,123 +24,89 @@ METRICS = ["mean", "median", "std", "skewness", "kurtosis"] + [
 ]
 
 
-# def _get_DLNCO_features_from_audio(audio, feature_sequence_length, Fs, feature_rate):
-#     f_pitch_onset = audio_to_pitch_onset_features(f_audio=audio, Fs=Fs)
-#     f_DLNCO = pitch_onset_features_to_DLNCO(
-#         f_peaks=f_pitch_onset,
-#         feature_rate=feature_rate,
-#         feature_sequence_length=feature_sequence_length,
-#         visualize=False,
-#     )
-
-#     return f_DLNCO
+def transfer_positions(wp, perf_annots, frame_rate):
+    perf_annots_frame = np.round(perf_annots * frame_rate)
+    x, y = wp[0], wp[1]
+    return (
+        scipy.interpolate.interp1d(y, x, kind="linear")(perf_annots_frame) / frame_rate
+    )
 
 
-# def run_offline_alignment(
-#     score_audio_path: Path, ref_audio_path: Path, config, same_feature=False
-# ):
-#     # read audio
-#     audio_1, _ = librosa.load(score_audio_path.as_posix(), sr=config.sample_rate)
-#     audio_2, _ = librosa.load(ref_audio_path.as_posix(), sr=config.sample_rate)
+def _get_DLNCO_features_from_audio(audio, feature_sequence_length, Fs, feature_rate):
+    f_pitch_onset = audio_to_pitch_onset_features(f_audio=audio, Fs=Fs)
+    f_DLNCO = pitch_onset_features_to_DLNCO(
+        f_peaks=f_pitch_onset,
+        feature_rate=feature_rate,
+        feature_sequence_length=feature_sequence_length,
+        visualize=False,
+    )
 
-#     if same_feature:
-#         # extract chroma stft features
-#         f_chroma_librosa_1 = librosa.feature.chroma_stft(
-#             y=audio_1,
-#             sr=config.sample_rate,
-#             hop_length=config.hop_length,
-#         )
-#         f_chroma_librosa_2 = librosa.feature.chroma_stft(
-#             y=audio_2,
-#             sr=config.sample_rate,
-#             hop_length=config.hop_length,
-#         )
-#         f_DLNCO_1, f_DLNCO_2 = None, None
-#     else:
-#         # extract chroma cens features
-#         f_chroma_librosa_1 = librosa.feature.chroma_cens(
-#             y=audio_1,
-#             sr=config.sample_rate,
-#             hop_length=config.hop_length,
-#         )
-#         f_chroma_librosa_2 = librosa.feature.chroma_cens(
-#             y=audio_2,
-#             sr=config.sample_rate,
-#             hop_length=config.hop_length,
-#         )
-#         # generate DLNCO features
-#         f_DLNCO_1 = _get_DLNCO_features_from_audio(
-#             audio_1, f_chroma_librosa_1.shape[1], config.sample_rate, config.frame_rate
-#         )
-
-#         f_DLNCO_2 = _get_DLNCO_features_from_audio(
-#             audio_2, f_chroma_librosa_2.shape[1], config.sample_rate, config.frame_rate
-#         )
-
-#     wp = sync_via_mrmsdtw(
-#         f_chroma1=f_chroma_librosa_1,
-#         f_onset1=f_DLNCO_1,
-#         f_chroma2=f_chroma_librosa_2,
-#         f_onset2=f_DLNCO_2,
-#         input_feature_rate=config.frame_rate,
-#         verbose=False,
-#     )
-#     # wp = compute_strict_alignment_path_mask(wp.T).T
-#     return wp
+    return f_DLNCO
 
 
-# def transfer_positions(wp, ref_anns):
-#     """
-#     Transfer the positions of the reference annotations to the target annotations using the warping path.
+def run_offline_alignment(
+    score_path: Path,
+    perf_path: Path,
+    perf_beat_ann,
+    config,
+    use_musical_beat,
+):
+    mm = Matchmaker(
+        score_file=score_path,
+        performance_file=perf_path,
+        input_type="audio",
+    )
+    # read audio
+    audio_1 = mm.score_audio
+    audio_2, _ = librosa.load(perf_path.as_posix(), sr=config.sample_rate)
 
-#     Parameters
-#     ----------
-#     wp : np.array with shape (2, T)
-#         array of warping path.
-#     ref_ann : List[float]
-#         reference annotations.
-#     """
-#     # positions_1_transferred_to_2 = scipy.interpolate.interp1d(
-#     #     wp[0], wp[1], kind="linear"
-#     # )(ref_anns)
-#     # return positions_1_transferred_to_2
-#     x, y = wp[0], wp[1]
-#     predicted_targets = np.array([y[np.where(x >= r)[0][0]] for r in ref_anns])
-#     return predicted_targets
+    # extract chroma cens features
+    f_chroma_librosa_1 = librosa.feature.chroma_cens(
+        y=audio_1,
+        sr=config.sample_rate,
+        hop_length=config.hop_length,
+    )
+    f_chroma_librosa_2 = librosa.feature.chroma_cens(
+        y=audio_2,
+        sr=config.sample_rate,
+        hop_length=config.hop_length,
+    )
+    # generate DLNCO features
+    f_DLNCO_1 = _get_DLNCO_features_from_audio(
+        audio_1, f_chroma_librosa_1.shape[1], config.sample_rate, config.frame_rate
+    )
 
+    f_DLNCO_2 = _get_DLNCO_features_from_audio(
+        audio_2, f_chroma_librosa_2.shape[1], config.sample_rate, config.frame_rate
+    )
 
-# def run_evaluation(wp, ref_ann, target_ann, frame_rate):
-#     ref_annots = np.rint(
-#         pd.read_csv(filepath_or_buffer=ref_ann, delimiter="\t", header=None)[0]
-#         * frame_rate
-#     )
-#     target_annots = np.rint(
-#         pd.read_csv(filepath_or_buffer=target_ann, delimiter="\t", header=None)[0]
-#         * frame_rate
-#     )
+    wp = sync_via_mrmsdtw(
+        f_chroma1=f_chroma_librosa_1,
+        f_onset1=f_DLNCO_1,
+        f_chroma2=f_chroma_librosa_2,
+        f_onset2=f_DLNCO_2,
+        input_feature_rate=config.frame_rate,
+        verbose=False,
+    )
+    # wp = compute_strict_alignment_path_mask(wp.T).T
+    score_annots = mm.build_score_annotations(musical_beat=use_musical_beat)
+    perf_annots = np.loadtxt(fname=perf_beat_ann, delimiter="\t", usecols=0)
 
-#     target_annots_predicted = transfer_positions(wp, ref_annots)
-#     errors_in_delay = (
-#         (target_annots - target_annots_predicted) / frame_rate * 1000
-#     )  # in milliseconds
+    min_length = min(len(score_annots), len(perf_annots))
+    score_annots = score_annots[:min_length]
+    perf_annots = perf_annots[:min_length]
 
-#     absolute_errors_in_delay = np.abs(errors_in_delay)
-#     filtered_abs_errors_in_delay = absolute_errors_in_delay[
-#         absolute_errors_in_delay <= TOLERANCES[-1]
-#     ]
-
-#     results = {
-#         "mean": float(f"{np.mean(filtered_abs_errors_in_delay):.4f}"),
-#         "median": float(f"{np.median(filtered_abs_errors_in_delay):.4f}"),
-#         "std": float(f"{np.std(filtered_abs_errors_in_delay):.4f}"),
-#         "skewness": float(f"{scipy.stats.skew(filtered_abs_errors_in_delay):.4f}"),
-#         "kurtosis": float(f"{scipy.stats.kurtosis(filtered_abs_errors_in_delay):.4f}"),
-#     }
-#     for tau in TOLERANCES:
-#         results[f"{tau}ms"] = float(f"{np.mean(absolute_errors_in_delay <= tau):.4f}")
-
-#     results["count"] = len(filtered_abs_errors_in_delay)
-#     return results
+    predicted_score_annots = transfer_positions(
+        wp,
+        perf_annots,
+        config.frame_rate,
+    )
+    results = get_evaluation_results(
+        score_annots,
+        predicted_score_annots,
+        TOLERANCES,
+    )
+    return results
 
 
 def regenerate_tempo_adjusted_midi(midi_path: Path, target_duration: float) -> Path:

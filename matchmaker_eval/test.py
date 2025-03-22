@@ -7,7 +7,7 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-from eval import METRICS, run_score_following
+from eval import METRICS, run_offline_alignment, run_score_following
 from tabulate import tabulate
 from tqdm import tqdm
 from utils import (
@@ -15,7 +15,6 @@ from utils import (
     get_list_of_exp_config,
     save_config,
     save_results_to_csv,
-    save_score_following_result,
 )
 
 import wandb
@@ -70,16 +69,25 @@ def run_tests_and_eval_by_dataset(
         perf_beat_ann = dataset_dir / row.performance_annotations
 
         try:
-            result = run_score_following(
-                score_xml,
-                perf_audio,
-                perf_beat_ann,
-                config,
-                use_musical_beat,
-                dry_run=dry_run,
-                save_dir=run_dir,
-                run_name=f"{i}",
-            )
+            if config.method == "offline":
+                result = run_offline_alignment(
+                    score_xml,
+                    perf_audio,
+                    perf_beat_ann,
+                    config,
+                    use_musical_beat,
+                )
+            else:
+                result = run_score_following(
+                    score_xml,
+                    perf_audio,
+                    perf_beat_ann,
+                    config,
+                    use_musical_beat,
+                    dry_run=dry_run,
+                    save_dir=run_dir,
+                    run_name=f"{i}",
+                )
         except Exception as e:
             print(f"Error: {e}")
             continue
