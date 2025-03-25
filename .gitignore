@@ -172,3 +172,8 @@ wandb/
 *.tsv
 output/
 results/
+datasets/
+
+pitchhmm_results/
+pitchtempohmm_results/
+matchmaker_eval/score.mid
