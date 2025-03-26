@@ -194,7 +194,11 @@ def test_alignment_piece(
             return
 
         audio_frames = np.load(pfeat_fn, allow_pickle=True)["frames"]
-        ref_frames = np.load(rfeat_fn, allow_pickle=True)["frames"]
+
+        if proc_name == "noise":
+            ref_frames = [(rrff, i/30) for i, rrff in enumerate(np.random.rand(len(audio_frames), 12))]
+        else:
+            ref_frames = np.load(rfeat_fn, allow_pickle=True)["frames"]
 
         ref_features = np.vstack([rf[0] for rf in ref_frames])
         input_features = np.vstack([ff[0] for ff in audio_frames])
@@ -212,14 +216,20 @@ def test_alignment_piece(
             )
         elif model == "pthmm":
 
-            if proc_name != "chroma":
-                obs_model = CosineExpGaussianAudioPitchTempoObservationModel(
-                    audio_features=ref_features,
-                    pitch_rate=2,
-                    ioi_precision=2,
-                )
-            else:
-                obs_model = None
+            # if proc_name != "chroma":
+            #     obs_model = CosineExpGaussianAudioPitchTempoObservationModel(
+            #         audio_features=ref_features,
+            #         pitch_rate=2,
+            #         ioi_precision=2,
+            #     )
+            # else:
+            #     obs_model = None
+
+            obs_model = CosineExpGaussianAudioPitchTempoObservationModel(
+                audio_features=ref_features,
+                pitch_rate=2,
+                ioi_precision=2,
+            )
             score_follower = GaussianAudioPitchTempoHMM(
                 reference_features=ref_features,
                 observation_model=obs_model,
@@ -236,7 +246,7 @@ def test_alignment_piece(
 
         perf_annots_predicted = transfer_positions(
             score_follower.warping_path,
-            perf_annots,
+            score_annots,
             frame_rate=FRAME_RATE,
         )
 
@@ -306,16 +316,17 @@ if __name__ == "__main__":
 
     tasks = []
     for dataset in [
-        # "vienna",
-        "asap",
-        "batik",
+        "vienna",
+        # "asap",
+        # "batik",
     ]:
 
         for proc_name in [
-            # "chroma",
-            "mel",
+            "chroma",
+            # "mel",
             # "lse",
             # "mfcc",
+            # "noise",
         ]:
 
             for ix, row in METADATA[dataset].iterrows():
@@ -331,11 +342,14 @@ if __name__ == "__main__":
                 safn = afn.with_name(f"{afn.stem}_score_annotations.txt")
                 pafn = DATASET_DIR[dataset] / Path(row["performance_annotations"])
 
-                if not pfeat_fn.exists():
+                if not pfeat_fn.exists() and proc_name != "noise":
                     print(f"Features do not exist for {pfeat_fn}")
                     missing_features.append(pfeat_fn)
 
-                if not rfeat_fn.exists():
+                if proc_name == "noise":
+                    pfeat_fn = afn.with_name(f"{afn.stem}_chroma.npz")
+
+                if not rfeat_fn.exists() and proc_name != "noise":
                     print(f"Reference features do not exist for {rfeat_fn}")
                     missing_rfeatures.append(rfeat_fn)
 
@@ -343,7 +357,7 @@ if __name__ == "__main__":
                     print("Score annotations do not exist")
                     missing_score_annotations.append(safn)
 
-                if pfeat_fn.exists() and rfeat_fn.exists() and safn.exists():
+                if pfeat_fn.exists() and (rfeat_fn.exists() or proc_name == "noise") and safn.exists():
 
                     tasks.append(
                         (dataset, afn, proc_name, pfeat_fn, rfeat_fn, safn, pafn)

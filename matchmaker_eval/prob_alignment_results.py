@@ -31,6 +31,9 @@ for filepath in Path(exp_dir).rglob("*_results.json"):
                 dataset = part
                 break
 
+        if "chroma_gaussian" in filepath.parts:
+            features = "chroma_gaussian"
+
         with open(filepath, "r") as f:
             data = json.load(f)
 
