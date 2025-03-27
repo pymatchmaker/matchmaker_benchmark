@@ -21,7 +21,9 @@ for filepath in Path(exp_dir).rglob("*_results.json"):
     if match:
         perf_name = match.group("perf_name")
         model = match.group("model")
-        features = match.group("features")
+
+        # Extract features as the third-to-last part of the path
+        features = filepath.parts[-2]
 
         # Extract dataset from the path parts
         parts = filepath.parts
@@ -30,9 +32,6 @@ for filepath in Path(exp_dir).rglob("*_results.json"):
             if part in {"vienna", "batik", "asap"}:
                 dataset = part
                 break
-
-        if "chroma_gaussian" in filepath.parts:
-            features = "chroma_gaussian"
 
         with open(filepath, "r") as f:
             data = json.load(f)

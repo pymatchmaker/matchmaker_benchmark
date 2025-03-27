@@ -5,8 +5,9 @@ import numpy as np
 import pandas as pd
 
 from matchmaker.features.audio import FRAME_RATE
+from matchmaker.utils.eval import transfer_from_score_to_predicted_perf
 from matchmaker.utils.misc import save_nparray_to_csv
-from matchmaker.utils.eval import get_evaluation_results, TOLERANCES, transfer_positions
+from matchmaker.utils.eval import get_evaluation_results, TOLERANCES_IN_MILLISECONDS, transfer_positions
 from matchmaker.utils.misc import save_mixed_audio
 from matchmaker.prob.hmm import (
     GaussianAudioPitchHMM,
@@ -117,17 +118,6 @@ def plot_and_save_score_following_result(
     plt.xlabel("Performance Audio frame", fontsize=15)
     plt.ylabel("Score Audio frame", fontsize=15)
 
-    # plot online DTW path
-    # ref_paths, target_paths = wp[0], wp[1]
-    # for n in range(len(ref_paths)):
-    #     plt.plot(
-    #         target_paths[n],
-    #         ref_paths[n],
-    #         ".",
-    #         color="lime",
-    #         alpha=0.5,
-    #         markersize=5,
-    #     )
     for i, (ref, target) in enumerate(zip(score_annots, perf_annots_pred)):
         plt.plot(
             target * frame_rate,
@@ -216,19 +206,10 @@ def test_alignment_piece(
             )
         elif model == "pthmm":
 
-            # if proc_name != "chroma":
-            #     obs_model = CosineExpGaussianAudioPitchTempoObservationModel(
-            #         audio_features=ref_features,
-            #         pitch_rate=2,
-            #         ioi_precision=2,
-            #     )
-            # else:
-            #     obs_model = None
-
             obs_model = CosineExpGaussianAudioPitchTempoObservationModel(
                 audio_features=ref_features,
-                pitch_rate=2,
-                ioi_precision=2,
+                pitch_rate=0.5,
+                ioi_precision=0.05,
             )
             score_follower = GaussianAudioPitchTempoHMM(
                 reference_features=ref_features,
@@ -239,21 +220,25 @@ def test_alignment_piece(
             )
 
         current_positions = []
-        for frame, f_time in audio_frames:
+        for frame, f_time in tqdm(audio_frames, desc="Processing frames"):
             current_pos = score_follower((frame, f_time))
 
             current_positions.append((f_time, current_pos))
 
-        perf_annots_predicted = transfer_positions(
+        min_length = min(len(score_annots), len(perf_annots))
+        score_annots = score_annots[:min_length]
+        perf_annots = perf_annots[:min_length]
+
+        perf_annots_predicted = transfer_from_score_to_predicted_perf(
             score_follower.warping_path,
             score_annots,
             frame_rate=FRAME_RATE,
         )
 
-        perf_annots_predicted = adjust_predictions(
-            perf_annots=perf_annots,
-            perf_annots_predicted=perf_annots_predicted,
-        )
+        # perf_annots_predicted = adjust_predictions(
+        #     perf_annots=perf_annots,
+        #     perf_annots_predicted=perf_annots_predicted,
+        # )
 
         out_dir = OUTPUT_DIR / Path(f"{dataset}/{proc_name}/")
 
@@ -283,9 +268,9 @@ def test_alignment_piece(
         )
 
         results = get_evaluation_results(
-            perf_annots=perf_annots,
-            perf_annots_predicted=perf_annots_predicted,
-            tolerances=TOLERANCES,
+            gt_annots=perf_annots,
+            predicted_annots=perf_annots_predicted,
+            tolerances=TOLERANCES_IN_MILLISECONDS,
         )
 
         with open(results_path, "w") as f:
@@ -322,7 +307,7 @@ if __name__ == "__main__":
     ]:
 
         for proc_name in [
-            "chroma",
+            # "chroma",
             # "mel",
             # "lse",
             # "mfcc",
@@ -366,7 +351,7 @@ if __name__ == "__main__":
     # tasks = np.array(tasks, dtype=object)
     # random_state = np.random.RandomState(seed=1984)
     # tasks_idxs = random_state.choice(np.arange(len(tasks)), size=5, replace=False)
-    # tasks = tasks[30:]
+    # tasks = tasks[tasks_idxs]
     model = "pthmm"
 
     for dataset, afn, proc_name, pfeat_fn, rfeat_fn, safn, pafn in tasks:
