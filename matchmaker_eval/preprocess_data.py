@@ -22,6 +22,7 @@ from matchmaker.features.audio import (
     MFCCProcessor,
     LogSpectralEnergyProcessor,
     FRAME_RATE,
+    CQTProcessor,
 )
 
 # from matchmaker.io.audio import AudioStream
@@ -92,63 +93,105 @@ def process_feature_offline(
 
 
 def build_score_annotations(
-    score_part: Part,
-    tempo: float,
+    score_part,
+    tempo,
     level="beat",
     musical_beat: bool = False,
 ):
-    
-    if musical_beat:
-        score_part.use_musical_beat()  # for asap
-
-    snote_array = score_part.note_array()
-
-    unique_onsets = np.unique(snote_array["onset_beat"])
-
-    iois = np.diff(unique_onsets)
-
-    if callable(tempo) or isinstance(tempo, np.ndarray):
-        if callable(tempo):
-            # bpm parameter is a callable that returns a bpm value
-            # for each score onset
-            bp = 60 / tempo(unique_onsets)
-
-        elif isinstance(tempo, np.ndarray):
-            if tempo.ndim != 2:
-                raise ValueError("`bpm` should be a 2D array")
-
-            bpm_fun = interp1d(
-                x=tempo[:, 0],
-                y=tempo[:, 1],
-                kind="previous",
-                bounds_error=False,
-                fill_value=(tempo[0, 1], tempo[-1, 1]),
-            )
-            bp = 60 / bpm_fun(unique_onsets)
-
-        p_onsets = np.r_[0, np.cumsum(iois * bp[:-1])]
-
-    else:
-        # convert bpm to beat period
-        bp = 60 / float(tempo)
-        p_onsets = np.r_[0, np.cumsum(iois * bp)]
-
-    if level == "beat":
-        ponset_fun = interp1d(
-            x=unique_onsets,
-            y=p_onsets,
-            kind="linear",
-        )
-        start_beat = np.ceil(unique_onsets.min())
-        end_beat = np.floor(unique_onsets.max())
+    score_annots = []
+    if level == "beat":  # TODO: add bar-level, note-level
+        if musical_beat:
+            score_part.use_musical_beat()  # for asap dataset
+        note_array = np.unique(score_part.note_array()["onset_beat"])
+        start_beat = np.ceil(note_array.min())
+        end_beat = np.floor(note_array.max())
         beats = np.arange(start_beat, end_beat + 1)
 
-        score_annots = ponset_fun(beats)
+        beat_timestamp = [
+            score_part.inv_beat_map(beat)
+            / score_part.quarter_duration_map(score_part.inv_beat_map(beat))
+            * (60 / tempo)
+            for beat in beats
+        ]
 
-    elif level == "onset":
-        score_annots = p_onsets
-
+        score_annots = np.array(beat_timestamp)
     return score_annots
+
+
+# def build_score_annotations(score_part, tempo, level="beat"):
+#     score_annots = []
+#     if level == "beat":  # TODO: add bar-level, note-level
+#         onsets_in_beats = np.unique(score_part.note_array()["onset_beat"])
+#         start_beat = np.ceil(onsets_in_beats.min())
+#         end_beat = np.floor(onsets_in_beats.max())
+#         beats = np.arange(start_beat, end_beat + 1)
+
+#         beat_timestamp = [
+#             score_part.inv_beat_map(beat) / get_ppq(score_part) * (60 / tempo)
+#             for beat in beats
+#         ]
+
+#         score_annots = np.array(beat_timestamp)
+#     return score_annots
+
+# def build_score_annotations(
+#     score_part: Part,
+#     tempo: float,
+#     level="beat",
+#     musical_beat: bool = False,
+# ):
+
+#     if musical_beat:
+#         score_part.use_musical_beat()  # for asap
+
+#     snote_array = score_part.note_array()
+
+#     unique_onsets = np.unique(snote_array["onset_beat"])
+
+#     iois = np.diff(unique_onsets)
+
+#     if callable(tempo) or isinstance(tempo, np.ndarray):
+#         if callable(tempo):
+#             # bpm parameter is a callable that returns a bpm value
+#             # for each score onset
+#             bp = 60 / tempo(unique_onsets)
+
+#         elif isinstance(tempo, np.ndarray):
+#             if tempo.ndim != 2:
+#                 raise ValueError("`bpm` should be a 2D array")
+
+#             bpm_fun = interp1d(
+#                 x=tempo[:, 0],
+#                 y=tempo[:, 1],
+#                 kind="previous",
+#                 bounds_error=False,
+#                 fill_value=(tempo[0, 1], tempo[-1, 1]),
+#             )
+#             bp = 60 / bpm_fun(unique_onsets)
+
+#         p_onsets = np.r_[0, np.cumsum(iois * bp[:-1])]
+
+#     else:
+#         # convert bpm to beat period
+#         bp = 60 / float(tempo)
+#         p_onsets = np.r_[0, np.cumsum(iois * bp)]
+
+#     if level == "beat":
+#         ponset_fun = interp1d(
+#             x=unique_onsets,
+#             y=p_onsets,
+#             kind="linear",
+#         )
+#         start_beat = np.ceil(unique_onsets.min())
+#         end_beat = np.floor(unique_onsets.max())
+#         beats = np.arange(start_beat, end_beat + 1)
+
+#         score_annots = ponset_fun(beats)
+
+#     elif level == "onset":
+#         score_annots = p_onsets
+
+#     return score_annots
 
 
 def process_audio_offline(
@@ -230,12 +273,17 @@ def extract_features(fn: Path) -> None:
         sample_rate=SAMPLE_RATE,
         hop_length=HOP_LENGTH,
     )
+    processor_cqt = CQTProcessor(
+        sample_rate=SAMPLE_RATE,
+        hop_length=HOP_LENGTH,
+    )
 
     processors = [
         ("chroma", processor_chroma),
         ("mel", processor_mel),
         ("lse", processor_lse),
         ("mfcc", processor_mfcc),
+        ("cqt", processor_cqt),
     ]
 
     for proc_name, processor in processors:
@@ -333,19 +381,18 @@ def process_score(af, rf, dataset):
         extract_features(fn=sfn)
 
         safn = af.with_name(f"{af.stem}_score_annotations.txt")
-        if True: # not safn.exists():
+        if not safn.exists():
             score_annotations = build_score_annotations(
                 score_part=score_part,
                 tempo=tempo,
                 level="beat",
                 musical_beat=dataset == "asap",
             )
-
-            save_mixed_audio(
-                sfn,
-                score_annotations,
-                save_path=af.with_name(f"{af.stem}_beats_mixed.wav"),
-            )
+            # save_mixed_audio(
+            #     sfn,
+            #     score_annotations,
+            #     save_path=af.with_name(f"{af.stem}_beats_mixed.wav"),
+            # )
 
             np.savetxt(safn, score_annotations, fmt="%.6f")
             check = np.random.rand() < 0.10

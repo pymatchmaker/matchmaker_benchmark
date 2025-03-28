@@ -5,17 +5,25 @@ import numpy as np
 import pandas as pd
 
 from matchmaker.features.audio import FRAME_RATE
+from matchmaker.utils.eval import transfer_from_perf_to_predicted_score
 from matchmaker.utils.eval import transfer_from_score_to_predicted_perf
-from matchmaker.utils.misc import save_nparray_to_csv
-from matchmaker.utils.eval import get_evaluation_results, TOLERANCES_IN_MILLISECONDS, transfer_positions
+from matchmaker.utils.misc import save_nparray_to_csv, set_latency_stats
+from matchmaker.utils.eval import (
+    get_evaluation_results,
+    TOLERANCES_IN_MILLISECONDS,
+    TOLERANCES_IN_BEATS,
+    transfer_positions,
+)
 from matchmaker.utils.misc import save_mixed_audio
 from matchmaker.prob.hmm import (
     GaussianAudioPitchHMM,
     GaussianAudioPitchTempoHMM,
     CosineExpGaussianAudioPitchTempoObservationModel,
 )
+from matchmaker.dp.oltw_arzt import OnlineTimeWarpingArzt
 from scipy.spatial import distance
 from scipy.signal import fftconvolve
+import time
 
 import warnings
 
@@ -43,12 +51,6 @@ METADATA = {
     "batik": pd.read_csv(METADATA_PATH["batik"]),
     "vienna": pd.read_csv(METADATA_PATH["vienna"]),
 }
-OUTPUT_DIR = WORKING_DIR / "pitchtempohmm_results"
-
-OUTPUT_DIR.mkdir(
-    parents=True,
-    exist_ok=True,
-)
 
 
 def adjust_predictions(perf_annots, perf_annots_predicted):
@@ -164,7 +166,7 @@ def test_alignment_piece(
             f"{dataset}/{proc_name}/{afn.stem}_{model}_{proc_name}.wav"
         )
         results_path = OUTPUT_DIR / Path(
-            f"{dataset}/{proc_name}/{afn.stem}_{model}_{proc_name}_results.json"
+            f"{dataset}/{proc_name}/{afn.stem}_{model}_{proc_name}_results_perf.json"
         )
         plot_path = OUTPUT_DIR / Path(
             f"{dataset}/{proc_name}/{afn.stem}_{model}_{proc_name}_wp.pdf"
@@ -186,7 +188,10 @@ def test_alignment_piece(
         audio_frames = np.load(pfeat_fn, allow_pickle=True)["frames"]
 
         if proc_name == "noise":
-            ref_frames = [(rrff, i/30) for i, rrff in enumerate(np.random.rand(len(audio_frames), 12))]
+            ref_frames = [
+                (rrff, i / 30)
+                for i, rrff in enumerate(np.random.rand(len(audio_frames), 12))
+            ]
         else:
             ref_frames = np.load(rfeat_fn, allow_pickle=True)["frames"]
 
@@ -218,10 +223,30 @@ def test_alignment_piece(
                 # ioi_precision=2,
                 transition_scale=0.05,
             )
+        elif model == "oltw_artzt":
+
+            score_follower = OnlineTimeWarpingArzt(
+                reference_features=ref_features,
+                distance_func="Cosine",
+            )
 
         current_positions = []
+        counter = 0
         for frame, f_time in tqdm(audio_frames, desc="Processing frames"):
-            current_pos = score_follower((frame, f_time))
+            time_start_proc = time.time()
+            if model == "oltw_artzt":
+                current_pos = score_follower(frame)
+            else:
+                current_pos = score_follower((frame, f_time))
+            time_end_proc = time.time()
+
+            latency = time_end_proc - time_start_proc
+            score_follower.latency_stats = set_latency_stats(
+                latency,
+                score_follower.latency_stats,
+                counter,
+            )
+            counter += 1
 
             current_positions.append((f_time, current_pos))
 
@@ -235,10 +260,11 @@ def test_alignment_piece(
             frame_rate=FRAME_RATE,
         )
 
-        # perf_annots_predicted = adjust_predictions(
-        #     perf_annots=perf_annots,
-        #     perf_annots_predicted=perf_annots_predicted,
-        # )
+        score_annots_predicted = transfer_from_perf_to_predicted_score(
+            score_follower.warping_path,
+            perf_annots,
+            frame_rate=FRAME_RATE,
+        )
 
         out_dir = OUTPUT_DIR / Path(f"{dataset}/{proc_name}/")
 
@@ -267,11 +293,25 @@ def test_alignment_piece(
             save_path=mixed_fn,
         )
 
-        results = get_evaluation_results(
+        results_perf = get_evaluation_results(
             gt_annots=perf_annots,
             predicted_annots=perf_annots_predicted,
             tolerances=TOLERANCES_IN_MILLISECONDS,
         )
+
+        results_score = get_evaluation_results(
+            predicted_annots=score_annots_predicted,
+            gt_annots=score_annots,
+            tolerances=TOLERANCES_IN_BEATS,
+            in_seconds=False,
+        )
+
+        results = {
+            **{f"{k}_perf": v for k, v in results_perf.items()},
+            **{f"{k}_score": v for k, v in results_score.items()},
+            **{k: v for k, v in score_follower.latency_stats.items()},
+            "num_beats_total": len(score_annots)
+        }
 
         with open(results_path, "w") as f:
             json.dump(results, f, indent=4)
@@ -301,16 +341,17 @@ if __name__ == "__main__":
 
     tasks = []
     for dataset in [
-        "vienna",
-        # "asap",
+        # "vienna",
+        "asap",
         # "batik",
     ]:
 
         for proc_name in [
-            # "chroma",
-            # "mel",
-            # "lse",
-            # "mfcc",
+            "chroma",
+            "cqt",
+            "mel",
+            "lse",
+            "mfcc",
             # "noise",
         ]:
 
@@ -342,17 +383,30 @@ if __name__ == "__main__":
                     print("Score annotations do not exist")
                     missing_score_annotations.append(safn)
 
-                if pfeat_fn.exists() and (rfeat_fn.exists() or proc_name == "noise") and safn.exists():
+                if (
+                    pfeat_fn.exists()
+                    and (rfeat_fn.exists() or proc_name == "noise")
+                    and safn.exists()
+                ):
 
                     tasks.append(
                         (dataset, afn, proc_name, pfeat_fn, rfeat_fn, safn, pafn)
                     )
 
-    # tasks = np.array(tasks, dtype=object)
-    # random_state = np.random.RandomState(seed=1984)
-    # tasks_idxs = random_state.choice(np.arange(len(tasks)), size=5, replace=False)
-    # tasks = tasks[tasks_idxs]
-    model = "pthmm"
+    tasks = np.array(tasks, dtype=object)
+    random_state = np.random.RandomState(seed=1984)
+    unique_afns = np.unique([task[1] for task in tasks])
+    selected_afns = random_state.choice(unique_afns, size=5, replace=False)
+    tasks_idxs = [i for i, task in enumerate(tasks) if task[1] in selected_afns]
+    tasks = tasks[tasks_idxs]
+    model = "phmm"
+
+    OUTPUT_DIR = WORKING_DIR / f"{model}_results4"
+
+    OUTPUT_DIR.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
     for dataset, afn, proc_name, pfeat_fn, rfeat_fn, safn, pafn in tasks:
         print(dataset, afn, proc_name)
