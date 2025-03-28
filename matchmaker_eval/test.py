@@ -21,9 +21,9 @@ import wandb
 
 WORKING_DIR = Path(__file__).parent.parent
 DATASET_DIR = {
-    "asap": Path("/home/jiyun/data/asap-dataset-matchmaker"),
-    "batik": Path("/home/jiyun/data/Batik_Audio"),
-    "vienna": Path("/home/jiyun/data/vienna4x22"),
+    "asap": Path("/Users/carlos/repos/ismir2025_matchmaker_eval/datasets/asap-dataset-matchmaker"),
+    "batik": Path("/Users/carlos/repos/ismir2025_matchmaker_eval/datasets/Batik_Audio"),
+    "vienna": Path("/Users/carlos/repos/ismir2025_matchmaker_eval/datasets/vienna4x22"),
 }
 METADATA_PATH = {
     "asap": WORKING_DIR / "data/metadata-asap.csv",
@@ -178,7 +178,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--method",
         type=str,
-        choices=["hmm", "dixon", "arzt", "offline"],
+        choices=["hmm", "pthmm", "dixon", "arzt", "offline"],
         default="arzt",
         help="Method to use (hmm, dixon, arzt, or offline)",
     )

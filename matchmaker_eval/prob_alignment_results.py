@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 
 # Directory containing the JSON files
-exp_dir = "../oltw_artzt_results/"
+exp_dir = "../oltw_arzt_results5/"
 
 # Regex pattern to extract perf_name, model, and features
 # Assumes filenames end with: _<model>_<features>_results.json

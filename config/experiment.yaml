@@ -15,10 +15,10 @@ distance_func_exp:
   # - "jensenshannon"
   # - "minkowski"
   # - "sqeuclidean"
-  - "Euclidean"
-  # - "Cosine"
+  # - "Euclidean"
+  - "Cosine"
   # - "L1"
   # - "Linf"
   # - "Manhattan"
 feature_type_exp:
-  - "chroma"
+  - "cqt"

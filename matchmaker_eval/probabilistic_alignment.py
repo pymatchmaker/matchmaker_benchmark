@@ -223,18 +223,20 @@ def test_alignment_piece(
                 # ioi_precision=2,
                 transition_scale=0.05,
             )
-        elif model == "oltw_artzt":
+        elif model == "oltw_arzt":
 
             score_follower = OnlineTimeWarpingArzt(
                 reference_features=ref_features,
-                distance_func="Cosine",
+                distance_func="Euclidean" if proc_name == "chroma" else "Cosine",
+                window_size=5,
+
             )
 
         current_positions = []
         counter = 0
         for frame, f_time in tqdm(audio_frames, desc="Processing frames"):
             time_start_proc = time.time()
-            if model == "oltw_artzt":
+            if model == "oltw_arzt":
                 current_pos = score_follower(frame)
             else:
                 current_pos = score_follower((frame, f_time))
@@ -341,17 +343,17 @@ if __name__ == "__main__":
 
     tasks = []
     for dataset in [
-        # "vienna",
-        "asap",
+        "vienna",
+        # "asap",
         # "batik",
     ]:
 
         for proc_name in [
             "chroma",
-            "cqt",
-            "mel",
-            "lse",
-            "mfcc",
+            # "cqt",
+            # "mel",
+            # "lse",
+            # "mfcc",
             # "noise",
         ]:
 
@@ -399,9 +401,9 @@ if __name__ == "__main__":
     selected_afns = random_state.choice(unique_afns, size=5, replace=False)
     tasks_idxs = [i for i, task in enumerate(tasks) if task[1] in selected_afns]
     tasks = tasks[tasks_idxs]
-    model = "phmm"
+    model = "oltw_arzt"
 
-    OUTPUT_DIR = WORKING_DIR / f"{model}_results4"
+    OUTPUT_DIR = WORKING_DIR / f"{model}_results5"
 
     OUTPUT_DIR.mkdir(
         parents=True,
@@ -420,16 +422,3 @@ if __name__ == "__main__":
             pafn=pafn,
             model=model,
         )
-
-    # num_cores = multiprocessing.cpu_count()
-
-    # failed_pieces = Parallel(n_jobs=num_cores)(
-    #     delayed(test_alignment_piece)(
-    #         dataset, proc_name, afn, pfeat_fn, rfeat_fn, safn, pafn, model
-    #     )
-    #     for dataset, afn, proc_name, pfeat_fn, rfeat_fn, safn, pafn in tqdm(
-    #         tasks, desc="Processing alignments"
-    #     )
-    # )
-
-    # print(failed_pieces)
