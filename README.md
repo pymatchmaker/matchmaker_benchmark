@@ -12,12 +12,10 @@ To setup the experiments, use the following script.
 
 ```bash
 # Download this repository
-git clone https://github.com/neosatrapahereje/ismir2024_matchmaker.git
+git clone https://github.com/neosatrapahereje/ismir2025_matchmaker.git
  
 # Clone matchmaker
 git clone https://github.com/pymatchmaker/matchmaker.git
-
-cd matchmaker_eval
 
 conda env create -f environment.yml
 
@@ -26,6 +24,13 @@ cd ../matchmaker
 
 # Install matchmaker in editable mode
 pip install -e ."[dev]"
+
+# Install GCC
+conda install -c conda-forge gcc=12.1.0
+
+# Install glib and fluidsynth
+conda install -c conda-forge glib fluidsynth
+
 ```
 
 ### Setting up the datasets
