@@ -7,7 +7,12 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-from eval import METRICS, run_offline_alignment, run_score_following
+from eval import (
+    METRICS,
+    run_offline_alignment,
+    run_score_following,
+    parse_match_file_for_note_onsets,
+)
 from tabulate import tabulate
 from tqdm import tqdm
 from utils import (
@@ -22,13 +27,24 @@ import wandb
 WORKING_DIR = Path(__file__).parent.parent
 DATASET_DIR = {
     "asap": Path("/home/jiyun/data/asap-dataset-matchmaker"),
+    "asap-valid": Path("/home/jiyun/data/asap-dataset-matchmaker"),
     "batik": Path("/home/jiyun/data/Batik_Audio"),
     "vienna": Path("/home/jiyun/data/vienna4x22"),
+    "pfvn": Path("/home/jiyun/data/KRAISLER"),
+    "chorale": Path("/home/jiyun/data/chorale-bricks"),
+    "winterreise": Path("/home/jiyun/data/winterreise"),
+    "zeilinger": Path("/home/jiyun/data/Zeilinger_data"),
+    "valid": None,  # mixed datasets - uses 'dataset' column from metadata
 }
 METADATA_PATH = {
-    "asap": WORKING_DIR / "data/metadata-asap.csv",
-    "batik": WORKING_DIR / "data/metadata-batik.csv",
-    "vienna": WORKING_DIR / "data/metadata-vienna.csv",
+    "valid": WORKING_DIR / "data/validation_data.csv",
+    "asap": WORKING_DIR / "data/reduced/metadata-asap.csv",
+    "batik": WORKING_DIR / "data/reduced/metadata-batik.csv",
+    "vienna": WORKING_DIR / "data/reduced/metadata-vienna.csv",
+    "pfvn": WORKING_DIR / "data/metadata-pfvn.csv",
+    "chorale": WORKING_DIR / "data/metadata-chorale.csv",
+    "winterreise": WORKING_DIR / "data/metadata-winterreise.csv",
+    "zeilinger": WORKING_DIR / "data/metadata-zeilinger-note.csv",
 }
 OUTPUT_DIR = WORKING_DIR / "output"
 
@@ -50,6 +66,7 @@ def run_tests_and_eval_by_dataset(
     config: MatchmakerEvalConfig,
     run_dir: Optional[Path] = None,
     dry_run: bool = False,
+    granularity: str = "note",
 ):
     if run_dir is None and not dry_run:
         raise ValueError("run_dir must be provided if not dry_run")
@@ -59,21 +76,37 @@ def run_tests_and_eval_by_dataset(
 
     dataset_dir = DATASET_DIR[dataset_type]
     metadata = pd.read_csv(METADATA_PATH[dataset_type])
+    has_folder_column = "folder" in metadata.columns
+    is_valid_dataset = dataset_type == "valid"
     results = defaultdict(list)
-    use_musical_beat = dataset_type == "asap"
     for i, row in enumerate(metadata.itertuples(), 1):
         print(row)
-        score_xml = dataset_dir / row.xml_score
-        score_midi = dataset_dir / row.midi_score
-        perf_audio = dataset_dir / row.audio_performance
-        perf_beat_ann = dataset_dir / row.performance_annotations
+        # Handle validation dataset with mixed sources
+        if is_valid_dataset:
+            # folder_dir = DATASET_DIR.get(row.dataset, dataset_dir)
+            current_dataset = row.dataset
+        else:
+            current_dataset = dataset_type
+
+        if has_folder_column:
+            folder_dir = dataset_dir / row.folder
+        else:
+            folder_dir = dataset_dir
+
+        use_musical_beat = current_dataset in ["asap", "asap-valid", "pfvn"]
+        score_xml = folder_dir / row.xml_score
+        # score_midi = dataset_dir / row.midi_score
+        perf_audio = folder_dir / row.audio_performance
+
+        # Use match file
+        match_file = folder_dir / row.match
 
         try:
             if config.method == "offline":
                 result = run_offline_alignment(
                     score_xml,
                     perf_audio,
-                    perf_beat_ann,
+                    match_file,
                     config,
                     use_musical_beat,
                 )
@@ -81,7 +114,7 @@ def run_tests_and_eval_by_dataset(
                 result = run_score_following(
                     score_xml,
                     perf_audio,
-                    perf_beat_ann,
+                    match_file,
                     config,
                     use_musical_beat,
                     dry_run=dry_run,
@@ -96,7 +129,7 @@ def run_tests_and_eval_by_dataset(
         results["Index"].append(i)
         results["Piece"].append(row.title)
         results["Name"].append(perf_audio.stem)
-        results["Difficulty"].append(row.difficulty)
+        # results["Difficulty"].append(row.difficulty)
 
         # add config to results
         for k, v in config.model_dump(include=config.attr_exp).items():
@@ -118,6 +151,8 @@ def main(args):
     method = args.method
     dry_run = args.dry_run
     wandb = args.wandb
+    granularity = args.granularity or "note"
+    adjust_tempo = args.adjust_tempo
 
     # save results
     if not dry_run:
@@ -133,11 +168,12 @@ def main(args):
             config.dataset = dataset_type
         if method:
             config.method = method
+        config.adjust_tempo = adjust_tempo
         print(f"Config: {config.model_dump(include=config.attr_exp)}")
 
         run_dir = save_dir / f"{i}" if not dry_run else None
         results = run_tests_and_eval_by_dataset(
-            config.dataset, config, run_dir, dry_run
+            config.dataset, config, run_dir, dry_run, granularity
         )
 
         if not dry_run:
@@ -171,14 +207,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset",
         type=str,
-        choices=["asap", "vienna", "batik"],
+        choices=list(DATASET_DIR.keys()),
         default="asap",
-        help="Dataset to use (asap, vienna, or batik)",
+        help="Dataset to use (asap, vienna, batik, or pfvn)",
     )
     parser.add_argument(
         "--method",
         type=str,
-        choices=["hmm", "dixon", "arzt", "offline"],
+        choices=["hmm", "dixon", "arzt", "offline", "audio_outerhmm"],
         default="arzt",
         help="Method to use (hmm, dixon, arzt, or offline)",
     )
@@ -190,6 +226,19 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--wandb", action="store_true", help="report results to wandb", default=False
+    )
+    parser.add_argument(
+        "--granularity",
+        type=str,
+        choices=["beat", "note"],
+        default="note",
+        help="Granularity to use (beat or note)",
+    )
+    parser.add_argument(
+        "--adjust-tempo",
+        action="store_true",
+        help="Adjust tempo based on performance audio length",
+        default=False,
     )
     args = parser.parse_args()
 

@@ -39,6 +39,7 @@ class MatchmakerEvalConfig(BaseSettings):
     n_fft: int
     max_run_count: int
     dataset: Optional[str] = None  # for experiment
+    adjust_tempo: bool = False  # whether to adjust tempo based on performance audio
 
     # attributes for inference
     attr_infer: list[str] = [

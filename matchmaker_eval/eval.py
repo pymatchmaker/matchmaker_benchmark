@@ -1,5 +1,4 @@
 import json
-import time
 import traceback
 from pathlib import Path
 from typing import Optional, Union
@@ -7,21 +6,78 @@ from typing import Optional, Union
 import librosa
 import mido
 import numpy as np
-import pandas as pd
 import partitura as pt
 import scipy
 from matchmaker import Matchmaker
 from matchmaker.utils.eval import get_evaluation_results
 from numpy.typing import NDArray
+from partitura.musicanalysis.performance_codec import get_time_maps_from_alignment
 from synctoolbox.dtw.mrmsdtw import sync_via_mrmsdtw
 from synctoolbox.feature.dlnco import pitch_onset_features_to_DLNCO
 from synctoolbox.feature.pitch_onset import audio_to_pitch_onset_features
 from utils import MatchmakerEvalConfig
 
-TOLERANCES = [50, 100, 300, 500, 1000, 2000]
-METRICS = ["mean", "median", "std", "skewness", "kurtosis"] + [
-    f"{t}ms" for t in TOLERANCES
-]
+TOLERANCES_IN_MS = [50, 100, 300, 500, 1000, 2000]
+TOLERANCES_IN_BEATS = [0.1, 0.2, 0.3, 0.5, 1.0, 2.0]
+METRICS = (
+    ["mean", "median", "std", "skewness", "kurtosis"]
+    + [f"{t}ms" for t in TOLERANCES_IN_MS]
+    + [f"{t}b" for t in TOLERANCES_IN_BEATS]
+)
+
+
+def parse_match_file_for_note_onsets(
+    match_file: Union[str, Path], level: str = "note"
+) -> np.ndarray:
+    """
+    Parse a match file and extract performed note onset times in seconds
+    using partitura's alignment mapping.
+
+    Uses partitura to properly load the match file and create a mapping
+    from score time to performance time based on the alignment.
+
+    Parameters
+    ----------
+    match_file : Union[str, Path]
+        Path to the match file
+    level : str
+        "note" for note-level onsets, "beat" for beat-level onsets
+
+    Returns
+    -------
+    np.ndarray
+        Array of performed times in seconds, corresponding to unique
+        score onset positions.
+    """
+    match_file = Path(match_file)
+
+    perf, alignment, score = pt.load_match(
+        filename=str(match_file),
+        create_score=True,
+    )
+
+    pnote_array = perf.note_array()
+    snote_array = score.note_array()
+
+    ptime_to_stime_map, stime_to_ptime_map = get_time_maps_from_alignment(
+        ppart_or_note_array=pnote_array,
+        spart_or_note_array=snote_array,
+        alignment=alignment,
+    )
+
+    # Extract annotations based on level
+    if level == "beat":
+        start_beat = np.ceil(snote_array["onset_beat"].min())
+        end_beat = np.floor(snote_array["onset_beat"].max())
+        beats = np.arange(start_beat, end_beat + 1)
+        performed_times = stime_to_ptime_map(beats)
+    elif level == "note":
+        unique_onsets = np.unique(snote_array["onset_beat"])
+        performed_times = stime_to_ptime_map(unique_onsets)
+    else:
+        raise ValueError(f"Invalid level: {level}. Must be 'beat' or 'note'.")
+
+    return performed_times
 
 
 def transfer_positions(wp, perf_annots, frame_rate):
@@ -47,7 +103,7 @@ def _get_DLNCO_features_from_audio(audio, feature_sequence_length, Fs, feature_r
 def run_offline_alignment(
     score_path: Path,
     perf_path: Path,
-    perf_beat_ann,
+    match_file: Path,
     config,
     use_musical_beat,
 ):
@@ -90,7 +146,7 @@ def run_offline_alignment(
     )
     # wp = compute_strict_alignment_path_mask(wp.T).T
     score_annots = mm.build_score_annotations(musical_beat=use_musical_beat)
-    perf_annots = np.loadtxt(fname=perf_beat_ann, delimiter="\t", usecols=0)
+    perf_annots = parse_match_file_for_note_onsets(match_file)
 
     min_length = min(len(score_annots), len(perf_annots))
     score_annots = score_annots[:min_length]
@@ -104,7 +160,7 @@ def run_offline_alignment(
     results = get_evaluation_results(
         score_annots,
         predicted_score_annots,
-        TOLERANCES,
+        TOLERANCES_IN_MS,
     )
     return results
 
@@ -140,7 +196,7 @@ def regenerate_tempo_adjusted_midi(midi_path: Path, target_duration: float) -> P
 def run_score_following(
     score_path: Path,
     perf_path: Union[Path, str],
-    perf_beat_ann: Path,
+    match_file: Path,
     config: MatchmakerEvalConfig,
     use_musical_beat: bool = False,
     dry_run: bool = False,
@@ -156,6 +212,8 @@ def run_score_following(
         path to the score file (.mid or .xml).
     perf_path : Path or str
         path to the performance file (.wav or .mid), or empty string for live performance mode.
+    match_file : Path
+        path to the match file.
 
     Returns
     -------
@@ -172,6 +230,7 @@ def run_score_following(
         sample_rate=config.sample_rate,
         feature_type=config.feature_type,
         wait=False,
+        auto_adjust_tempo=getattr(config, "adjust_tempo", False),
     )
 
     try:
@@ -181,13 +240,38 @@ def run_score_following(
         traceback.print_exc()
         mm._has_run = True
 
+    # Parse performance annotations from match file
+    perf_annotations = parse_match_file_for_note_onsets(match_file)
+
+    # Performance domain evaluation (ms-based tolerances)
     results = mm.run_evaluation(
-        perf_beat_ann,
-        tolerances=TOLERANCES,
+        perf_annotations,
+        tolerances=TOLERANCES_IN_MS,
         musical_beat=use_musical_beat,
         debug=not dry_run,
         save_dir=save_dir,
         run_name=run_name,
+        level="note",
     )
+
+    # Score domain evaluation (beat-based tolerances)
+    score_results = mm.run_evaluation(
+        perf_annotations,
+        tolerances=TOLERANCES_IN_BEATS,
+        musical_beat=use_musical_beat,
+        domain="score",
+        debug=False,
+        save_dir=save_dir,
+        run_name=run_name,
+        level="note",
+    )
+
+    beat_tolerance_keys = {f"{t}b" for t in TOLERANCES_IN_BEATS}
+    for key, value in score_results.items():
+        if key in beat_tolerance_keys:
+            results[key] = value
+        else:
+            results[f"{key}_b"] = value
+
     print(f"RESULTS: {json.dumps(results, indent=4)}")
     return results

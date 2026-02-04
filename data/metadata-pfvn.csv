@@ -1,0 +1,21 @@
+composer,title,xml_score,performance_annotations,audio_performance
+Tchaikovsky,Valse sentimentale,score/musicxml/track01.xml,performance_annots/track01.csv,audio/01/01_mix_studio.wav
+Rachmaninoff,Preghiera,score/musicxml/track02.xml,performance_annots/track02.csv,audio/02/02_mix_studio.wav
+Saint-Saëns,Danse Macabre,score/musicxml/track03.xml,performance_annots/track03.csv,audio/03/03_mix_studio.wav
+Tchaikovsky,Violin Concerto in D major,score/musicxml/track04.xml,performance_annots/track04.csv,audio/04/04_mix_studio.wav
+Saint-Saëns,Violin Concerto No. 3 in B minor,score/musicxml/track05.xml,performance_annots/track05.csv,audio/05/05_mix_studio.wav
+Schumann,3 Romances,score/musicxml/track06.xml,performance_annots/track06.csv,audio/06/06_mix_studio.wav
+Brahms,Violin Sonata No. 1 in G major,score/musicxml/track07.xml,performance_annots/track07.csv,audio/07/07_mix_studio.wav
+Grieg,Violin Sonata No. 3 in C minor,score/musicxml/track08.xml,performance_annots/track08.csv,audio/08/08_mix_studio.wav
+Franck,Violin Sonata in A major,score/musicxml/track09.xml,performance_annots/track09.csv,audio/09/09_mix_studio.wav
+Chopin,Nocturne No. 20 in C♯ minor,score/musicxml/track10.xml,performance_annots/track10.csv,audio/10/10_mix_studio.wav
+Schumann,Dichterliebe_48_1,score/musicxml/track11.xml,performance_annots/track11.csv,audio/11/11_mix_studio.wav
+Schumann,Dichterliebe_48_5,score/musicxml/track12.xml,performance_annots/track12.csv,audio/12/12_mix_studio.wav
+Beethoven,Violin Sonata No. 5,score/musicxml/track13.xml,performance_annots/track13.csv,audio/13/13_mix_studio.wav
+Ponce,Estrellita,score/musicxml/track14.xml,performance_annots/track14.csv,audio/14/14_mix_studio.wav
+Rachmaninoff,Vocalise,score/musicxml/track15.xml,performance_annots/track15.csv,audio/15/15_mix_studio.wav
+Tchaikovsky,Mélodie from Souvenir d’un Lieu Cher,score/musicxml/track16.xml,performance_annots/track16.csv,audio/16/16_mix_studio.wav
+Mozart,Violin Concerto No. 3,score/musicxml/track17.xml,performance_annots/track17.csv,audio/17/17_mix_studio.wav
+Kreisler,Liebesleid,score/musicxml/track18.xml,performance_annots/track18.csv,audio/18/18_mix_studio.wav
+Mendelssohn,Violin Concerto in E minor,score/musicxml/track19.xml,performance_annots/track19.csv,audio/19/19_mix_studio.wav
+Kreisler,Liebesfreud,score/musicxml/track20.xml,performance_annots/track20.csv,audio/20/20_mix_studio.wav

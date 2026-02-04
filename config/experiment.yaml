@@ -4,21 +4,6 @@ sample_rate_exp: [44100]
 frame_rate_exp: [30]
 window_size_exp: [5]
 distance_func_exp: 
-  # - "euclidean"
-  # - "cosine"
-  # - "dice"
-  # - "braycurtis"
-  # - "canberra"
-  # - "chebyshev"
-  # - "cityblock"
-  # - "correlation"
-  # - "jensenshannon"
-  # - "minkowski"
-  # - "sqeuclidean"
   - "Euclidean"
-  # - "Cosine"
-  # - "L1"
-  # - "Linf"
-  # - "Manhattan"
 feature_type_exp:
   - "chroma"
