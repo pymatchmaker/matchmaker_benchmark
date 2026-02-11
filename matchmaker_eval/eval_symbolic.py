@@ -1,13 +1,12 @@
-
 # -*- coding: utf-8 -*-
+import sys
+sys.setrecursionlimit(2**31 - 1)
 import argparse
 import os
 from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
 from collections import defaultdict
 from pathlib import Path
 import wandb
-import sys
-sys.setrecursionlimit(2**31 -1)
 
 import pdb
 
@@ -24,7 +23,7 @@ from partitura.performance import Performance, PerformedPart, PerformanceLike
 from partitura.score import Score, Part, ScoreLike, merge_parts
 from partitura.utils.misc import PathLike
 
-from partitura.utils.music import performance_from_part
+from partitura.utils.music import performance_from_part, compute_pianoroll
 from partitura.musicanalysis.performance_codec import get_time_maps_from_alignment, to_matched_score
 
 from partitura_utils import (
@@ -37,18 +36,19 @@ from matchmaker.utils.symbolic import (
     framed_midi_messages_from_performance,
     midi_messages_from_performance,
 )
-from matchmaker.features.midi import PitchIOIProcessor, PitchProcessor, PianoRollProcessor
+from matchmaker.features.midi import PitchIOIProcessor, PitchProcessor, PianoRollProcessor, PitchClassPianoRollProcessor
 
 """from matchmaker.utils.accompanist_tempo_models import   (KalmanTempoSyncModel, 
-                                                    ReactiveSyncModel,
-                                                    MovingAverageSyncModel,
-                                                    LinearSyncModel,
-                                                    JointAdaptationAnticipationSyncModel)"""
+                                                        ReactiveSyncModel,
+                                                        MovingAverageSyncModel,
+                                                        LinearSyncModel,
+                                                        JointAdaptationAnticipationSyncModel)"""
 from matchmaker.utils.tempo_models import (
     KalmanTempoModel,
     LinearTempoModel,
     MovingAverageTempoModel,
     ReactiveTempoModel,
+    JointAdaptationAnticipationModel
 )
 
 from matchmaker.utils.eval import (
@@ -67,14 +67,16 @@ warnings.filterwarnings("ignore")
 
 
 DATASET_DIR = {
-      "asap": Path("/home/alexander-neuhauser/datasets/asap-dataset-matchmaker"),
-     "batik": Path("/home/alexander-neuhauser/datasets/Batik_Audio"),
+    "validation": Path("/home/alexander-neuhauser/datasets"),
+    "asap": Path("/home/alexander-neuhauser/datasets/asap-dataset-matchmaker"),
+    "batik": Path("/home/alexander-neuhauser/datasets/Batik_Audio"),
     "vienna": Path("/home/alexander-neuhauser/datasets/vienna4x22"),
 }
 METADATA_PATH = {
-    "asap": "../ismir2025_matchmaker/data/metadata-asap.csv",
-    "batik": "../ismir2025_matchmaker/data/metadata-batik.csv",
-    "vienna":"../ismir2025_matchmaker/data/metadata-vienna.csv",
+    "validation": "../ismir2025_matchmaker/data/validation_data.csv",
+    "asap": "../ismir2025_matchmaker/data/reduced/metadata-asap.csv",
+    "batik": "../ismir2025_matchmaker/data/reduced/metadata-batik.csv",
+    "vienna":"../ismir2025_matchmaker/data/reduced/metadata-vienna.csv",
 }
 
 DEFAULT_LOCAL_COST = "Manhattan"
@@ -83,19 +85,33 @@ STEP_SIZE = 5
 START_WINDOW_SIZE = 60
 POLLING_PERIOD = None#0.01
 
-CONFIG = dict(
-    follower_type="hmm",
-    ioi_precision=0.1,
-    gumbel_transition_matrix_scale=1.5,
-    init_bp=0.8,
-    trans_par=2,
-    trans_var=0.5,
-    obs_var=1,
-    init_var=0.5,
-    tempo_model=KalmanTempoModel,
-    piano_range=True,
-    save_results = True,
-)
+SAVE_RESULTS = False
+
+KWARGS = {
+        "midi": 
+            {"arzt": 
+                {"processor": "pianoroll",
+                "piano_range": True,
+                },
+            "dixon":
+                {"processor": "pianoroll",
+                "piano_range": True,
+                },
+            "hmm": 
+                {"processor": "pitch_ioi",
+                "tempo_model": KalmanTempoModel,
+                "piano_range": True,
+                },
+            "pthmm":
+                {"processor": "pitch_ioi",
+                "piano_range": True,
+                },
+            "outerhmm":
+                {"processor": "pitch_ioi",
+                "piano_range": True,
+                },
+            },
+    }
 
 # ============= helper functions =============
 
@@ -145,7 +161,7 @@ def compute_features_from_symbolic(
         "pitch": PitchProcessor,
         "pitch_ioi": PitchIOIProcessor,
         "pianoroll": PianoRollProcessor,
-        #"pitch_class_pianoroll": PitchClassPianoRollProcessor,
+        "pitch_class_pianoroll": PitchClassPianoRollProcessor,
     }
     if processor_kwargs is None:
         processor_kwargs = {}
@@ -194,84 +210,150 @@ def compute_features_from_symbolic(
             outputs.append(output)
     return outputs, frame_times
 
+def compute_pianoroll_features(
+    note_info: Union[ScoreLike, PerformanceLike],
+    polling_period: float,
+    pianoroll_method: str = "partitura",
+):
+    """
+    Features for OLTW
+    """
+    if pianoroll_method == "accompanion":
+        ref_frames = partitura_to_framed_midi(
+            part_or_notearray_or_filename=note_info,
+            is_performance=True,
+            pipeline=PianoRollProcessor(piano_range=True),
+            polling_period=polling_period,
+        )[0]
+
+    elif pianoroll_method == "partitura":
+
+        if isinstance(note_info, (Score, Part)):
+            ppart = pt.utils.music.performance_from_part(note_info, bpm=60)
+        else:
+            ppart = note_info
+        # Use real note off instead of sound off
+        ppart.sustain_pedal_threshold = 127
+        ref_frames = (
+            compute_pianoroll(
+                note_info=ppart,
+                time_unit="sec",
+                time_div=int(np.round(1 / polling_period)),
+                binary=True,
+                piano_range=True,
+            )
+            .toarray()
+            .T
+        )
+
+    return ref_frames
+
 # ============= main alignment function for a single performance =============
 
 def align(
     solo_perf_fn: PathLike,
     reference_fn: Union[PathLike, List[PathLike]],
     perf_midi,
-    tempo_model,
-    method,
-    unfold = False,
-    piano_range = False,
-):
-    solo_ppart, ptime_to_stime_map, stime_to_ptime_map = setup_match_file([solo_perf_fn])[0]
-
-    
-    _, alignment, solo_score = pt.load_match(
+    args,
+    kwargs,
+):    
+    solo_perf, alignment = pt.load_match(
                     filename=solo_perf_fn,
-                    create_score=True,
+                    create_score=False,
                     first_note_at_zero=True,
                 )
-
+    solo_ppart = solo_perf[0]
     
-    score = pt.load_musicxml(reference_fn)
-    if unfold:
+    score = pt.load_musicxml(reference_fn, ignore_invisible_objects=True)
+    
+    if True: # unfold piece - only necessary if piece is not unfolded yet
         score = pt.score.unfold_part_maximal(score)
-    
-    matched_array = to_matched_score(score,#.note_array(), 
-                                     solo_ppart, alignment)[0]['onset']
-    processor_kwargs = dict({'piano_range': piano_range})
 
-    if method == "arzt":
-        processor_name = 'pianoroll'
-        POLLING_PERIOD = None
-        
-    elif method == "hmm":
+    ptime_to_stime_map, stime_to_ptime_map = get_time_maps_from_alignment(
+                ppart_or_note_array=solo_ppart,
+                spart_or_note_array=score,
+                alignment=alignment,
+            )
+    
+    matched_array = to_matched_score(score, solo_ppart, alignment)[0]['onset']
+    
+    processor_kwargs = dict({'piano_range': kwargs[args.input_type][args.method]['piano_range']})
+
+    if args.method == "arzt":
+        processor_name = "pianoroll"#'pitch_class_pianoroll' 
+        POLLING_PERIOD = 0.01
+        feature_type = "pianoroll"#'pitchclass'
+    
+    if args.method == "dixon":
+        processor_name = 'pianoroll'#pitch_ioi'
+        POLLING_PERIOD = 0.01
+        feature_type = "pianoroll"
+    
+    elif args.method == "hmm":
         processor_name = 'pitch_ioi'
         POLLING_PERIOD = 0.01
         processor_kwargs["return_pitch_list"] = True
+        feature_type = "pitch_ioi"
         
-    elif method == "pthmm":
+    elif args.method == "pthmm":
         processor_name = 'pitch'
         POLLING_PERIOD = 0.01
         processor_kwargs["return_pitch_list"] = False
+        feature_type = "pitch_ioi"
     
-    elif method == "outerhmm":
+    elif args.method == "outerhmm":
         processor_name = 'pitch_ioi'
         POLLING_PERIOD = None
         processor_kwargs["return_pitch_list"] = False
+        feature_type = 'pitch_ioi'#'pianoroll'#'pitch_ioi'#"pianoroll"#pitch_ioi"
         
-    input_signal, frame_times = compute_features_from_symbolic(ref_info=solo_ppart,processor_name=processor_name, 
+    if processor_name == "pianoroll" :
+        ref_frames = compute_pianoroll_features(note_info=solo_ppart,#score.parts[0], 
+                                                polling_period=POLLING_PERIOD)
+        input_signal = np.array(ref_frames).astype(np.float32)
+        frame_times = np.arange(1, len(input_signal)+1) * POLLING_PERIOD
+        
+    else:
+        input_signal, frame_times = compute_features_from_symbolic(ref_info=solo_ppart,processor_name=processor_name, 
                                                                 processor_kwargs=processor_kwargs,
                                                                 polling_period=POLLING_PERIOD)
-    
+
 
     mm = Matchmaker(
     score_file=reference_fn, # the score file (musicxml) is used as reference feature
     performance_file=perf_midi,
-    input_type=config["input_type"],
-    tempo_model=tempo_model,
-    feature_type="pitch_ioi",
-    method=method,
-    piano_range=piano_range,
+    input_type=args.input_type,
+    feature_type=feature_type,
+    method=args.method,
+    kwargs=kwargs
     )
     
-
     tracked_sonsets, tracked_ponsets = [], []
 
-    
-    for i, frame in enumerate(input_signal):
-        if frame is not None:
-            current_state = mm.score_follower(frame)
-            mm_score_position = mm.score_follower.state_space[current_state] # (= current_position)
-
-        else:
-            mm_score_position = None
-
-        if mm_score_position != None:
-            tracked_sonsets.append(mm_score_position)
-            tracked_ponsets.append(frame_times[i])
+    if processor_name == "pianoroll":
+        current_idx = 0
+        for i, frame in enumerate(input_signal):
+            if frame.sum() != 0:
+                current_state = mm.score_follower(frame)
+                score_position = mm.score_follower.state_to_ref_time_map(current_state * POLLING_PERIOD)
+                
+                if score_position is not None:
+                    try:
+                        current_onset = mm.score_follower.state_space[current_idx]
+                    except IndexError:
+                        current_onset = mm.score_follower.state_space[-1]
+                    if score_position >= current_onset:
+                        if current_onset not in tracked_sonsets:
+                            tracked_sonsets.append(current_onset)
+                            tracked_ponsets.append(frame_times[i])
+                            current_idx += 1
+    else:
+        for i, frame in enumerate(input_signal):
+            if frame is not None:
+                current_state = mm.score_follower(frame)
+                mm_score_position = mm.score_follower.state_space[current_state] # (= current_position)
+                tracked_sonsets.append(mm_score_position)
+                tracked_ponsets.append(frame_times[i])
 
     tracked_sonsets = np.array(tracked_sonsets)
     tracked_ponsets = np.array(tracked_ponsets)
@@ -280,7 +362,7 @@ def align(
     set_tracked_sonsets = set(tracked_sonsets)
     tracking_ratio = len(set_matched_sonsets.intersection(set_tracked_sonsets))/len(set_matched_sonsets)
 
-    mapped_ponsets = stime_to_ptime_map(tracked_sonsets) 
+    mapped_ponsets = stime_to_ptime_map(tracked_sonsets)    
 
     list_of_nans = []
     asynchrony = mapped_ponsets - tracked_ponsets
@@ -298,6 +380,7 @@ def align(
     )
 
     mapped_sonsets = ptime_to_stime_map(tracked_ponsets)
+
     beat_tolerances = [0.05, 0.1, 0.3, 0.5, 1, 2]
     beat_results = get_evaluation_results(
         tracked_sonsets,
@@ -319,16 +402,21 @@ def align(
                     '<500ms': f'{results_in_seconds["500ms"]*100:.1f}',
                     '<1000ms': f'{results_in_seconds["1000ms"]*100:.1f}',
                     '<2000ms': f'{results_in_seconds["2000ms"]*100:.1f}',
+                    'count (ms)': f'{results_in_seconds["count"]}',
+                    'pcr (ms)': f'{results_in_seconds["pcr"]:.3f}',
                     'AAE (beats) ± σ': f'{beat_results["mean"]:.2f}±{beat_results["std"]:.2f}',
                     'MAE (beats)': f'{beat_results["median"]:.2f}', 
                     '<0.05b': f'{beat_results["0.05b"]*100:.1f}',
                     '<0.1b': f'{beat_results["0.1b"]*100:.1f}',
                     '<0.5b': f'{beat_results["0.5b"]*100:.1f}',
                     '<1b': f'{beat_results["1b"]*100:.1f}',
-                    '<2b': f'{beat_results["2b"]*100:.1f}', 
+                    '<2b': f'{beat_results["2b"]*100:.1f}',
+                    'count (beats)': f'{beat_results["count"]}',
+                    'pcr (beats)': f'{beat_results["pcr"]:.3f}',
+                    
                 })
     
-    result_ext = dict({'tracking_ratio': f'{tracking_ratio:.3f}',
+    result_ext = dict({'tracking_ratio': tracking_ratio,
                     'AAE': results_in_seconds["mean"], 
                     'std': results_in_seconds["std"],
                     'MAE': results_in_seconds["median"], 
@@ -343,6 +431,8 @@ def align(
                     '%_lt_500ms': results_in_seconds["500ms"]*100,
                     '%_lt_1000ms': results_in_seconds["1000ms"]*100,
                     '%_lt_2000ms': results_in_seconds["2000ms"]*100,
+                    'count (ms)': results_in_seconds["count"],
+                    'pcr (ms)': results_in_seconds["pcr"],
                     'AAE (beats)': beat_results["mean"],
                     'MAE (beats)': beat_results["median"], 
                     'std (beats)': beat_results["std"],
@@ -354,52 +444,56 @@ def align(
                     '%_lt_<0.5b': beat_results["0.5b"]*100,
                     '%_lt_<1b': beat_results["1b"]*100,
                     '%_lt_<2b': beat_results["2b"]*100,
+                    'count (beats)': beat_results["count"],
+                    'pcr (beats)': beat_results["pcr"],
                     })
 
     return result, result_ext, list_of_nans
 
 # ============= run the alignment for each performance in a specified dataset =============
 
-def run_tests_and_eval_by_dataset(args, config):
-    path = os.path.join(f'results/experiment/hmm-preprocessing/compute_ft_fr_symb-has_insertions_but_no_eval-pipeline-differences', f'{config["dataset"]}')
+def run_tests_and_eval_by_dataset(args, kwargs):
+    path = os.path.join(f'results_symbolic')
     os.makedirs(path, exist_ok=True)
 
-    keys = '88' if config["piano_range"] else '128' 
-    if config["method"] == "hmm":
-        name = f'{config["method"]}-{keys}-{config["input_type"]}-{config["tempo_model"].__name__}'
+    keys = '88' if kwargs[args.input_type][args.method]["piano_range"] else '128' 
+    if args.method == "hmm":
+        name = f'{args.dataset}:{args.method}-{keys}-{args.input_type}-{kwargs[args.input_type][args.method]["tempo_model"].__name__}'
     else:
-        name = f'{config["method"]}-{keys}-{config["input_type"]}'
+        name = f'{args.dataset}:{args.method}-{keys}-{args.input_type}'
         
     csv_path = os.path.join(path, name + '.csv')
     issue_path = os.path.join(path, 'issues-' + name + '.csv')
     
-    dataset_dir = DATASET_DIR[config["dataset"]]
-    metadata = pd.read_csv(METADATA_PATH[config["dataset"]])
+    dataset_dir = DATASET_DIR[args.dataset]
+    metadata = pd.read_csv(METADATA_PATH[args.dataset])
     results = pd.DataFrame()
     issues = pd.DataFrame()
-    use_musical_beat = config["dataset"] == "asap"
+    use_musical_beat = args.dataset == "asap"
 
     if args.wandb:
         wandb.init(
         entity="darthalexus",
-        project=f'matchmaker',
-        config = config,
+        project=f'matchmaker-symbolic',
+        config = kwargs[args.input_type][args.method],
         name=name,
         )
 
-    print(f'{name} - SAVE_RESULTS={config["save_results"]}')
+    print(f'{name} - SAVE_RESULTS={SAVE_RESULTS}')
     
     for i, row in enumerate(metadata.itertuples(), 1):
+        if args.dataset == "validation":
+            dataset_dir = DATASET_DIR[row.dataset]
+
         score_xml = dataset_dir / row.xml_score
-        if config["dataset"] == 'vienna':
+        if args.dataset == 'vienna':
             score_xml = dataset_dir / Path('musicxml_corrected'+row.xml_score[8:])
-            #print(score_xml)
 
         match = dataset_dir / row.match
         perf_midi = dataset_dir / row.midi_performance
         perf_audio = dataset_dir / row.audio_performance
 
-        if config["input_type"] == "midi":
+        if args.input_type == "midi":
             perf = perf_midi
         else:
             perf = perf_audio
@@ -412,19 +506,16 @@ def run_tests_and_eval_by_dataset(args, config):
         ######################################## the magic happens here: ########################################
         res, res_extended, list_of_nans = align(solo_perf_fn=str(match), 
                                   reference_fn=str(score_xml), 
-                                  perf_midi=str(perf_midi), 
-                                  tempo_model=config["tempo_model"], 
-                                  method=config["method"], 
-                                  piano_range=config["piano_range"],
-                                  #filtered=config["filtered"],
-                                  unfold = False if config["dataset"] == "vienna" else True)
+                                  perf_midi=str(perf_midi),
+                                  args=args,
+                                  kwargs=kwargs)
         #########################################################################################################
 
         if issues.empty:
             issues = pd.DataFrame(columns=['composer', 'title', 'performance', '#Nans', 'Nans'])
         if len(list_of_nans) > 0:
             issues.loc[len(issues)] = dict({'composer': row.composer, 'title': row.title, 'performance': perf.stem, '#Nans': len(list_of_nans[0]), 'Nans': list_of_nans[0]})
-            if config["save_results"]:
+            if SAVE_RESULTS:
                 issues.to_csv(issue_path, index=False)
 
         result.update(res)
@@ -438,10 +529,11 @@ def run_tests_and_eval_by_dataset(args, config):
         results_extended.loc[len(results)] = result_extended
         
         print(results)
-        if config["save_results"]:
+        if SAVE_RESULTS:
             results.to_csv(csv_path, index=False)
 
     final_res = dict({
+                    'tracking ratio': f'{np.mean(results_extended["tracking_ratio"]):.3f}',
                     'AAE (ms) ± σ': f'{np.mean(results_extended["AAE"]):.3f}±{np.mean(results_extended["std"]):.3f}', 
                     'MAE (ms)': f'{np.mean(results_extended["MAE"]):.3f}', 
                     'skewness (ms)': f'{np.mean(results_extended["skewness (ms)"]):.3f}',
@@ -453,6 +545,8 @@ def run_tests_and_eval_by_dataset(args, config):
                     '<500ms': f'{np.mean(results_extended["%_lt_500ms"]):.1f}',
                     '<1000ms': f'{np.mean(results_extended["%_lt_1000ms"]):.1f}',
                     '<2000ms': f'{np.mean(results_extended["%_lt_2000ms"]):.1f}',
+                    'count (ms)': f'{np.mean(results_extended["count (ms)"]):.3f}',
+                    'pcr (ms)': f'{np.mean(results_extended["pcr (ms)"]):.3f}',
                     'AAE (beats) ± σ': f'{np.mean(results_extended["AAE (beats)"]):.3f}±{np.mean(results_extended["std (beats)"]):.3f}', 
                     'MAE (beats)': f'{np.mean(results_extended["MAE (beats)"]):.3f}', 
                     'skewness (beats)': f'{np.mean(results_extended["skewness (beats)"]):.3f}',
@@ -462,13 +556,15 @@ def run_tests_and_eval_by_dataset(args, config):
                     '<0.5b': f'{np.mean(results_extended["%_lt_<0.5b"]):.1f}',
                     '<1b': f'{np.mean(results_extended["%_lt_<1b"]):.1f}',
                     '<2b': f'{np.mean(results_extended["%_lt_<2b"]):.1f}',
+                    'count (beats)': f'{np.mean(results_extended["count (beats)"]):.3f}',
+                    'pcr (beats)': f'{np.mean(results_extended["pcr (beats)"]):.3f}',
                     })
 
-    final_results = pd.DataFrame(final_res, index=[config["dataset"]])
+    final_results = pd.DataFrame(final_res, index=[args.dataset])
 
-    print(f'finished.\n\nFINAL_RESULTS:\n{name} - SAVE_RESULTS={config["save_results"]}\n')
+    print(f'finished.\n\nFINAL_RESULTS:\n{name} - SAVE_RESULTS={SAVE_RESULTS}\n')
     print(final_results)
-    if config["save_results"]:
+    if SAVE_RESULTS:
         final_csv_path = os.path.join(path,'final')
         os.makedirs(final_csv_path, exist_ok=True)
         final_csv_path = os.path.join(final_csv_path, f'{name}.csv')
@@ -489,41 +585,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Run an offline alignment experiment."# For further configs, use config/experiment.yaml"
     )
-    '''
-    parser.add_argument(
-        "--solo",
-        "-s",
-        help="Input Solo performance (as a match file)",
-        type=str,
-        default=None,
-    )
-
-    parser.add_argument(
-        "--reference",
-        "-r",
-        help="Reference (as a list of match files)",
-        nargs="+",
-        default=None,
-    )
-    parser.add_argument(
-        "--config",
-        "-c",
-        help="Config file (YAML)",
-        type=str,
-        default=None,
-    )
-    '''
     parser.add_argument(
         "--dataset",
         type=str,
-        choices=["asap", "vienna", "batik"],
+        choices=["validation", "asap", "vienna", "batik"],
         default="asap",
         help="Dataset to use (asap, vienna, or batik)",
     )
     parser.add_argument(
         "--method",
         type=str,
-        choices=["hmm", "outerhmm", "pthmm", "arzt"],
+        choices=["hmm", "outerhmm", "pthmm", "arzt", "dixon"],
         default="hmm",
         help="Method to use (hmm, dixon, arzt, or offline)",
     )
@@ -537,42 +609,41 @@ if __name__ == "__main__":
     parser.add_argument(
         "--wandb", action="store_true", help="report results to wandb", default=False
     )
-    parser.add_argument(
-        "--wandb_ext", action="store_true", help="report extensive results to wandb", default=False
-    )    
-
     args = parser.parse_args()
 
-    print('Use this script together with the feature/PitchIOIHMM branch of the matchmaker repository.')
+    print('\nThis script expects a "kwargs" parameter for the matchmaker class.\nIf this parameter was not added to the matchmaker class yet, simply comment out the "kwargs" parameter in line 328 and set your matchmaker configuration accordingly.\n')
 
-    config = CONFIG
-    config["method"] = args.method
-    config["input_type"] = args.input_type
-    config["dataset"] = args.dataset
-
-    config["piano_range"] = True
-    run_tests_and_eval_by_dataset(args, config)
-    raise KeyboardInterrupt
+    run_tests_and_eval_by_dataset(args, kwargs=KWARGS)
     
-    for method in ["pthmm", "outerhmm", "hmm"]:
-        config["method"] = method
-        print(f'METHOD = {config["method"]}')
-        for dataset in ["vienna", "asap", "batik"]:
-            config["dataset"] = dataset
-            for piano_range in [True, False]:
-                config["piano_range"] = piano_range
-                if config["method"] == "hmm":
-                    for tempo_model in [#KalmanTempoSyncModel, 
-                                        #ReactiveSyncModel,
-                                        #MovingAverageSyncModel,
-                                        #LinearSyncModel,
-                                        #JointAdaptationAnticipationSyncModel,
-                                        KalmanTempoModel,
-                                        LinearTempoModel,
-                                        MovingAverageTempoModel,
-                                        ReactiveTempoModel]:
-                        config["tempo_model"] = tempo_model
-                        print(f'{config["tempo_model"]=}')
-                        results = run_tests_and_eval_by_dataset(args, config)
-                else:
-                    results = run_tests_and_eval_by_dataset(args, config)
+    if False:
+        for method in ["outerhmm", 
+                    "pthmm", 
+                    "hmm",
+                    ]:
+            args.method = method
+            print(f'METHOD = {args.method}')
+            for dataset in ["asap", 
+                            "vienna", 
+                            "batik"
+                            ]:
+                args.dataset = dataset
+                for piano_range in [True]:#, False]:
+                    KWARGS[args.input_type][args.method]["piano_range"] = piano_range
+                    if args.method == "hmm":
+                        for tempo_model in [KalmanTempoModel,
+                                            LinearTempoModel,
+                                            MovingAverageTempoModel,
+                                            ReactiveTempoModel,
+                                            JointAdaptationAnticipationModel,
+                                            #KalmanTempoSyncModel, 
+                                            #ReactiveSyncModel,
+                                            #MovingAverageSyncModel,
+                                            #LinearSyncModel,
+                                            #JointAdaptationAnticipationSyncModel,
+                                            ]:
+                            KWARGS[args.input_type][args.method]["tempo_model"] = tempo_model
+                            print(f'{KWARGS[args.input_type][args.method]["tempo_model"]=}')
+
+                            results = run_tests_and_eval_by_dataset(args, kwargs=KWARGS)
+                    else:
+                        results = run_tests_and_eval_by_dataset(args, kwargs=KWARGS)
