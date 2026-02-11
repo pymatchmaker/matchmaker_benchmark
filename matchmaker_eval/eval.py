@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Optional, Union
 
 import librosa
-import mido
 import numpy as np
 import partitura as pt
 import scipy
@@ -163,34 +162,6 @@ def run_offline_alignment(
         TOLERANCES_IN_MS,
     )
     return results
-
-
-def regenerate_tempo_adjusted_midi(midi_path: Path, target_duration: float) -> Path:
-    mid = mido.MidiFile(midi_path.as_posix())
-    ratio = target_duration / mid.length
-    print(f"Tempo ratio (target audio / midi length): {ratio}")
-
-    has_set_tempo = False
-    for track in mid.tracks:
-        for msg in track:
-            if msg.type == "set_tempo":
-                has_set_tempo = True
-                print(f"Original tempo: {mido.tempo2bpm(msg.tempo)}, {msg.tempo}")
-                new_tempo = mido.bpm2tempo(mido.tempo2bpm(msg.tempo) / ratio)
-                print(f"New tempo: {mido.tempo2bpm(new_tempo)}, {new_tempo}")
-                msg.tempo = int(new_tempo)
-    if not has_set_tempo:
-        # If the track does not have a 'set_tempo' message, add one with the default BPM
-        default_bpm = 120
-        print(f"[Default] Original tempo: {default_bpm}, 500000")
-        new_tempo = mido.bpm2tempo(default_bpm / ratio)
-        print(f"New tempo: {new_tempo}")
-        for track in mid.tracks:
-            track.insert(0, mido.MetaMessage("set_tempo", tempo=int(new_tempo)))
-
-    new_midi_path = midi_path.with_stem("midi_score_adjusted")
-    mid.save(new_midi_path)
-    return new_midi_path
 
 
 def run_score_following(

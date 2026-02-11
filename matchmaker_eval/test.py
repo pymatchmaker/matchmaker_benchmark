@@ -26,15 +26,13 @@ import wandb
 
 WORKING_DIR = Path(__file__).parent.parent
 DATASET_DIR = {
-    "asap": Path("/home/jiyun/data/asap-dataset-matchmaker"),
-    "asap-valid": Path("/home/jiyun/data/asap-dataset-matchmaker"),
-    "batik": Path("/home/jiyun/data/Batik_Audio"),
-    "vienna": Path("/home/jiyun/data/vienna4x22"),
-    "pfvn": Path("/home/jiyun/data/KRAISLER"),
-    "chorale": Path("/home/jiyun/data/chorale-bricks"),
-    "winterreise": Path("/home/jiyun/data/winterreise"),
-    "zeilinger": Path("/home/jiyun/data/Zeilinger_data"),
-    "valid": None,  # mixed datasets - uses 'dataset' column from metadata
+    "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
+    "batik": Path("~/data/Batik_Audio").expanduser(),
+    "vienna": Path("~/workspace/vienna4x22").expanduser(),
+    "pfvn": Path("~/data/KRAISLER").expanduser(),
+    "chorale": Path("~/data/chorale-bricks").expanduser(),
+    "winterreise": Path("~/data/winterreise").expanduser(),
+    "zeilinger": Path("~/data/Zeilinger_data").expanduser(),
 }
 METADATA_PATH = {
     "valid": WORKING_DIR / "data/validation_data.csv",
@@ -74,9 +72,10 @@ def run_tests_and_eval_by_dataset(
     if not dry_run:
         run_dir.mkdir(parents=True, exist_ok=True)
 
-    dataset_dir = DATASET_DIR[dataset_type]
-    metadata = pd.read_csv(METADATA_PATH[dataset_type])
-    has_folder_column = "folder" in metadata.columns
+    metadata = pd.read_csv(METADATA_PATH[dataset_type], skipinitialspace=True)
+    metadata.columns = metadata.columns.str.strip()
+    str_cols = metadata.select_dtypes(include=["object"]).columns
+    metadata[str_cols] = metadata[str_cols].apply(lambda x: x.str.strip())
     is_valid_dataset = dataset_type == "valid"
     results = defaultdict(list)
     for i, row in enumerate(metadata.itertuples(), 1):
@@ -85,21 +84,18 @@ def run_tests_and_eval_by_dataset(
         if is_valid_dataset:
             # folder_dir = DATASET_DIR.get(row.dataset, dataset_dir)
             current_dataset = row.dataset
+            dataset_dir = DATASET_DIR[current_dataset]
         else:
             current_dataset = dataset_type
+            dataset_dir = DATASET_DIR[dataset_type]
 
-        if has_folder_column:
-            folder_dir = dataset_dir / row.folder
-        else:
-            folder_dir = dataset_dir
-
-        use_musical_beat = current_dataset in ["asap", "asap-valid", "pfvn"]
-        score_xml = folder_dir / row.xml_score
+        use_musical_beat = current_dataset in ["asap", "pfvn"]
+        score_xml = dataset_dir / row.xml_score
         # score_midi = dataset_dir / row.midi_score
-        perf_audio = folder_dir / row.audio_performance
+        perf_audio = dataset_dir / row.audio_performance
 
         # Use match file
-        match_file = folder_dir / row.match
+        match_file = dataset_dir / row.match
 
         try:
             if config.method == "offline":
@@ -207,9 +203,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset",
         type=str,
-        choices=list(DATASET_DIR.keys()),
+        choices=list(METADATA_PATH.keys()),
         default="asap",
-        help="Dataset to use (asap, vienna, batik, or pfvn)",
+        help="Dataset to use (asap, vienna, batik, pfvn, or valid)",
     )
     parser.add_argument(
         "--method",
