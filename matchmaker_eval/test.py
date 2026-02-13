@@ -35,7 +35,7 @@ DATASET_DIR = {
     "zeilinger": Path("~/data/Zeilinger_data").expanduser(),
 }
 METADATA_PATH = {
-    "valid": WORKING_DIR / "data/validation_data.csv",
+    "valid": WORKING_DIR / "data/metadata-validation.csv",
     "asap": WORKING_DIR / "data/reduced/metadata-asap.csv",
     "batik": WORKING_DIR / "data/reduced/metadata-batik.csv",
     "vienna": WORKING_DIR / "data/reduced/metadata-vienna.csv",
