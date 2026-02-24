@@ -294,6 +294,9 @@ def align(
                 alignment=alignment,
             )
     
+    sna = score.note_array()
+    pna = solo_ppart.note_array()
+    
     matched_array = to_matched_score(score, solo_ppart, alignment)[0]['onset']
     
     processor_kwargs = dict({'piano_range': config['piano_range']})
@@ -394,8 +397,10 @@ def align(
         tolerances=beat_tolerances,
         in_seconds=False,
     )
+    gt_ponsets = pna["onset_sec"]
+    gt_sonsets = sna["onset_beat"]
 
-    predicted_alignments = tracked_ponsets, mapped_ponsets, tracked_sonsets, mapped_sonsets
+    predicted_alignments = tracked_ponsets, mapped_ponsets, tracked_sonsets, mapped_sonsets, gt_ponsets, gt_sonsets
 
     if save_alignments:
         results_path = os.path.join("predicted_alignments", args.method, args.dataset)
@@ -409,12 +414,23 @@ def align(
             writer.writerow(['tracked_ponsets', 'mapped_ponsets', 'tracked_sonsets', 'mapped_sonsets'])
             writer.writerows(zip(predicted_alignments))
 
-        plt.plot(mapped_sonsets, tracked_sonsets)
-        plt.xlabel('mapped sonsets')
-        plt.ylabel('tracked sonsets')
+        plt.plot(gt_sonsets, gt_sonsets, label="gt")
+        plt.plot(tracked_sonsets, mapped_sonsets, label="predicted")
+        plt.xlabel('tracked sonsets')
+        plt.ylabel('mapped sonsets')
         plt.title('Sonsets')
+        plt.legend()
         plt.savefig(alignment_fn.replace(".csv", ".png"))
         plt.clf()
+
+        """plt.plot(gt_ponsets, gt_ponsets, label="gt")
+        plt.plot(mapped_ponsets, tracked_ponsets, label="predicted")
+        plt.xlabel('mapped ponsets')
+        plt.ylabel('tracked ponsets')
+        plt.title('Ponsets')
+        plt.legend()
+        plt.savefig(alignment_fn.replace(".csv", "-p.png"))
+        plt.clf()"""
         
         config_fn = os.path.join(results_path, "config.yaml")
         with open(config_fn, 'w') as f:

@@ -61,23 +61,33 @@ def run_tests_and_eval_by_dataset(args, kwargs):
 
         result.update(res_extended)
 
-        wandb.log({f'individual/{row.title}': result})
+        wandb.log({f'individual/{row.title}': result}) # TODO: this works only in the validation set because here row.title is unique
 
         if UPLOAD_ALIGNMENTS:
-            pred_alignment = [[a,b,c,d] for (a,b,c,d) in zip(predicted_alignments[0], 
-                                                             predicted_alignments[1], 
-                                                             predicted_alignments[2], 
-                                                             predicted_alignments[3])]
-            
-            table = wandb.Table(data=pred_alignment, columns=["tracked_ponsets", "mapped_ponsets", "tracked_sonsets", "mapped_sonsets"])
-            wandb.log(
-                {f"alignments/{row.title}/ponsets": wandb.plot.line(
-                        table, "tracked_ponsets", "mapped_ponsets", title=f"alignments/{row.title}/ponsets")}
-                    )
-            wandb.log(
-                {f"alignments/{row.title}/sonsets": wandb.plot.line(
-                        table, "tracked_sonsets", "mapped_sonsets", title=f"alignments/{row.title}/sonsets")}
-                    )
+            #tracked_ponsets, mapped_ponsets, tracked_sonsets, mapped_sonsets, gt_ponsets, gt_sonsets = predicted_alignments
+            _, _, tracked_sonsets, mapped_sonsets, _, gt_sonsets = predicted_alignments
+
+
+            wandb.log({
+                f"alignments/{row.title}/sonsets": wandb.plot.line_series(
+                    xs=[mapped_sonsets, gt_sonsets],
+                    ys=[tracked_sonsets, gt_sonsets],
+                    keys=["predicted sonsets", "ground_truth"],
+                    title=f"alignments/{row.title}/sonsets",
+                    xname="mapped_sonsets",
+                )
+            })
+            '''
+            wandb.log({
+                f"alignments/{row.title}/ponsets": wandb.plot.line_series(
+                    xs=[tracked_ponsets, gt_ponsets],
+                    ys=[mapped_ponsets, gt_ponsets],
+                    keys=["predicted ponsets", "ground_truth"],
+                    title=f"alignments/{row.title}/ponsets",
+                    xname="tracked ponsets",
+                )
+            })
+            '''
         
         if results.empty:
             results = pd.DataFrame(columns=result.keys())
