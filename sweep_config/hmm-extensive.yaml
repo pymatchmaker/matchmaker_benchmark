@@ -1,0 +1,29 @@
+program: matchmaker_eval/sweep.py
+name: hmm
+method: grid
+
+metric:
+  name: average.<10ms
+  goal: maximize
+
+parameters:
+  dataset:
+    value: "validation"
+
+  method:
+    value: "hmm"
+
+  input_type:
+    value: "midi"
+
+  processor:
+    value: "pitch_ioi"
+
+  piano_range:
+    values: [True, False]
+
+  tempo_model:
+    values: ["KalmanTempoModel", "LinearTempoModel", "MovingAverageTempoModel", "ReactiveTempoModel", "JointAdaptationAnticipationModel", "KalmanTempoSyncModel", "LinearSyncModel", "MovingAverageSyncModel", "JointAdaptationAnticipationSyncModel", "ReactiveSyncModel", "LinearTempoExpectationsSyncModel", "SyncModel"]
+
+  init_beat_period:
+    values: [0.4, 0.5, 0.6]
