@@ -172,3 +172,7 @@ wandb/
 *.tsv
 output/
 results/
+performance_audio*/
+score_audio*/
+predicted_alignments/
+sweep_results/
