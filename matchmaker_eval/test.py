@@ -1,5 +1,7 @@
 import argparse
 import json
+import sys
+import tempfile
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -7,11 +9,13 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
+import soundfile as sf
 from eval import (
     METRICS,
     run_offline_alignment,
     run_score_following,
     parse_match_file_for_note_onsets,
+    parse_annotation_csv,
 )
 from tabulate import tabulate
 from tqdm import tqdm
@@ -24,13 +28,16 @@ from utils import (
 
 import wandb
 
+sys.setrecursionlimit(10000)
+
 WORKING_DIR = Path(__file__).parent.parent
 DATASET_DIR = {
     "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
     "batik": Path("~/data/Batik_Audio").expanduser(),
-    "vienna": Path("~/workspace/vienna4x22").expanduser(),
+    "vienna": Path("~/data/vienna4x22").expanduser(),
     "pfvn": Path("~/data/KRAISLER").expanduser(),
     "chorale": Path("~/data/chorale-bricks").expanduser(),
+    "urmp": Path("~/data/URMP").expanduser(),
     "winterreise": Path("~/data/winterreise").expanduser(),
     "zeilinger": Path("~/data/Zeilinger_data").expanduser(),
 }
@@ -41,6 +48,7 @@ METADATA_PATH = {
     "vienna": WORKING_DIR / "data/reduced/metadata-vienna.csv",
     "pfvn": WORKING_DIR / "data/metadata-pfvn.csv",
     "chorale": WORKING_DIR / "data/metadata-chorale.csv",
+    "urmp": WORKING_DIR / "data/metadata-urmp.csv",
     "winterreise": WORKING_DIR / "data/metadata-winterreise.csv",
     "zeilinger": WORKING_DIR / "data/metadata-zeilinger-note.csv",
 }
@@ -90,12 +98,55 @@ def run_tests_and_eval_by_dataset(
             dataset_dir = DATASET_DIR[dataset_type]
 
         use_musical_beat = current_dataset in ["asap", "pfvn"]
-        score_xml = dataset_dir / row.xml_score
-        # score_midi = dataset_dir / row.midi_score
-        perf_audio = dataset_dir / row.audio_performance
 
-        # Use match file
-        match_file = dataset_dir / row.match
+        # Determine base directory: some datasets (e.g. chorale) have paths
+        # relative to a folder column, while others include the full path.
+        has_folder = hasattr(row, "folder")
+        if has_folder and not row.xml_score.startswith(row.folder):
+            base_dir = dataset_dir / row.folder
+        else:
+            base_dir = dataset_dir
+
+        score_xml = base_dir / row.xml_score
+        # score_midi = base_dir / row.midi_score
+        perf_audio = base_dir / row.audio_performance
+
+        # Get performance annotations: from note annotation file, match file, or annotation CSV
+        trimmed_audio_path = None
+        has_match = hasattr(row, "match")
+        if has_match:
+            match_file = dataset_dir / row.match
+            # Use match file parsing (via eval.py) to ensure annotation alignment
+            # with build_score_annotations, especially when ignore_invisible_objects
+            # changes the note count.
+            perf_annotations = None
+        else:
+            match_file = None
+            annotation_file = base_dir / row.performance_annotations
+            if not annotation_file.exists():
+                print(f"Annotation file not found: {annotation_file}, skipping")
+                continue
+            perf_annotations = parse_annotation_csv(annotation_file)
+
+        # Trim leading silence (URMP only): shift audio and annotations by first onset
+        trim_offset = 0.0
+        trimmed_audio_path = None
+        if (
+            current_dataset == "urmp"
+            and perf_annotations is not None
+            and len(perf_annotations) > 0
+        ):
+            margin = 0.5  # keep 0.5s before first note
+            trim_offset = max(0, perf_annotations[0] - margin)
+            if trim_offset > 1.0:  # only trim if >1s of silence
+                perf_annotations = perf_annotations - trim_offset
+                audio_data, sr = sf.read(str(perf_audio))
+                start_sample = int(trim_offset * sr)
+                audio_trimmed = audio_data[start_sample:]
+                tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+                sf.write(tmp.name, audio_trimmed, sr)
+                trimmed_audio_path = Path(tmp.name)
+                perf_audio = trimmed_audio_path
 
         try:
             if config.method == "offline":
@@ -105,21 +156,28 @@ def run_tests_and_eval_by_dataset(
                     match_file,
                     config,
                     use_musical_beat,
+                    perf_annotations=perf_annotations,
+                    granularity=granularity,
                 )
             else:
                 result = run_score_following(
                     score_xml,
                     perf_audio,
-                    match_file,
                     config,
                     use_musical_beat,
                     dry_run=dry_run,
                     save_dir=run_dir,
                     run_name=f"{i}",
+                    match_file=match_file,
+                    perf_annotations=perf_annotations,
+                    granularity=granularity,
                 )
         except Exception as e:
             print(f"Error: {e}")
             continue
+        finally:
+            if trimmed_audio_path is not None:
+                trimmed_audio_path.unlink(missing_ok=True)
 
         # add metadata to results
         results["Index"].append(i)
@@ -148,7 +206,6 @@ def main(args):
     dry_run = args.dry_run
     wandb = args.wandb
     granularity = args.granularity or "note"
-    adjust_tempo = args.adjust_tempo
 
     # save results
     if not dry_run:
@@ -164,7 +221,6 @@ def main(args):
             config.dataset = dataset_type
         if method:
             config.method = method
-        config.adjust_tempo = adjust_tempo
         print(f"Config: {config.model_dump(include=config.attr_exp)}")
 
         run_dir = save_dir / f"{i}" if not dry_run else None
@@ -182,7 +238,7 @@ def main(args):
 
             # save averaged results
             averaged_result = {
-                k: f"{np.mean(v):.4f}" for k, v in results.items() if k in METRICS
+                k: f"{np.nanmean(v):.4f}" for k, v in results.items() if k in METRICS
             }
             averaged_result["piece_count"] = len(results["Piece"])
             averaged_result["count"] = sum([c for c in results["count"]])
@@ -229,12 +285,6 @@ if __name__ == "__main__":
         choices=["beat", "note"],
         default="note",
         help="Granularity to use (beat or note)",
-    )
-    parser.add_argument(
-        "--adjust-tempo",
-        action="store_true",
-        help="Adjust tempo based on performance audio length",
-        default=False,
     )
     args = parser.parse_args()
 

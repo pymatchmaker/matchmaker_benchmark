@@ -45,7 +45,7 @@ Please set the `DATASET_DIR` in `matchmaker_eval/test.py` to the path of the dat
 DATASET_DIR = {
     "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
     "batik": Path("~/data/Batik_Audio").expanduser(),
-    "vienna": Path("~/workspace/vienna4x22").expanduser(),
+    "vienna": Path("~/data/vienna4x22").expanduser(),
 }
 ```
 
