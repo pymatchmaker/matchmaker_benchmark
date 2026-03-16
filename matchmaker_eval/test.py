@@ -7,20 +7,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-import numpy as np
 import pandas as pd
 import soundfile as sf
-from eval import (
-    METRICS,
-    run_offline_alignment,
-    run_score_following,
-    parse_match_file_for_note_onsets,
-    parse_annotation_csv,
-)
+from eval import parse_annotation_csv, run_offline_alignment, run_score_following
 from tabulate import tabulate
 from tqdm import tqdm
 from utils import (
     MatchmakerEvalConfig,
+    compute_event_pooled_summary,
     get_list_of_exp_config,
     save_config,
     save_results_to_csv,
@@ -43,6 +37,7 @@ DATASET_DIR = {
 }
 METADATA_PATH = {
     "valid": WORKING_DIR / "data/metadata-validation.csv",
+    "example": WORKING_DIR / "data/metadata-example.csv",
     "asap": WORKING_DIR / "data/reduced/metadata-asap.csv",
     "batik": WORKING_DIR / "data/reduced/metadata-batik.csv",
     "vienna": WORKING_DIR / "data/reduced/metadata-vienna.csv",
@@ -53,6 +48,20 @@ METADATA_PATH = {
     "zeilinger": WORKING_DIR / "data/metadata-zeilinger-note.csv",
 }
 OUTPUT_DIR = WORKING_DIR / "output"
+DISPLAY_COLUMNS = [
+    "Index",
+    "Piece",
+    "mean",
+    "median",
+    "300ms",
+    "1000ms",
+    "mean_b",
+    "median_b",
+    "0.3b",
+    "1.0b",
+    "2.0b",
+    "tracked",
+]
 
 
 def report_results_to_wandb(averaged_result: dict, config: MatchmakerEvalConfig):
@@ -65,6 +74,12 @@ def report_results_to_wandb(averaged_result: dict, config: MatchmakerEvalConfig)
     )
     wandb.log(averaged_result, step=None)
     wandb.finish()
+
+
+def print_summary_table(results: dict):
+    display = {k: results[k] for k in DISPLAY_COLUMNS if k in results}
+    print(tabulate(display, headers="keys", tablefmt="fancy_grid", showindex=True))
+    return results
 
 
 def run_tests_and_eval_by_dataset(
@@ -84,7 +99,7 @@ def run_tests_and_eval_by_dataset(
     metadata.columns = metadata.columns.str.strip()
     str_cols = metadata.select_dtypes(include=["object"]).columns
     metadata[str_cols] = metadata[str_cols].apply(lambda x: x.str.strip())
-    is_valid_dataset = dataset_type == "valid"
+    is_valid_dataset = dataset_type in ("valid", "example")
     results = defaultdict(list)
     for i, row in enumerate(metadata.itertuples(), 1):
         print(row)
@@ -193,11 +208,9 @@ def run_tests_and_eval_by_dataset(
         for k, v in result.items():
             results[k].append(v)
 
-        print("Results")
-        print(tabulate(results, headers="keys", tablefmt="fancy_grid", showindex=True))
+        print_summary_table(results)
 
-    print(tabulate(results, headers="keys", tablefmt="fancy_grid", showindex=True))
-    return results
+    print_summary_table(results)
 
 
 def main(args):
@@ -236,20 +249,21 @@ def main(args):
                 results, save_path=(run_dir / f"test_results.tsv").as_posix()
             )
 
-            # save averaged results
-            averaged_result = {
-                k: f"{np.nanmean(v):.4f}" for k, v in results.items() if k in METRICS
-            }
-            averaged_result["piece_count"] = len(results["Piece"])
-            averaged_result["count"] = sum([c for c in results["count"]])
-            results_file = run_dir / "summary_results.json"
-            with open(results_file, "w") as f:
-                json.dump(averaged_result, f, indent=4)
-            print(f"Results saved to: {results_file}")
+            # Compute event-wise pooled summary (both all and tracked-only)
+            summary_all = compute_event_pooled_summary(
+                results, run_dir, config, tracked_only=False
+            )
+            summary_tracked = compute_event_pooled_summary(
+                results, run_dir, config, tracked_only=True
+            )
+            for label, s in [("all", summary_all), ("tracked", summary_tracked)]:
+                path = run_dir / f"summary_{label}.json"
+                with open(path, "w") as f:
+                    json.dump(s, f, indent=4)
+                print(f"Results saved to: {path}")
 
         if not dry_run and wandb:
-            # report averaged results to wandb
-            report_results_to_wandb(averaged_result, config)
+            report_results_to_wandb(summary_tracked, config)
 
 
 if __name__ == "__main__":

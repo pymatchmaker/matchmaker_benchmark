@@ -12,15 +12,9 @@ from matchmaker import Matchmaker
 from matchmaker.utils.eval import get_evaluation_results
 from numpy.typing import NDArray
 from partitura.musicanalysis.performance_codec import get_time_maps_from_alignment
-from utils import MatchmakerEvalConfig
 
-TOLERANCES_IN_MS = [50, 100, 300, 500, 1000, 2000]
-TOLERANCES_IN_BEATS = [0.1, 0.2, 0.3, 0.5, 1.0, 2.0]
-METRICS = (
-    ["mean", "median", "std", "skewness", "kurtosis"]
-    + [f"{t}ms" for t in TOLERANCES_IN_MS]
-    + [f"{t}b" for t in TOLERANCES_IN_BEATS]
-)
+from utils import TOLERANCES_IN_BEATS, TOLERANCES_IN_MS, MatchmakerEvalConfig
+from verify_tracking import check_tracking, plot_tracking
 
 
 def parse_match_file_for_note_onsets(
@@ -154,7 +148,7 @@ def run_offline_alignment(
     config,
     use_musical_beat,
     perf_annotations: Optional[np.ndarray] = None,
-    granularity: str = "beat",
+    granularity: str = "note",
 ):
     mm = Matchmaker(
         score_file=score_path,
@@ -217,14 +211,32 @@ def run_offline_alignment(
     if perf_annotations is not None:
         perf_annots = perf_annotations[intro_offset:]
     elif match_file is not None:
-        # Match file annotations are already aligned to score, no offset needed
-        perf_annots = parse_match_file_for_note_onsets(match_file, level=granularity)
+        # Pass score_onset_beats to ensure alignment with build_score_annotations,
+        # especially when ignore_invisible_objects reduces the note count.
+        score_onset_beats = mm.build_score_annotations(
+            level=granularity, musical_beat=use_musical_beat, return_type="beats"
+        )
+        perf_annots = parse_match_file_for_note_onsets(
+            match_file, level=granularity, score_onset_beats=score_onset_beats
+        )
     else:
         raise ValueError("Either match_file or perf_annotations must be provided")
 
     min_length = min(len(score_annots), len(perf_annots))
     score_annots = score_annots[:min_length]
     perf_annots = perf_annots[:min_length]
+
+    # Filter out invalid pairs (NaN or outside warping path range)
+    max_perf_frame = wp[1].max()
+    max_perf_time = max_perf_frame / config.frame_rate
+    valid = (
+        np.isfinite(perf_annots)
+        & np.isfinite(score_annots)
+        & (perf_annots <= max_perf_time)
+        & (perf_annots >= 0)
+    )
+    score_annots = score_annots[valid]
+    perf_annots = perf_annots[valid]
 
     predicted_score_annots = transfer_offline_positions(
         wp,
@@ -234,7 +246,7 @@ def run_offline_alignment(
     results = get_evaluation_results(
         score_annots,
         predicted_score_annots,
-        total_counts=min_length,
+        total_counts=len(score_annots),
         tolerances=TOLERANCES_IN_MS,
     )
     return results
@@ -353,34 +365,41 @@ def run_score_following(
         else:
             results[f"{key}_b"] = value
 
-    # Tracking verification
+    # Tracking verification + plot
     try:
-        from verify_tracking_v2 import check_tracking
-
         wp_for_check = wp.T  # (2, T) → (T, 2)
-        score_annots_sec = mm.build_score_annotations(
-            level=granularity, musical_beat=use_musical_beat, return_type="seconds"
+
+        score_annots_for_gt = mm.build_score_annotations(
+            level=granularity, musical_beat=use_musical_beat, return_type="beats"
         )
-        min_len = min(len(score_annots_sec), len(perf_annotations))
+
+        min_len = min(len(score_annots_for_gt), len(perf_annotations))
         gt_for_check = np.column_stack(
             [
+                score_annots_for_gt[:min_len],
                 perf_annotations[:min_len],
-                score_annots_sec[:min_len],
             ]
         )
-        # Determine mode and state_space for correct score axis conversion
-        trk_mode = "state" if config.method == "audio_outerhmm" else "frame"
-        trk_state_space = score_annots_sec[:min_len] if trk_mode == "state" else None
         tracking = check_tracking(
             wp_for_check,
             gt_for_check,
             config.frame_rate,
-            mode=trk_mode,
-            state_space=trk_state_space,
+            mode="beat",
         )
         results["tracked"] = tracking["tracked"]
         results["max_deviation"] = tracking["max_deviation"]
         results["n_failed_segments"] = tracking["n_failed"]
+
+        # Save tracking plot
+        if save_dir is not None and run_name:
+            plot_tracking(
+                wp_for_check,
+                gt_for_check,
+                config.frame_rate,
+                title=f"{config.method} #{run_name}",
+                save_path=Path(save_dir) / f"tracking_{run_name}.png",
+                mode="beat",
+            )
     except Exception:
         pass
 

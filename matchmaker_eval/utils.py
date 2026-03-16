@@ -17,13 +17,24 @@ from matchmaker.prob.hmm import (
     gumbel_init_dist,
     gumbel_transition_matrix,
 )
+from matchmaker.utils.eval import get_evaluation_results, transfer_positions
 from matchmaker.utils.tempo_models import KalmanTempoModel
 from midi2audio import FluidSynth
 from numpy.typing import NDArray
 from pydantic_settings import BaseSettings
 
-SOUND_FONT_PATH = "~/soundfonts/sf2/MuseScore_General.sf2"
 WORKING_DIR = Path(__file__).parent.parent
+SOUND_FONT_PATH = "~/soundfonts/sf2/MuseScore_General.sf2"
+TOLERANCES_IN_MS = [50, 100, 300, 500, 1000, 2000]
+TOLERANCES_IN_BEATS = [0.1, 0.2, 0.3, 0.5, 1.0, 2.0]
+METRICS_MS = ["mean", "median", "std", "skewness", "kurtosis"] + [
+    f"{t}ms" for t in TOLERANCES_IN_MS
+]
+METRICS_BEAT = ["mean_b", "median_b", "std_b", "skewness_b", "kurtosis_b"] + [
+    f"{t}b" for t in TOLERANCES_IN_BEATS
+]
+METRICS_TRACKING = ["tracked", "max_deviation", "n_failed_segments"]
+METRICS_ALL = METRICS_MS + METRICS_BEAT + METRICS_TRACKING
 DEFAULT_CONFIG_PATH = WORKING_DIR / "config/default.yaml"
 EXP_CONFIG_PATH = WORKING_DIR / "config/experiment.yaml"
 
@@ -163,11 +174,124 @@ def convert_score_to_audio(score_path: str, sample_rate: int) -> Path:
     return score_audio_path
 
 
+def compute_event_pooled_summary(
+    results: dict,
+    run_dir: Path,
+    config,
+    tracked_only: bool = True,
+) -> dict:
+    """
+    Compute event-wise pooled metrics.
+
+    Accuracy metrics (mean, median, tolerances): pooled across all events.
+    RTF/latency metrics: piece-wise averaged.
+
+    Parameters
+    ----------
+    tracked_only : bool
+        If True, only include tracked pieces. If False, include all pieces.
+    """
+    n_total = len(results["Index"])
+    tracked_flags = results.get("tracked", [False] * n_total)
+
+    # Collect events from selected pieces
+    all_gt_perf = []
+    all_pred_perf = []
+    all_gt_score_beats = []
+    all_pred_score_beats = []
+    selected_indices = []
+
+    for idx, is_tracked in zip(results["Index"], tracked_flags):
+        if tracked_only and not is_tracked:
+            continue
+        selected_indices.append(idx)
+
+        wp_file = run_dir / f"wp_{idx}.tsv"
+        gt_file = run_dir / f"gt_{idx}.tsv"
+        if not wp_file.exists() or not gt_file.exists():
+            continue
+
+        wp = np.loadtxt(wp_file, delimiter="\t")
+        gt = np.loadtxt(gt_file, delimiter="\t")
+
+        gt_score = gt[:, 0]  # score positions (beats or seconds)
+        gt_perf = gt[:, 1]  # perf times (seconds)
+
+        # Score → perf prediction (ms metrics)
+        pred_perf = transfer_positions(wp.T, gt_score, config.frame_rate, mode="beat")
+        valid = np.isfinite(pred_perf) & np.isfinite(gt_perf)
+        all_gt_perf.append(gt_perf[valid])
+        all_pred_perf.append(pred_perf[valid])
+
+        # Perf → score prediction (beat metrics)
+        valid_gt_perf = np.isfinite(gt_perf)
+        pred_score = transfer_positions(
+            wp.T, gt_perf[valid_gt_perf], config.frame_rate, reverse=True, mode="beat"
+        )
+        valid_b = np.isfinite(pred_score)
+        all_gt_score_beats.append(gt_score[valid_gt_perf][valid_b])
+        all_pred_score_beats.append(pred_score[valid_b])
+
+    summary = {}
+    n_tracked = sum(1 for t in tracked_flags if t)
+    n_selected = len(selected_indices)
+    summary["tracking_rate"] = round(n_tracked / n_total, 4) if n_total > 0 else 0.0
+
+    if all_gt_perf:
+        pooled_gt = np.concatenate(all_gt_perf)
+        pooled_pred = np.concatenate(all_pred_perf)
+        total_count = len(pooled_gt)
+        ms_results = get_evaluation_results(
+            pooled_gt,
+            pooled_pred,
+            total_count,
+            tolerances=TOLERANCES_IN_MS,
+            in_seconds=True,
+        )
+        for k, v in ms_results.items():
+            summary[k] = v
+
+    if all_gt_score_beats:
+        pooled_gt_b = np.concatenate(all_gt_score_beats)
+        pooled_pred_b = np.concatenate(all_pred_score_beats)
+        total_count_b = len(pooled_gt_b)
+        beat_results = get_evaluation_results(
+            pooled_gt_b,
+            pooled_pred_b,
+            total_count_b,
+            tolerances=TOLERANCES_IN_BEATS,
+            in_seconds=False,
+        )
+        for k, v in beat_results.items():
+            # Keys like "0.1b" already have 'b' suffix; others need "_b"
+            if k.endswith("b"):
+                summary[k] = v
+            else:
+                summary[f"{k}_b"] = v
+
+    # RTF and latency: piece-wise average of selected pieces
+    for key in ["rtf", "f_avg_latency", "i_avg_latency"]:
+        if key in results:
+            if tracked_only:
+                vals = [v for v, t in zip(results[key], tracked_flags) if t]
+            else:
+                vals = list(results[key])
+            if vals:
+                summary[key] = float(f"{np.nanmean(vals):.4f}")
+
+    summary["piece_count"] = n_total
+    summary["tracked_count"] = n_tracked
+    summary["selected_count"] = n_selected
+    return summary
+
+
 def save_results_to_csv(results: dict, save_path: str):
+    from itertools import zip_longest
+
     with open(save_path, "w", newline="") as f:
         writer = csv.writer(f, delimiter="\t")
         writer.writerow(results.keys())
-        writer.writerows(zip(*results.values()))
+        writer.writerows(zip_longest(*results.values(), fillvalue=""))
 
 
 def save_nparray_to_csv(array: NDArray, save_path: str):

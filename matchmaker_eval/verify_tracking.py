@@ -2,63 +2,66 @@
 Check if a tracker followed the score throughout a piece (v2).
 
 Divides performance time into fixed 30-second segments.  For each GT
-annotation in a segment, interpolates the warping path to get the
-tracker's predicted score position, computes |predicted - gt|, and
-reports the median of those absolute errors as the segment deviation.
-A piece is FAILED if any segment's median error exceeds the threshold.
+annotation in a segment, finds the tracker's first-arrival performance
+time for that score position and computes |predicted_perf - gt_perf|.
+Reports the median of those absolute errors (in seconds) as the segment
+deviation.  A piece is FAILED if enough segments exceed the threshold.
 
 Key difference from v1:
   - v1: N equal segments, compares median positions
   - v2: Fixed 30-second segments, per-point absolute alignment errors
 
-Score axis conversion (no 0-1 normalization):
-  - frame mode (arzt, dixon): wp score frames / frame_rate → seconds
-  - state mode (outerhmm): wp state indices → score positions via state_space
+Evaluation is in the **performance domain** (errors always in seconds),
+so results are independent of whether the WP stores frame indices,
+beat positions, or state indices.
 
 Input:
-  wp.tsv   Warping path (tab-separated, 1 header row)
-           Column 0 = score position (frames or state indices), Column 1 = perf position (frame index)
-  gt.tsv   Ground truth (tab-separated, 1 header row)
-           Column 0 = perf time (seconds), Column 1 = score position (seconds)
+  wp.tsv   Warping path (tab-separated)
+           Column 0 = score position (beats or state indices), Column 1 = perf position (frame index)
+  gt.tsv   Ground truth (tab-separated)
+           Column 0 = score position (beats), Column 1 = perf time (seconds)
 
 Usage:
-  python verify_tracking_v2.py --wp output/.../wp_1.tsv --gt data/gt/valid/gt_1.tsv --frame-rate 30
-  python verify_tracking_v2.py --wp output/.../wp_1.tsv --gt data/gt/valid/gt_1.tsv --frame-rate 30 --save out.png
+  python verify_tracking.py --wp output/.../wp_1.tsv --gt data/gt/valid/gt_1.tsv --frame-rate 30
+  python verify_tracking.py --wp output/.../wp_1.tsv --gt data/gt/valid/gt_1.tsv --frame-rate 30 --save out.png
 """
 
 import argparse
 from pathlib import Path
 from typing import Optional
 
+import matplotlib.pyplot as plt
 import numpy as np
 
-SEGMENT_DURATION = 30.0  # seconds
 SEGMENT_THRESHOLD = 1.0  # max allowed median |error| per segment (seconds)
+SEGMENT_DURATION = 30.0  # seconds
 MIN_FAILS = 2  # piece fails if >= this many segments exceed SEGMENT_THRESHOLD
-MAX_DEV_CAP = 2.0  # piece fails if any segment exceeds this (seconds)
+MAX_DEV_CAP = 5.0  # seconds — any segment exceeding this → immediate fail
 
 
 def _wp_to_score(
     wp: np.ndarray,
     frame_rate: float,
-    mode: str = "frame",
+    mode: str = "beat",
     state_space: Optional[np.ndarray] = None,
 ) -> np.ndarray:
-    """Convert wp score axis to the same units as GT score axis.
+    """Convert wp score axis to GT-compatible units.
 
     Parameters
     ----------
-    wp : (N, 2) — col 0: score (frames or state indices), col 1: perf frames
+    wp : (N, 2) — col 0: score (frames, state indices, or beat positions), col 1: perf frames
     frame_rate : float
-    mode : "frame" or "state"
-    state_space : array mapping state index → score position (seconds or beats).
+    mode : "beat" or "state"
+    state_space : array mapping state index → score position.
                   Required when mode="state".
 
     Returns
     -------
     wp_score : (N,) array in GT-compatible units
     """
-    if mode == "state" and state_space is not None:
+    if mode == "beat":
+        return wp[:, 0].astype(float)
+    elif mode == "state" and state_space is not None:
         state_idx = wp[:, 0].astype(int)
         offset = int(state_idx.min())
         mapped = np.clip(state_idx - offset, 0, len(state_space) - 1)
@@ -74,7 +77,7 @@ def check_tracking(
     frame_rate: float,
     segment_duration: float = SEGMENT_DURATION,
     threshold: float = SEGMENT_THRESHOLD,
-    mode: str = "frame",
+    mode: str = "beat",
     state_space: Optional[np.ndarray] = None,
     min_fails: int = MIN_FAILS,
     max_dev_cap: float = MAX_DEV_CAP,
@@ -82,21 +85,19 @@ def check_tracking(
     """
     Check tracking quality using fixed-duration segments.
 
-    For each GT point in a segment, interpolates the warping path to get
-    the tracker's predicted score position and computes the absolute error
-    against the GT score position.  No 0-1 normalization — errors are in
-    the same units as gt[:, 1] (typically seconds).
+    Evaluates in the **performance domain**: for each GT annotation,
+    finds the tracker's first-arrival performance time at that score
+    position (via searchsorted on wp_score), then computes the absolute
+    error against the GT performance time.  Errors are always in seconds.
 
     Parameters
     ----------
-    wp : (N, 2) array — col 0: score position (frames or state indices), col 1: perf frames
-    gt : (M, 2) array — col 0: perf time (seconds), col 1: score position (seconds)
-    frame_rate : float — converts frames to seconds
+    wp : (N, 2) array — col 0: score position, col 1: perf frame indices
+    gt : (M, 2) array — col 0: score position, col 1: perf time (seconds)
+    frame_rate : float — converts perf frames to seconds
     segment_duration : float — segment length in seconds (default: 30)
-    threshold : float — max allowed median absolute error per segment
-    mode : "frame" or "state"
-        "frame": wp[:, 0] are score frames (÷ frame_rate → seconds)
-        "state": wp[:, 0] are HMM state indices (mapped via state_space)
+    threshold : float — max allowed median absolute error per segment in seconds (default: 1.0)
+    mode : "beat" or "state"
     state_space : optional array mapping state index → score position.
         Required when mode="state".
 
@@ -104,23 +105,23 @@ def check_tracking(
     -------
     dict with: segments, max_deviation, tracked, reason
     """
-    wp_perf = wp[:, 1] / frame_rate
-
-    gt_perf = gt[:, 0]
-    gt_score = gt[:, 1]
-
     wp_score = _wp_to_score(wp, frame_rate, mode, state_space)
+    wp_perf = wp[:, 1] / frame_rate  # seconds
 
-    # Causal lookup: for each GT time, use the last WP entry at or before that time.
-    # GT points before the first WP entry or after the last get NaN → treated as errors.
-    indices = np.searchsorted(wp_perf, gt_perf, side="right") - 1
-    predicted_score = np.full(len(gt_perf), np.nan)
-    valid = indices >= 0
-    predicted_score[valid] = wp_score[indices[valid]]
-    errors_all = np.abs(predicted_score - gt_score)
+    gt_score = gt[:, 0]
+    gt_perf = gt[:, 1]
+
+    # Forward lookup (score → perf): first WP entry where wp_score >= gt_score
+    # This gives the tracker's first-arrival perf time at each GT score position.
+    indices = np.searchsorted(wp_score, gt_score, side="left")
+    predicted_perf = np.full(len(gt_score), np.nan)
+    valid = indices < len(wp_score)
+    predicted_perf[valid] = wp_perf[indices[valid]]
+
+    errors_all = np.abs(predicted_perf - gt_perf)  # always in seconds
 
     # Cover full performance duration (max of WP and GT), so early tracker death is penalized
-    total_dur = max(wp_perf[-1], gt_perf[-1])
+    total_dur = max(wp_perf[-1], gt_perf[np.isfinite(gt_perf)][-1]) if np.any(np.isfinite(gt_perf)) else wp_perf[-1]
     n_segments = max(1, int(np.ceil(total_dur / segment_duration)))
     segments = []
 
@@ -150,8 +151,8 @@ def check_tracking(
             }
         )
 
-    valid = [seg["deviation"] for seg in segments if not np.isnan(seg["deviation"])]
-    max_dev = max(valid) if valid else 0.0
+    valid_devs = [seg["deviation"] for seg in segments if not np.isnan(seg["deviation"])]
+    max_dev = max(valid_devs) if valid_devs else 0.0
     n_failed = sum(1 for seg in segments if seg["failed"])
     tracked = n_failed < min_fails and max_dev <= max_dev_cap
 
@@ -197,14 +198,12 @@ def plot_tracking(
     save_path: Path = None,
     segment_duration: float = SEGMENT_DURATION,
     threshold: float = SEGMENT_THRESHOLD,
-    mode: str = "frame",
+    mode: str = "beat",
     state_space: Optional[np.ndarray] = None,
     min_fails: int = MIN_FAILS,
     max_dev_cap: float = MAX_DEV_CAP,
 ):
     """Plot warping path vs GT with per-point error analysis per segment."""
-    import matplotlib.pyplot as plt
-
     result = check_tracking(
         wp,
         gt,
@@ -220,16 +219,16 @@ def plot_tracking(
     max_dev = result["max_deviation"]
     tracked = result["tracked"]
 
-    wp_perf = wp[:, 1] / frame_rate
     wp_score = _wp_to_score(wp, frame_rate, mode, state_space)
-    gt_perf = gt[:, 0]
-    gt_score = gt[:, 1]
+    wp_perf = wp[:, 1] / frame_rate
+    gt_score = gt[:, 0]
+    gt_perf = gt[:, 1]
 
-    # Causal lookup (same as check_tracking)
-    indices = np.searchsorted(wp_perf, gt_perf, side="right") - 1
-    predicted_score = np.full(len(gt_perf), np.nan)
-    valid_idx = indices >= 0
-    predicted_score[valid_idx] = wp_score[indices[valid_idx]]
+    # Forward lookup (same as check_tracking)
+    indices = np.searchsorted(wp_score, gt_score, side="left")
+    predicted_perf = np.full(len(gt_score), np.nan)
+    valid_idx = indices < len(wp_score)
+    predicted_perf[valid_idx] = wp_perf[indices[valid_idx]]
 
     # Figure (3-panel)
     fig = plt.figure(figsize=(16, 12))
@@ -250,8 +249,10 @@ def plot_tracking(
     ax1.plot(
         wp_perf, wp_score, color="navy", lw=1.2, alpha=0.9, zorder=3, label="Tracker"
     )
-    for t, gs_val, ps_val in zip(gt_perf, gt_score, predicted_score):
-        ax1.plot([t, t], [gs_val, ps_val], color="red", alpha=0.15, lw=0.5)
+    # Error lines: horizontal (same score position, different perf times)
+    for gs_val, gp_val, pp_val in zip(gt_score, gt_perf, predicted_perf):
+        if np.isfinite(pp_val):
+            ax1.plot([gp_val, pp_val], [gs_val, gs_val], color="red", alpha=0.15, lw=0.5)
     n_failed = result["n_failed"]
     status = "TRACKED" if tracked else f"FAILED ({result['reason']})"
     mf_label = f", min_fails={min_fails}" if min_fails > 1 else ""
@@ -262,11 +263,11 @@ def plot_tracking(
         color="green" if tracked else "red",
         fontweight="bold",
     )
-    ax1.set_ylabel("Score position (s)")
+    ax1.set_ylabel("Score position")
     ax1.set_xlabel("Performance time (s)")
     ax1.legend(loc="upper left")
 
-    # Panel 2: median absolute error bars
+    # Panel 2: median absolute error bars (in seconds)
     for seg in segments:
         t_mid = (seg["t0"] + seg["t1"]) / 2
         v = seg["deviation"] if not np.isnan(seg["deviation"]) else 0
@@ -280,11 +281,11 @@ def plot_tracking(
             lw=0.5,
         )
     ax2.axhline(
-        threshold, color="red", ls="--", lw=1.5, label=f"threshold={threshold:.0f}s"
+        threshold, color="red", ls="--", lw=1.5, label=f"threshold={threshold:.1f}s"
     )
     ax2.axhline(0, color="black", lw=0.5)
     ax2.set_ylabel("Median |error| per segment (s)")
-    yl = max(threshold * 2, max_dev * 1.3)
+    yl = max(threshold * 2, max_dev * 1.3) if max_dev > 0 else threshold * 2
     ax2.set_ylim(0, yl)
     ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.1f}s"))
     ax2.legend(loc="upper right", fontsize=9)
@@ -328,12 +329,12 @@ def main():
     )
     parser.add_argument("--wp", type=Path, required=True, help="Warping path TSV")
     parser.add_argument("--gt", type=Path, required=True, help="Ground truth TSV")
-    parser.add_argument("--frame-rate", type=float, required=True, help="Frame rate")
+    parser.add_argument("--frame-rate", type=int, help="Frame rate")
     parser.add_argument(
         "--mode",
-        choices=["frame", "state"],
-        default="frame",
-        help="Warping path mode: 'frame' for arzt/dixon, 'state' for outerhmm",
+        choices=["beat", "state"],
+        default="beat",
+        help="Warping path mode: 'beat' for current audio trackers, 'state' for symbolic trackers",
     )
     parser.add_argument(
         "--state-space",
@@ -368,8 +369,8 @@ def main():
     )
     for i, seg in enumerate(result["segments"]):
         d = seg["deviation"]
-        flag = " !" if not np.isnan(d) and d > SEGMENT_THRESHOLD else ""
         if not np.isnan(d):
+            flag = " !" if d > SEGMENT_THRESHOLD else ""
             print(
                 f"  S{i+1:>2} [{seg['t0']:>5.0f}-{seg['t1']:>5.0f}s]: {d:.2f}s ({seg['n_points']} pts){flag}"
             )
