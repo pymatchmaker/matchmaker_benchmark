@@ -121,7 +121,11 @@ def check_tracking(
     errors_all = np.abs(predicted_perf - gt_perf)  # always in seconds
 
     # Cover full performance duration (max of WP and GT), so early tracker death is penalized
-    total_dur = max(wp_perf[-1], gt_perf[np.isfinite(gt_perf)][-1]) if np.any(np.isfinite(gt_perf)) else wp_perf[-1]
+    total_dur = (
+        max(wp_perf[-1], gt_perf[np.isfinite(gt_perf)][-1])
+        if np.any(np.isfinite(gt_perf))
+        else wp_perf[-1]
+    )
     n_segments = max(1, int(np.ceil(total_dur / segment_duration)))
     segments = []
 
@@ -151,7 +155,9 @@ def check_tracking(
             }
         )
 
-    valid_devs = [seg["deviation"] for seg in segments if not np.isnan(seg["deviation"])]
+    valid_devs = [
+        seg["deviation"] for seg in segments if not np.isnan(seg["deviation"])
+    ]
     max_dev = max(valid_devs) if valid_devs else 0.0
     n_failed = sum(1 for seg in segments if seg["failed"])
     tracked = n_failed < min_fails and max_dev <= max_dev_cap
@@ -170,7 +176,7 @@ def check_tracking(
         "segments": segments,
         "n_segments": n_segments,
         "n_failed": n_failed,
-        "max_deviation": max_dev,
+        "max_deviation": round(max_dev, 4),
         "tracked": tracked,
         "reason": reason,
     }
@@ -252,7 +258,9 @@ def plot_tracking(
     # Error lines: horizontal (same score position, different perf times)
     for gs_val, gp_val, pp_val in zip(gt_score, gt_perf, predicted_perf):
         if np.isfinite(pp_val):
-            ax1.plot([gp_val, pp_val], [gs_val, gs_val], color="red", alpha=0.15, lw=0.5)
+            ax1.plot(
+                [gp_val, pp_val], [gs_val, gs_val], color="red", alpha=0.15, lw=0.5
+            )
     n_failed = result["n_failed"]
     status = "TRACKED" if tracked else f"FAILED ({result['reason']})"
     mf_label = f", min_fails={min_fails}" if min_fails > 1 else ""

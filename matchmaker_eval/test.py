@@ -211,6 +211,7 @@ def run_tests_and_eval_by_dataset(
         print_summary_table(results)
 
     print_summary_table(results)
+    return results
 
 
 def main(args):
