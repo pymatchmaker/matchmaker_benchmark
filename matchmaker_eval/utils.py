@@ -21,10 +21,10 @@ from matchmaker.utils.eval import get_evaluation_results, transfer_positions
 from matchmaker.utils.tempo_models import KalmanTempoModel
 from midi2audio import FluidSynth
 from numpy.typing import NDArray
+from partitura.utils.fluidsynth import DEFAULT_SOUNDFONT as SOUND_FONT_PATH
 from pydantic_settings import BaseSettings
 
 WORKING_DIR = Path(__file__).parent.parent
-SOUND_FONT_PATH = "~/soundfonts/sf2/MuseScore_General.sf2"
 TOLERANCES_IN_MS = [50, 100, 300, 500, 1000, 2000]
 TOLERANCES_IN_BEATS = [0.1, 0.2, 0.3, 0.5, 1.0, 2.0]
 METRICS_MS = ["mean", "median", "std", "skewness", "kurtosis"] + [
