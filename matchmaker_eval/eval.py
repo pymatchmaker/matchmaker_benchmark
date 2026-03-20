@@ -26,9 +26,6 @@ def parse_match_file_for_note_onsets(
     Parse a match file and extract performed note onset times in seconds
     using partitura's alignment mapping.
 
-    Uses partitura to properly load the match file and create a mapping
-    from score time to performance time based on the alignment.
-
     Parameters
     ----------
     match_file : Union[str, Path]
@@ -38,9 +35,7 @@ def parse_match_file_for_note_onsets(
     score_onset_beats : np.ndarray, optional
         Onset beat positions from the MusicXML score. If provided, these
         are mapped through stime_to_ptime_map instead of using the match
-        file's own score onsets. Required when ignore_invisible_objects=True
-        reduces the score note count, to ensure alignment with
-        build_score_annotations().
+        file's own score onsets.
 
     Returns
     -------
@@ -65,8 +60,6 @@ def parse_match_file_for_note_onsets(
     )
 
     if score_onset_beats is not None:
-        # Use MusicXML onset beats to ensure index alignment with
-        # build_score_annotations
         performed_times = stime_to_ptime_map(score_onset_beats)
     elif level == "beat":
         start_beat = np.ceil(snote_array["onset_beat"].min())
@@ -154,7 +147,7 @@ def run_offline_alignment(
         score_file=score_path,
         performance_file=perf_path,
         input_type="audio",
-        unfold_score=False,
+        unfold_score=True,
     )
     # read audio
     audio_1 = mm.score_audio
@@ -308,7 +301,7 @@ def run_score_following(
         sample_rate=config.sample_rate,
         feature_type=config.feature_type,
         wait=False,
-        unfold_score=False,
+        unfold_score=True,
         **extra,
     )
 

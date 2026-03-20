@@ -27,7 +27,7 @@ sys.setrecursionlimit(10000)
 WORKING_DIR = Path(__file__).parent.parent
 DATASET_DIR = {
     "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
-    "batik": Path("~/data/Batik_Audio").expanduser(),
+    "batik": Path("~/data/batik_plays_mozart").expanduser(),
     "vienna": Path("~/data/vienna4x22").expanduser(),
     "pfvn": Path("~/data/KRAISLER").expanduser(),
     "chorale": Path("~/data/chorale-bricks").expanduser(),
@@ -55,6 +55,7 @@ DISPLAY_COLUMNS = [
     "median",
     "300ms",
     "1000ms",
+    "2000ms",
     "mean_b",
     "median_b",
     "0.3b",
