@@ -35,109 +35,27 @@ METRICS_BEAT = ["mean_b", "median_b", "std_b", "skewness_b", "kurtosis_b"] + [
 ]
 METRICS_TRACKING = ["tracked", "max_deviation", "n_failed_segments"]
 METRICS_ALL = METRICS_MS + METRICS_BEAT + METRICS_TRACKING
-DEFAULT_CONFIG_PATH = WORKING_DIR / "config/default.yaml"
-EXP_CONFIG_PATH = WORKING_DIR / "config/experiment.yaml"
 
 
 class MatchmakerEvalConfig(BaseSettings):
-    sample_rate: int
-    frame_rate: int
-    window_size: int
-    feature_type: str
-    distance_func: str
     method: str
-    hop_length: int
-    n_fft: int
-    max_run_count: int
-    dataset: Optional[str] = None  # for experiment
-    adjust_tempo: bool = False  # whether to adjust tempo based on performance audio
+    sample_rate: int = 44100
+    frame_rate: int = 30
+    dataset: Optional[str] = None
 
-    # attributes for inference
-    attr_infer: list[str] = [
-        "sample_rate",
-        "frame_rate",
-        "window_size",
-        "feature_type",
-        "distance_func",
-        "method",
-        "hop_length",
-        "n_fft",
-    ]
+    @property
+    def hop_length(self) -> int:
+        return self.sample_rate // self.frame_rate
 
     # attributes for experiment (for logging purpose)
     attr_exp: list[str] = [
+        "method",
         "sample_rate",
         "frame_rate",
-        "window_size",
-        "feature_type",
-        "distance_func",
         "dataset",
-        "method",
     ]
 
 
-def load_config(config_path: str) -> dict:
-    with open(config_path, "r") as f:
-        config_dict = yaml.safe_load(f)
-    return config_dict
-
-
-def initialize_config(**kwargs) -> dict:
-    default_config = load_config(DEFAULT_CONFIG_PATH.as_posix())
-
-    sample_rate = kwargs.get("sample_rate", default_config["sample_rate"])
-    frame_rate = kwargs.get("frame_rate", default_config["frame_rate"])
-    window_size = kwargs.get("window_size", default_config["window_size"])
-    feature_type = kwargs.get("feature_type", default_config["feature_type"])
-    distance_func = kwargs.get("distance_func", default_config["distance_func"])
-    max_run_count = kwargs.get("max_run_count", default_config["max_run_count"])
-    method = kwargs.get("method", default_config["method"])
-    dataset = kwargs.get("dataset")
-
-    hop_length = sample_rate // frame_rate
-    n_fft = 2 * hop_length
-
-    # initialize config
-    conf = MatchmakerEvalConfig(
-        sample_rate=sample_rate,
-        frame_rate=frame_rate,
-        window_size=window_size,
-        feature_type=feature_type,
-        distance_func=distance_func,
-        dataset=dataset,
-        method=method,
-        hop_length=hop_length,
-        n_fft=n_fft,
-        max_run_count=max_run_count,
-    )
-    return conf
-
-
-def get_list_of_exp_config():
-    config = load_config(DEFAULT_CONFIG_PATH.as_posix())
-    experiment_config = load_config(EXP_CONFIG_PATH.as_posix())
-    for key in experiment_config.keys():
-        config[key] = experiment_config[key]
-
-    configs = []
-    for dataset in config["dataset_exp"]:
-        for method in config["method_exp"]:
-            for sample_rate in config["sample_rate_exp"]:
-                for frame_rate in config["frame_rate_exp"]:
-                    for window_size in config["window_size_exp"]:
-                        for distance_func in config["distance_func_exp"]:
-                            for feature_type in config["feature_type_exp"]:
-                                exp_config = initialize_config(
-                                    method=method,
-                                    sample_rate=sample_rate,
-                                    frame_rate=frame_rate,
-                                    window_size=window_size,
-                                    feature_type=feature_type,
-                                    dataset=dataset,
-                                    distance_func=distance_func,
-                                )
-                        configs.append(exp_config)
-    return configs
 
 
 def save_config(config, save_dir):

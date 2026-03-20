@@ -1,7 +1,0 @@
-sample_rate: 44100
-frame_rate: 30
-window_size: 5
-feature_type: "chroma"
-distance_func: "Manhattan"
-max_run_count: 30
-method: "arzt"  # hmm, dixon, arzt

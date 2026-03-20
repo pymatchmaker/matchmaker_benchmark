@@ -10,12 +10,11 @@ from typing import Optional
 import pandas as pd
 import soundfile as sf
 from eval import parse_annotation_csv, run_offline_alignment, run_score_following
+from matchmaker.matchmaker import KWARGS
 from tabulate import tabulate
-from tqdm import tqdm
 from utils import (
     MatchmakerEvalConfig,
     compute_event_pooled_summary,
-    get_list_of_exp_config,
     save_config,
     save_results_to_csv,
 )
@@ -215,12 +214,25 @@ def run_tests_and_eval_by_dataset(
     return results
 
 
+def build_config(method: str, dataset: str) -> MatchmakerEvalConfig:
+    """Build MatchmakerEvalConfig from matchmaker's KWARGS."""
+    kw = KWARGS.get("audio", {}).get(method, {})
+    return MatchmakerEvalConfig(
+        method=method,
+        dataset=dataset,
+        **{k: v for k, v in kw.items() if k in ("sample_rate", "frame_rate")},
+    )
+
+
 def main(args):
     dataset_type = args.dataset
     method = args.method
     dry_run = args.dry_run
     wandb = args.wandb
     granularity = args.granularity or "note"
+
+    config = build_config(method, dataset_type)
+    print(f"Config: {config.model_dump(include=config.attr_exp)}")
 
     # save results
     if not dry_run:
@@ -229,48 +241,39 @@ def main(args):
         )
         save_dir.mkdir(parents=True, exist_ok=True)
 
-    configs = get_list_of_exp_config()
-    run_dir = None
-    for i, config in enumerate(tqdm(configs), 1):
-        if dataset_type:
-            config.dataset = dataset_type
-        if method:
-            config.method = method
-        print(f"Config: {config.model_dump(include=config.attr_exp)}")
+    run_dir = save_dir / "1" if not dry_run else None
+    results = run_tests_and_eval_by_dataset(
+        config.dataset, config, run_dir, dry_run, granularity
+    )
 
-        run_dir = save_dir / f"{i}" if not dry_run else None
-        results = run_tests_and_eval_by_dataset(
-            config.dataset, config, run_dir, dry_run, granularity
+    if not dry_run:
+        save_config(config, run_dir)
+
+        # save individual results
+        save_results_to_csv(
+            results, save_path=(run_dir / f"test_results.tsv").as_posix()
         )
 
-        if not dry_run:
-            save_config(config, run_dir)
+        # Compute event-wise pooled summary (both all and tracked-only)
+        summary_all = compute_event_pooled_summary(
+            results, run_dir, config, tracked_only=False
+        )
+        summary_tracked = compute_event_pooled_summary(
+            results, run_dir, config, tracked_only=True
+        )
+        for label, s in [("all", summary_all), ("tracked", summary_tracked)]:
+            path = run_dir / f"summary_{label}.json"
+            with open(path, "w") as f:
+                json.dump(s, f, indent=4)
+            print(f"Results saved to: {path}")
 
-            # save individual results
-            save_results_to_csv(
-                results, save_path=(run_dir / f"test_results.tsv").as_posix()
-            )
-
-            # Compute event-wise pooled summary (both all and tracked-only)
-            summary_all = compute_event_pooled_summary(
-                results, run_dir, config, tracked_only=False
-            )
-            summary_tracked = compute_event_pooled_summary(
-                results, run_dir, config, tracked_only=True
-            )
-            for label, s in [("all", summary_all), ("tracked", summary_tracked)]:
-                path = run_dir / f"summary_{label}.json"
-                with open(path, "w") as f:
-                    json.dump(s, f, indent=4)
-                print(f"Results saved to: {path}")
-
-        if not dry_run and wandb:
-            report_results_to_wandb(summary_tracked, config)
+    if not dry_run and wandb:
+        report_results_to_wandb(summary_tracked, config)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Testing Matchmaker with different methods and datasets. For further configs, use config/experiment.yaml"
+        description="Testing Matchmaker with different methods and datasets. Config is read from matchmaker's KWARGS."
     )
     parser.add_argument(
         "--dataset",
