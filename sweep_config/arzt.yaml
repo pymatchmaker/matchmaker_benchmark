@@ -1,0 +1,42 @@
+program: matchmaker_eval/test_audio.py
+command:
+  - ${env}
+  - python
+  - ${program}
+  - --sweep
+name: audio-arzt
+method: bayes
+
+metric:
+  name: tracking_rate
+  goal: maximize
+
+parameters:
+  dataset:
+    value: "valid"
+
+  method:
+    value: "arzt"
+
+  sample_rate:
+    value: 44100
+
+  frame_rate:
+    value: 30
+
+  # Fixed from previous sweep results
+  start_window_size:
+    value: 0.1
+
+  distance_func:
+    values: ["Euclidean", "Manhattan", "Cosine"]
+
+  # Sweep parameters
+  window_size:
+    value: 10
+
+  step_size:
+    value: 3
+
+  feature_type:
+    values: ["chroma"]

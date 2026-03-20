@@ -1,0 +1,37 @@
+program: matchmaker_eval/test_audio.py
+command:
+  - ${env}
+  - python
+  - ${program}
+  - --sweep
+name: audio-outerhmm
+method: bayes
+
+metric:
+  name: tracking_rate
+  goal: maximize
+
+parameters:
+  dataset:
+    value: "valid"
+
+  method:
+    value: "audio_outerhmm"
+
+  feature_type:
+    value: "cqt_spectral_flux"
+
+  sample_rate:
+    values: [16000, 24000]
+
+  # Fixed from previous sweep results
+  patience:
+    value: 0
+
+  # Sweep parameters
+  frame_rate:
+    values: [25, 40, 50]
+
+  # Nakamura s_j: probability of stopping at event j for repeat/skip
+  # s_j:
+  #   values: [0, 1e-5]

@@ -171,8 +171,12 @@ matchmaker/utils/distances.c
 wandb/
 *.tsv
 output/
-results/
+*results/
 performance_audio*/
 score_audio*/
 predicted_alignments/
 sweep_results/
+plots/
+reports/
+*exports/
+scripts/
