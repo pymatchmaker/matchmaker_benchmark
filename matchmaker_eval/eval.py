@@ -1,7 +1,7 @@
 import json
 import traceback
 from pathlib import Path
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import librosa
 import numpy as np
@@ -21,6 +21,7 @@ def parse_match_file_for_note_onsets(
     match_file: Union[str, Path],
     level: str = "note",
     score_onset_beats: Optional[np.ndarray] = None,
+    onset_aggregation_fun: Callable = np.min,
 ) -> np.ndarray:
     """
     Parse a match file and extract performed note onset times in seconds
@@ -57,6 +58,7 @@ def parse_match_file_for_note_onsets(
         ppart_or_note_array=pnote_array,
         spart_or_note_array=snote_array,
         alignment=alignment,
+        onset_aggregation_fun=onset_aggregation_fun,
     )
 
     if score_onset_beats is not None:
