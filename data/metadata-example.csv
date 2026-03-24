@@ -1,0 +1,2 @@
+composer,title,xml_score,midi_score,midi_performance,performance_annotations,midi_score_annotations,audio_performance,difficulty,match,mean_rank,dataset
+Bach,Fugue_bwv_858,Bach/Fugue/bwv_858/xml_score.musicxml,Bach/Fugue/bwv_858/midi_score.mid,Bach/Fugue/bwv_858/VuV01M.mid,Bach/Fugue/bwv_858/VuV01M_annotations.txt,Bach/Fugue/bwv_858/midi_score_annotations.txt,Bach/Fugue/bwv_858/VuV01M.wav,3,Bach/Fugue/bwv_858/VuV01M.match,34.2,asap

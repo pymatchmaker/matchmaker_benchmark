@@ -1,4 +1,5 @@
 import argparse
+import copy
 import json
 import sys
 import tempfile
@@ -9,7 +10,7 @@ from typing import Optional
 
 import pandas as pd
 import soundfile as sf
-from eval import parse_annotation_csv, run_offline_alignment, run_score_following
+from eval_audio import parse_annotation_csv, run_offline_alignment, run_score_following
 from matchmaker.matchmaker import KWARGS
 from tabulate import tabulate
 from utils import (
@@ -88,6 +89,7 @@ def run_tests_and_eval_by_dataset(
     run_dir: Optional[Path] = None,
     dry_run: bool = False,
     granularity: str = "note",
+    matchmaker_kwargs: Optional[dict] = None,
 ):
     if run_dir is None and not dry_run:
         raise ValueError("run_dir must be provided if not dry_run")
@@ -186,6 +188,7 @@ def run_tests_and_eval_by_dataset(
                     match_file=match_file,
                     perf_annotations=perf_annotations,
                     granularity=granularity,
+                    matchmaker_kwargs=matchmaker_kwargs,
                 )
         except Exception as e:
             print(f"Error: {e}")
@@ -214,36 +217,59 @@ def run_tests_and_eval_by_dataset(
     return results
 
 
-def build_config(method: str, dataset: str) -> MatchmakerEvalConfig:
-    """Build MatchmakerEvalConfig from matchmaker's KWARGS."""
-    kw = KWARGS.get("audio", {}).get(method, {})
-    return MatchmakerEvalConfig(
-        method=method,
-        dataset=dataset,
-        **{k: v for k, v in kw.items() if k in ("sample_rate", "frame_rate")},
-    )
+def build_sweep_kwargs(method: str, wconfig) -> dict:
+    """Build matchmaker kwargs by merging KWARGS defaults with sweep config."""
+    matchmaker_kwargs = copy.deepcopy(KWARGS)
+    method_kwargs = matchmaker_kwargs["audio"].setdefault(method, {})
+    for key, value in wconfig.items():
+        if key not in ("dataset", "method"):
+            method_kwargs[key] = value
+    return matchmaker_kwargs
 
 
 def main(args):
     dataset_type = args.dataset
     method = args.method
     dry_run = args.dry_run
-    wandb = args.wandb
+    use_wandb = args.wandb
     granularity = args.granularity or "note"
 
-    config = build_config(method, dataset_type)
+    matchmaker_kwargs = None
+
+    if args.sweep:
+        method = wandb.config.get("method", method)
+        dataset_type = wandb.config.get("dataset", dataset_type)
+        matchmaker_kwargs = build_sweep_kwargs(method, wandb.config)
+
+    # Build config from KWARGS defaults, overridden by sweep config if present
+    kw = (matchmaker_kwargs or KWARGS).get("audio", {}).get(method, {})
+    config = MatchmakerEvalConfig(
+        method=method,
+        dataset=dataset_type,
+        **{k: v for k, v in kw.items() if k in ("sample_rate", "frame_rate")},
+    )
+
     print(f"Config: {config.model_dump(include=config.attr_exp)}")
 
     # save results
+    ts = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
     if not dry_run:
-        save_dir = (
-            OUTPUT_DIR / f"test_results_{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}"
-        )
+        if args.sweep:
+            save_dir = OUTPUT_DIR / f"sweep_{config.method}_{ts}_{wandb.run.id}"
+        else:
+            save_dir = (
+                OUTPUT_DIR / f"test_results_{ts}_{config.method}_{config.dataset}"
+            )
         save_dir.mkdir(parents=True, exist_ok=True)
 
-    run_dir = save_dir / "1" if not dry_run else None
+    run_dir = save_dir if not dry_run else None
     results = run_tests_and_eval_by_dataset(
-        config.dataset, config, run_dir, dry_run, granularity
+        config.dataset,
+        config,
+        run_dir,
+        dry_run,
+        granularity,
+        matchmaker_kwargs=matchmaker_kwargs,
     )
 
     if not dry_run:
@@ -267,7 +293,17 @@ def main(args):
                 json.dump(s, f, indent=4)
             print(f"Results saved to: {path}")
 
-    if not dry_run and wandb:
+    if not dry_run and args.sweep:
+        # Sweep mode: log to current wandb run
+        wandb.log(
+            {
+                "average": summary_all,
+                "tracking_rate": summary_all.get("tracking_rate", 0),
+            }
+        )
+        if summary_tracked.get("selected_count", 0) > 0:
+            wandb.log({"tracked_average": summary_tracked})
+    elif not dry_run and use_wandb:
         report_results_to_wandb(summary_tracked, config)
 
 
@@ -299,6 +335,9 @@ if __name__ == "__main__":
         "--wandb", action="store_true", help="report results to wandb", default=False
     )
     parser.add_argument(
+        "--sweep", action="store_true", help="run as wandb sweep agent", default=False
+    )
+    parser.add_argument(
         "--granularity",
         type=str,
         choices=["beat", "note"],
@@ -307,4 +346,11 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    main(args)
+    if args.sweep:
+        with wandb.init(
+            entity="matchmaker",
+            project=f"audio-{args.method}-sweep",
+        ):
+            main(args)
+    else:
+        main(args)
