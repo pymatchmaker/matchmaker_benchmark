@@ -217,37 +217,13 @@ def run_tests_and_eval_by_dataset(
     return results
 
 
-def build_config(method: str, dataset: str) -> MatchmakerEvalConfig:
-    """Build MatchmakerEvalConfig from matchmaker's KWARGS."""
-    kw = KWARGS.get("audio", {}).get(method, {})
-    return MatchmakerEvalConfig(
-        method=method,
-        dataset=dataset,
-        **{k: v for k, v in kw.items() if k in ("sample_rate", "frame_rate")},
-    )
-
-
-def build_matchmaker_kwargs(method: str, wconfig) -> dict:
-    """Build matchmaker_kwargs from wandb sweep config."""
+def build_sweep_kwargs(method: str, wconfig) -> dict:
+    """Build matchmaker kwargs by merging KWARGS defaults with sweep config."""
     matchmaker_kwargs = copy.deepcopy(KWARGS)
-    if method == "arzt":
-        matchmaker_kwargs["audio"]["arzt"] = {
-            "window_size": wconfig.get("window_size", 5),
-            "start_window_size": wconfig.get("start_window_size", 0.1),
-            "step_size": wconfig.get("step_size", 3),
-        }
-    elif method == "dixon":
-        matchmaker_kwargs["audio"]["dixon"] = {
-            "window_size": wconfig.get("window_size", 10),
-            "max_run_count": wconfig.get("max_run_count", 3),
-        }
-    elif method == "audio_outerhmm":
-        matchmaker_kwargs["audio"]["audio_outerhmm"] = {
-            "sample_rate": wconfig.get("sample_rate", 16000),
-            "frame_rate": wconfig.get("frame_rate", 50),
-            "patience": wconfig.get("patience", 0),
-            "s_j": wconfig.get("s_j", 0.0),
-        }
+    method_kwargs = matchmaker_kwargs["audio"].setdefault(method, {})
+    for key, value in wconfig.items():
+        if key not in ("dataset", "method"):
+            method_kwargs[key] = value
     return matchmaker_kwargs
 
 
@@ -258,20 +234,20 @@ def main(args):
     use_wandb = args.wandb
     granularity = args.granularity or "note"
 
-    config = build_config(method, dataset_type)
     matchmaker_kwargs = None
 
-    # Sweep mode: read hyperparams from wandb.config
     if args.sweep:
-        config = build_config(
-            wandb.config.get("method", method),
-            wandb.config.get("dataset", dataset_type),
-        )
-        if "sample_rate" in wandb.config:
-            config.sample_rate = wandb.config["sample_rate"]
-        if "frame_rate" in wandb.config:
-            config.frame_rate = wandb.config["frame_rate"]
-        matchmaker_kwargs = build_matchmaker_kwargs(config.method, wandb.config)
+        method = wandb.config.get("method", method)
+        dataset_type = wandb.config.get("dataset", dataset_type)
+        matchmaker_kwargs = build_sweep_kwargs(method, wandb.config)
+
+    # Build config from KWARGS defaults, overridden by sweep config if present
+    kw = (matchmaker_kwargs or KWARGS).get("audio", {}).get(method, {})
+    config = MatchmakerEvalConfig(
+        method=method,
+        dataset=dataset_type,
+        **{k: v for k, v in kw.items() if k in ("sample_rate", "frame_rate")},
+    )
 
     print(f"Config: {config.model_dump(include=config.attr_exp)}")
 
@@ -281,7 +257,9 @@ def main(args):
         if args.sweep:
             save_dir = OUTPUT_DIR / f"sweep_{config.method}_{ts}_{wandb.run.id}"
         else:
-            save_dir = OUTPUT_DIR / f"test_results_{ts}"
+            save_dir = (
+                OUTPUT_DIR / f"test_results_{ts}_{config.method}_{config.dataset}"
+            )
         save_dir.mkdir(parents=True, exist_ok=True)
 
     run_dir = save_dir if not dry_run else None

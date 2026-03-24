@@ -20,7 +20,7 @@ git clone https://github.com/pymatchmaker/matchmaker.git
 # Create and activate conda environment
 conda env create -f environment.yml
 
-conda activate ismir2024_matchmaker
+conda activate matchmaker-benchmark
 
 # Go to matchmaker directory
 cd ../matchmaker
