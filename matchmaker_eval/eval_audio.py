@@ -259,6 +259,7 @@ def run_score_following(
     perf_annotations: Optional[np.ndarray] = None,
     matchmaker_kwargs: Optional[dict] = None,
     granularity: str = "note",
+    save_plots: bool = True,
 ) -> NDArray[np.float32]:
     """
     Run score following on the score audio and the performance file.
@@ -333,7 +334,7 @@ def run_score_following(
         perf_annotations,
         tolerances=TOLERANCES_IN_MS,
         musical_beat=use_musical_beat,
-        debug=not dry_run,
+        debug=save_plots and not dry_run,
         save_dir=save_dir,
         run_name=run_name,
         level=granularity,
@@ -384,7 +385,7 @@ def run_score_following(
         results["n_failed_segments"] = tracking["n_failed"]
 
         # Save tracking plot
-        if save_dir is not None and run_name:
+        if save_plots and save_dir is not None and run_name:
             plot_tracking(
                 wp_for_check,
                 gt_for_check,

@@ -90,6 +90,7 @@ def run_tests_and_eval_by_dataset(
     dry_run: bool = False,
     granularity: str = "note",
     matchmaker_kwargs: Optional[dict] = None,
+    save_plots: bool = True,
 ):
     if run_dir is None and not dry_run:
         raise ValueError("run_dir must be provided if not dry_run")
@@ -189,6 +190,7 @@ def run_tests_and_eval_by_dataset(
                     perf_annotations=perf_annotations,
                     granularity=granularity,
                     matchmaker_kwargs=matchmaker_kwargs,
+                    save_plots=save_plots,
                 )
         except Exception as e:
             print(f"Error: {e}")
@@ -270,6 +272,7 @@ def main(args):
         dry_run,
         granularity,
         matchmaker_kwargs=matchmaker_kwargs,
+        save_plots=not args.sweep,
     )
 
     if not dry_run:
