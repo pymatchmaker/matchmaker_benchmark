@@ -1,0 +1,318 @@
+"""Single-piece alignment functions for audio and symbolic score following.
+
+Audio functions (used by test_audio.py):
+  - parse_annotation_csv
+  - parse_match_file_for_note_onsets
+  - run_score_following (input_type="audio")
+  - run_offline_alignment
+
+Symbolic functions (used by test_symbolic.py):
+  - run_score_following (input_type="midi", HMM methods)
+  - run_event_alignment (event-level OLTW for MIDI)
+  - build_gt (ground truth from match file)
+"""
+
+import json
+import traceback
+from pathlib import Path
+from typing import Callable, Optional, Union
+
+import librosa
+import numpy as np
+import pandas as pd
+import partitura as pt
+import scipy
+from matchmaker import Matchmaker
+from matchmaker.utils.eval import get_evaluation_results
+from numpy.typing import NDArray
+from partitura.musicanalysis.performance_codec import get_time_maps_from_alignment
+
+from utils import TOLERANCES_IN_BEATS, TOLERANCES_IN_MS, MatchmakerEvalConfig
+from verify_tracking import check_tracking, plot_tracking
+
+
+# ---------------------------------------------------------------------------
+# Annotation parsing
+# ---------------------------------------------------------------------------
+
+
+def parse_match_file_for_note_onsets(
+    match_file: Union[str, Path],
+    level: str = "note",
+    score_onset_beats: Optional[np.ndarray] = None,
+    onset_aggregation_fun: Callable = np.min,
+) -> np.ndarray:
+    """Parse a match file and extract performed note onset times in seconds."""
+    match_file = Path(match_file)
+    perf, alignment, score = pt.load_match(
+        filename=str(match_file),
+        create_score=True,
+    )
+    pnote_array = perf.note_array()
+    snote_array = score.note_array()
+    ptime_to_stime_map, stime_to_ptime_map = get_time_maps_from_alignment(
+        ppart_or_note_array=pnote_array,
+        spart_or_note_array=snote_array,
+        alignment=alignment,
+        onset_aggregation_fun=onset_aggregation_fun,
+    )
+    if score_onset_beats is not None:
+        return stime_to_ptime_map(score_onset_beats)
+    elif level == "beat":
+        start_beat = np.ceil(snote_array["onset_beat"].min())
+        end_beat = np.floor(snote_array["onset_beat"].max())
+        return stime_to_ptime_map(np.arange(start_beat, end_beat + 1))
+    elif level == "note":
+        return stime_to_ptime_map(np.unique(snote_array["onset_beat"]))
+    else:
+        raise ValueError(f"Invalid level: {level}")
+
+
+def parse_annotation_csv(annotation_file: Union[str, Path]) -> np.ndarray:
+    """Parse a note annotation file (CSV with TIME header or tab-delimited)."""
+    annotation_file = Path(annotation_file)
+    with open(annotation_file, "r") as f:
+        first_line = f.readline().strip()
+    if "TIME" in first_line.upper():
+        df = pd.read_csv(annotation_file)
+        if "TIME" in df.columns:
+            return df["TIME"].values
+        time_cols = [c for c in df.columns if "time" in c.lower()]
+        if time_cols:
+            return df[time_cols[0]].values
+        return df.iloc[:, 0].values
+    else:
+        try:
+            data = np.loadtxt(annotation_file)
+        except ValueError:
+            data = np.loadtxt(annotation_file, usecols=(0,))
+        return data if data.ndim == 1 else data[:, 0]
+
+
+# ---------------------------------------------------------------------------
+# Ground truth from match file
+# ---------------------------------------------------------------------------
+
+
+def build_gt(score_part, perf_ppart, alignment):
+    """Build GT array: (score_beat, perf_sec) for each unique score onset."""
+    _, stime_to_ptime = get_time_maps_from_alignment(
+        perf_ppart, score_part, alignment, onset_aggregation_fun=np.min
+    )
+    gt_beats = np.unique(score_part.note_array()["onset_beat"])
+    gt_times = stime_to_ptime(gt_beats)
+    valid = np.isfinite(gt_times)
+    return np.column_stack([gt_beats[valid], gt_times[valid]])
+
+
+# ---------------------------------------------------------------------------
+# Audio: score following via Matchmaker
+# ---------------------------------------------------------------------------
+
+
+def run_score_following(
+    score_path: Path,
+    perf_path: Union[Path, str],
+    config: MatchmakerEvalConfig,
+    use_musical_beat: bool = False,
+    *,
+    input_type: str = "audio",
+    dry_run: bool = False,
+    save_dir: Optional[Path] = None,
+    run_name: str = "",
+    match_file: Optional[Path] = None,
+    perf_annotations: Optional[np.ndarray] = None,
+    matchmaker_kwargs: Optional[dict] = None,
+    granularity: str = "note",
+    save_plots: bool = True,
+) -> dict:
+    """Run score following via Matchmaker (audio or MIDI HMM methods)."""
+    extra = {}
+    if matchmaker_kwargs is not None:
+        extra["kwargs"] = matchmaker_kwargs
+
+    mm = Matchmaker(
+        score_file=score_path,
+        performance_file=perf_path,
+        input_type=input_type,
+        method=config.method,
+        frame_rate=config.frame_rate,
+        sample_rate=config.sample_rate,
+        wait=False,
+        unfold_score=True,
+        **extra,
+    )
+
+    try:
+        alignment_positions = list(mm.run())
+    except Exception as e:
+        print(f"Error during mm.run(): {type(e)}, {e}")
+        traceback.print_exc()
+        mm._has_run = True
+
+    wp = mm.score_follower.warping_path
+    if wp is None or (hasattr(wp, "size") and wp.size == 0) or len(wp) == 0:
+        raise RuntimeError("Empty warping path — score follower produced no alignment")
+
+    if perf_annotations is None and match_file is not None:
+        score_onset_beats = mm.build_score_annotations(
+            level="note", musical_beat=use_musical_beat, return_type="beats"
+        )
+        perf_annotations = parse_match_file_for_note_onsets(
+            match_file, score_onset_beats=score_onset_beats
+        )
+
+    results = mm.run_evaluation(
+        perf_annotations,
+        tolerances=TOLERANCES_IN_BEATS,
+        musical_beat=use_musical_beat,
+        domain="score",
+        debug=save_plots and not dry_run,
+        save_dir=save_dir,
+        run_name=run_name,
+        level=granularity,
+    )
+
+    # Tracking verification
+    try:
+        wp_for_check = wp.T
+        score_annots_for_gt = mm.build_score_annotations(
+            level=granularity, musical_beat=use_musical_beat, return_type="beats"
+        )
+        min_len = min(len(score_annots_for_gt), len(perf_annotations))
+        gt_for_check = np.column_stack(
+            [score_annots_for_gt[:min_len], perf_annotations[:min_len]]
+        )
+        tracking = check_tracking(
+            wp_for_check, gt_for_check, config.frame_rate, mode="beat"
+        )
+        results["tracked"] = tracking["tracked"]
+        results["max_deviation"] = tracking["max_deviation"]
+        results["n_failed_segments"] = tracking["n_failed"]
+
+        if save_plots and save_dir is not None and run_name:
+            plot_tracking(
+                wp_for_check,
+                gt_for_check,
+                config.frame_rate,
+                title=f"{config.method} #{run_name}",
+                save_path=Path(save_dir) / f"tracking_{run_name}.png",
+                mode="beat",
+            )
+    except Exception:
+        pass
+
+    if save_dir is not None and run_name and not dry_run:
+        with open(Path(save_dir) / f"{run_name}.json", "w") as f:
+            json.dump(results, f, indent=4)
+
+    return results
+
+
+
+# ---------------------------------------------------------------------------
+# Audio: offline alignment (librosa DTW)
+# ---------------------------------------------------------------------------
+
+
+def transfer_offline_positions(wp, perf_annots, frame_rate):
+    perf_annots_frame = np.round(perf_annots * frame_rate)
+    x, y = wp[0], wp[1]
+    return (
+        scipy.interpolate.interp1d(y, x, kind="linear")(perf_annots_frame) / frame_rate
+    )
+
+
+def run_offline_alignment(
+    score_path,
+    perf_path,
+    match_file,
+    config,
+    use_musical_beat,
+    perf_annotations=None,
+    granularity="note",
+):
+    """Offline DTW alignment using librosa (audio only)."""
+    from matchmaker.utils.misc import generate_score_audio
+
+    mm = Matchmaker(
+        score_file=score_path,
+        performance_file=perf_path,
+        input_type="audio",
+        unfold_score=True,
+    )
+    audio_1 = generate_score_audio(
+        mm.score_part, mm.tempo, config.sample_rate
+    ).astype(np.float32)
+    audio_2, _ = librosa.load(perf_path.as_posix(), sr=config.sample_rate)
+
+    cqt_1 = np.abs(
+        librosa.cqt(
+            y=audio_1,
+            sr=config.sample_rate,
+            hop_length=config.hop_length,
+            n_bins=84,
+            bins_per_octave=12,
+        )
+    )
+    cqt_2 = np.abs(
+        librosa.cqt(
+            y=audio_2,
+            sr=config.sample_rate,
+            hop_length=config.hop_length,
+            n_bins=84,
+            bins_per_octave=12,
+        )
+    )
+    cqt_1_db = librosa.amplitude_to_db(cqt_1, ref=np.max)
+    cqt_2_db = librosa.amplitude_to_db(cqt_2, ref=np.max)
+    cqt_1_norm = cqt_1_db / (np.linalg.norm(cqt_1_db, axis=0, keepdims=True) + 1e-10)
+    cqt_2_norm = cqt_2_db / (np.linalg.norm(cqt_2_db, axis=0, keepdims=True) + 1e-10)
+
+    _, wp_raw = librosa.sequence.dtw(
+        X=cqt_1_norm, Y=cqt_2_norm, metric="cosine", backtrack=True
+    )
+    wp = wp_raw[::-1].T
+
+    score_annots = mm.build_score_annotations(
+        level=granularity, musical_beat=use_musical_beat, return_type="seconds"
+    )
+    na = mm.score_part.note_array()
+    start_beat = max(0, int(np.ceil(np.unique(na["onset_beat"]).min())))
+    n_perf = len(perf_annotations) if perf_annotations is not None else 0
+    n_score = len(score_annots)
+    intro_offset = max(0, min(start_beat, n_perf - n_score))
+
+    if perf_annotations is not None:
+        perf_annots = perf_annotations[intro_offset:]
+    elif match_file is not None:
+        score_onset_beats = mm.build_score_annotations(
+            level=granularity, musical_beat=use_musical_beat, return_type="beats"
+        )
+        perf_annots = parse_match_file_for_note_onsets(
+            match_file, level=granularity, score_onset_beats=score_onset_beats
+        )
+    else:
+        raise ValueError("Either match_file or perf_annotations must be provided")
+
+    min_length = min(len(score_annots), len(perf_annots))
+    score_annots = score_annots[:min_length]
+    perf_annots = perf_annots[:min_length]
+
+    max_perf_time = wp[1].max() / config.frame_rate
+    valid = (
+        np.isfinite(perf_annots)
+        & np.isfinite(score_annots)
+        & (perf_annots <= max_perf_time)
+        & (perf_annots >= 0)
+    )
+    score_annots = score_annots[valid]
+    perf_annots = perf_annots[valid]
+
+    predicted = transfer_offline_positions(wp, perf_annots, config.frame_rate)
+    return get_evaluation_results(
+        score_annots,
+        predicted,
+        total_counts=len(score_annots),
+        tolerances=TOLERANCES_IN_MS,
+    )

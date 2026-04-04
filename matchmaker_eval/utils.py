@@ -155,20 +155,7 @@ def compute_event_pooled_summary(
     n_selected = len(selected_indices)
     summary["tracking_rate"] = round(n_tracked / n_total, 4) if n_total > 0 else 0.0
 
-    if all_gt_perf:
-        pooled_gt = np.concatenate(all_gt_perf)
-        pooled_pred = np.concatenate(all_pred_perf)
-        total_count = len(pooled_gt)
-        ms_results = get_evaluation_results(
-            pooled_gt,
-            pooled_pred,
-            total_count,
-            tolerances=TOLERANCES_IN_MS,
-            in_seconds=True,
-        )
-        for k, v in ms_results.items():
-            summary[k] = v
-
+    # Beat metrics (primary)
     if all_gt_score_beats:
         pooled_gt_b = np.concatenate(all_gt_score_beats)
         pooled_pred_b = np.concatenate(all_pred_score_beats)
@@ -180,12 +167,21 @@ def compute_event_pooled_summary(
             tolerances=TOLERANCES_IN_BEATS,
             in_seconds=False,
         )
-        for k, v in beat_results.items():
-            # Keys like "0.1b" already have 'b' suffix; others need "_b"
-            if k.endswith("b"):
-                summary[k] = v
-            else:
-                summary[f"{k}_b"] = v
+        summary["beat"] = beat_results
+
+    # Ms metrics (secondary)
+    if all_gt_perf:
+        pooled_gt = np.concatenate(all_gt_perf)
+        pooled_pred = np.concatenate(all_pred_perf)
+        total_count = len(pooled_gt)
+        ms_results = get_evaluation_results(
+            pooled_gt,
+            pooled_pred,
+            total_count,
+            tolerances=TOLERANCES_IN_MS,
+            in_seconds=True,
+        )
+        summary["ms"] = ms_results
 
     # RTF and latency: piece-wise average of selected pieces
     for key in ["rtf", "f_avg_latency", "i_avg_latency"]:

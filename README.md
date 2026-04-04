@@ -1,106 +1,102 @@
-# A Systematic Comparison of Methods for Real-time Music Alignment
+# matchmaker-benchmark
 
-This repository contains experiments for a systematic comparison of methods for real-time music alignment using the matchmaker package.
+Benchmark for real-time music alignment using the [matchmaker](https://github.com/pymatchmaker/matchmaker) package. Supports both audio and MIDI (symbolic) score following.
 
 ## Setup
 
-### Setting up the code
-
-Setting up the experiments as described here requires [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html). Follow the instructions for your OS.
-
-To setup the experiments, use the following script.
+### Code
 
 ```bash
-# Download this repository
-git clone https://github.com/neosatrapahereje/ismir2025_matchmaker.git
- 
-# Clone matchmaker
+git clone https://github.com/pymatchmaker/matchmaker-benchmark.git
 git clone https://github.com/pymatchmaker/matchmaker.git
 
-# Create and activate conda environment
 conda env create -f environment.yml
-
 conda activate matchmaker-benchmark
 
-# Go to matchmaker directory
 cd ../matchmaker
+pip install -e ".[dev]"
 
-# Install matchmaker in editable mode
-pip install -e ."[dev]"
-
-# Install GCC
-conda install -c conda-forge gcc=12.1.0
-
-# Install glib and fluidsynth
-conda install -c conda-forge glib fluidsynth
-
+conda install -c conda-forge gcc=12.1.0 glib fluidsynth
 ```
 
-### Setting up the datasets
+### Datasets
 
-Please set the `DATASET_DIR` in `matchmaker_eval/test.py` to the path of the dataset you want to use.
+Set dataset paths in `matchmaker_eval/test_audio.py` and `matchmaker_eval/test_symbolic.py`:
 
 ```python
-# matchmaker_eval/test.py
 DATASET_DIR = {
     "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
-    "batik": Path("~/data/Batik_Audio").expanduser(),
+    "batik": Path("~/data/batik_plays_mozart").expanduser(),
     "vienna": Path("~/data/vienna4x22").expanduser(),
 }
 ```
 
-## Running the experiments
+Metadata CSV files are in `data/` (full) and `data/reduced/` (test set).
 
-### Inference for a single file
-You can run the following command to run inference of a single performance. For a quick test, you can use the following command:
+## Running experiments
 
-```bash
-python matchmaker_eval/infer.py --eval
-```
-
-For a specific performance file, you can run the following command with arguments:
+### Audio score following
 
 ```bash
-python matchmaker_eval/infer.py --score ./resources/ex_score.mid --perf ./resources/ex_VuV01M.wav --perf-annots ./resources/ex_VuV01M._annotations.txt --eval
+# Single dataset + method
+python matchmaker_eval/test_audio.py --dataset asap --method arzt
+
+# Available methods: arzt, dixon, outerhmm
+# Available datasets: valid, asap, batik, vienna
 ```
 
-The results will be saved in the `output` directory, and the results will include the following metrics:
+Methods use frame-level features (chroma, LSE, CQT). Results saved in `output/`.
 
-```javascript
-{
-    "mean": 16.3835,  // mean of the absolute alignment error (in ms)
-    "median": 16.8721, // median of the absolute alignment error (in ms)
-    "std": 6.5937, // standard deviation of the absolute alignment error (in ms)
-    "skewness": 1.7935, // skewness of the absolute alignment error (in ms)
-    "kurtosis": 9.2273, // kurtosis of the absolute alignment error (in ms)
-    "50ms": 0.9926, // percentage of the alignment error within 50ms
-    "100ms": 1.0, // percentage of the alignment error within 100ms
-    "300ms": 1.0, // percentage of the alignment error within 300ms
-    "500ms": 1.0, // percentage of the alignment error within 500ms
-    "1000ms": 1.0, // percentage of the alignment error within 1000ms
-    "2000ms": 1.0, // percentage of the alignment error within 2000ms
-    "count": 136 // number of aligned events in the performance (beats)
-}
-```
-
-### Experiment with a dataset (input type: audio)
-
-You can run the following command to run the experiments.
+### MIDI (symbolic) score following
 
 ```bash
-python matchmaker_eval/test.py --dataset asap --method arzt
+# HMM methods (note-level features)
+python matchmaker_eval/test_symbolic.py --dataset asap --method hmm
+
+# Event-level OLTW methods (onset pianoroll)
+python matchmaker_eval/test_symbolic.py --dataset asap --method arzt
+
+# Available methods: hmm, pthmm, outerhmm, arzt, dixon
+# Available datasets: valid, asap, batik, vienna
 ```
 
-You can also report the results to wandb.
+For MIDI, `arzt` and `dixon` use event-level OLTW variants (`OnlineTimeWarpingArztEvent` / `OnlineTimeWarpingDixonEvent`) which align onset-by-onset rather than frame-by-frame. HMM methods (`hmm`, `pthmm`, `outerhmm`) use Matchmaker's standard pipeline.
 
-```bash
-python matchmaker_eval/test.py --dataset vienna --method dixon --wandb
+### Output
+
+Each run creates a directory in `output/` containing:
+- `wp_{i}.tsv` — warping path per piece (score_beat, perf_time)
+- `gt_{i}.tsv` — ground truth per piece (score_beat, perf_time)
+- `{i}.json` — per-piece tracking result
+- `summary_tracked.json` — event-pooled summary over tracked pieces
+
+### Evaluation protocol
+
+- **Primary metric**: beat error (perf→score direction)
+- **Secondary metric**: ms error (score→perf direction)
+- **Tracking**: 30-second segments, median beat error per segment
+  - Audio threshold: 1.0 beat, min_fails=2
+  - MIDI threshold: 0.5 beat, min_fails=2
+- **Aggregation**: event-pooled across tracked pieces
+
+## Project structure
+
 ```
-
-All the results will be saved in the `output` directory.
-
-If you want to change the config of the inference, you can change the configurations in `matchmaker_eval/config/experiment.yaml`.
+matchmaker_eval/
+  eval.py              — single-piece alignment functions (audio + symbolic)
+  test_audio.py        — audio benchmark runner
+  test_symbolic.py     — symbolic benchmark runner
+  eval_symbolic.py     — symbolic eval (legacy, Alex's original code)
+  utils.py             — shared utilities (config, summary, metrics)
+  verify_tracking.py   — segment-based tracking verification
+data/
+  metadata-*.csv       — dataset metadata (full)
+  reduced/             — reduced metadata (test set)
+output/                — experiment results
+final_results/         — summary CSVs for paper tables
+scripts/               — utility scripts
+```
 
 ## Acknowledgments
 
-This work has been supported by the Austrian Science Fund (FWF), grant agreement PAT 8820923 (“Rach3: A Computational Approach to Study Piano Rehearsals”). Additionally, this work was supported by the National Research Foundation of Korea (NRF) grant funded by the Korea government (MSIT) (No. NRF-2023R1A2C3007605).
+This work has been supported by the Austrian Science Fund (FWF), grant agreement PAT 8820923 ("Rach3: A Computational Approach to Study Piano Rehearsals"). Additionally, this work was supported by the National Research Foundation of Korea (NRF) grant funded by the Korea government (MSIT) (No. NRF-2023R1A2C3007605).

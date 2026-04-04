@@ -1,0 +1,178 @@
+"""MIDI (symbolic) score following benchmark runner.
+
+Mirrors test_audio.py structure:
+  - Loops over dataset metadata
+  - Runs alignment per piece (HMM via Matchmaker, OLTW via event-level)
+  - Saves WP/GT as TSV
+  - Computes event-pooled summary (tracked-only)
+"""
+
+import argparse
+import json
+import sys
+from collections import defaultdict
+from datetime import datetime
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import partitura as pt
+
+from eval import build_gt
+from matchmaker import Matchmaker
+from matchmaker.matchmaker import KWARGS
+from utils import (
+    MatchmakerEvalConfig,
+    compute_event_pooled_summary,
+    save_config,
+    save_results_to_csv,
+)
+from verify_tracking import check_tracking
+
+sys.setrecursionlimit(10000)
+
+WORKING_DIR = Path(__file__).parent.parent
+DATASET_DIR = {
+    "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
+    "batik": Path("~/data/batik_plays_mozart").expanduser(),
+    "vienna": Path("~/data/vienna4x22").expanduser(),
+}
+METADATA_PATH = {
+    "valid": WORKING_DIR / "data/metadata-validation.csv",
+    "asap": WORKING_DIR / "data/reduced/metadata-asap.csv",
+    "batik": WORKING_DIR / "data/reduced/metadata-batik.csv",
+    "vienna": WORKING_DIR / "data/reduced/metadata-vienna.csv",
+}
+OUTPUT_DIR = WORKING_DIR / "output"
+
+def run_tests_and_eval_by_dataset(dataset_type, method, run_dir=None):
+    """Run symbolic alignment for all pieces in a dataset."""
+    metadata = pd.read_csv(METADATA_PATH[dataset_type])
+    is_valid = dataset_type == "valid"
+
+    results = defaultdict(list)
+
+    for i, row in enumerate(metadata.itertuples(), 1):
+        if is_valid:
+            dataset_dir = DATASET_DIR[row.dataset]
+        else:
+            dataset_dir = DATASET_DIR[dataset_type]
+
+        match_path = dataset_dir / row.match
+        score_xml = dataset_dir / row.xml_score
+        perf_midi = dataset_dir / row.midi_performance
+        print(f"[{i}/{len(metadata)}] {row.title}")
+
+        try:
+            perf, alignment, score = pt.load_match(
+                str(match_path), create_score=True, first_note_at_zero=False
+            )
+            score_part = score[0] if hasattr(score, "__getitem__") else score
+            perf_ppart = perf[0]
+
+            # Run alignment via Matchmaker (HMM or event-level OLTW)
+            mm = Matchmaker(
+                score_file=str(score_xml),
+                performance_file=str(perf_midi),
+                input_type="midi",
+                method=method,
+                kwargs=KWARGS,
+            )
+            list(mm.run(verbose=False))
+            wp = mm.score_follower.warping_path  # (2, T)
+
+            # Convert WP perf axis to absolute seconds (HMM WPs are IOI-
+            # accumulated from 0; OLTW event WPs are already absolute).
+            wp_perf_sec = mm._wp_perf_to_seconds(wp[1].astype(float))
+            wp = np.stack([wp[0].astype(float), wp_perf_sec])
+
+            # Build GT
+            gt = build_gt(score_part, perf_ppart, alignment)
+
+            # Check tracking
+            wp_T = wp.T if wp.shape[0] == 2 else wp
+            tracking = check_tracking(
+                wp_T,
+                gt,
+                frame_rate=1,
+                segment_duration=30,
+                threshold=0.5,
+                mode="beat",
+                min_fails=2,
+            )
+
+            # Save WP/GT
+            if run_dir is not None:
+                np.savetxt(run_dir / f"wp_{i}.tsv", wp_T, delimiter="\t", fmt="%.6f")
+                np.savetxt(run_dir / f"gt_{i}.tsv", gt, delimiter="\t", fmt="%.6f")
+                with open(run_dir / f"{i}.json", "w") as f:
+                    json.dump(
+                        {
+                            "tracked": tracking["tracked"],
+                            "max_deviation": float(tracking["max_deviation"]),
+                            "n_failed_segments": int(tracking["n_failed"]),
+                        },
+                        f,
+                        indent=4,
+                    )
+
+            status = "TRACKED" if tracking["tracked"] else "FAILED"
+            print(f"  {status} (max_dev={tracking['max_deviation']:.3f}b)")
+
+            results["Index"].append(i)
+            results["Piece"].append(row.title)
+            results["tracked"].append(tracking["tracked"])
+            results["max_deviation"].append(tracking["max_deviation"])
+            results["n_failed_segments"].append(tracking["n_failed"])
+
+        except Exception as e:
+            print(f"  ERROR: {e}")
+            continue
+
+    return results
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="MIDI score following benchmark (mirrors test_audio.py)"
+    )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default="asap",
+        help="Dataset (valid, asap, batik, vienna)",
+    )
+    parser.add_argument(
+        "--method",
+        type=str,
+        default="hmm",
+        help="Method (hmm, pthmm, outerhmm, arzt, dixon)",
+    )
+    args = parser.parse_args()
+
+    method = args.method
+    dataset = args.dataset
+    config = MatchmakerEvalConfig(method=method, dataset=dataset, frame_rate=1)
+
+    ts = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
+    run_dir = OUTPUT_DIR / f"test_results_{ts}_sym_{method}_{dataset}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"Method: {method}, Dataset: {dataset}, Output: {run_dir}")
+
+    results = run_tests_and_eval_by_dataset(dataset, method, run_dir)
+
+    n_total = len(results["Index"])
+    n_tracked = sum(results["tracked"])
+    print(f"\nTracked: {n_tracked}/{n_total}")
+
+    summary = compute_event_pooled_summary(results, run_dir, config, tracked_only=True)
+    with open(run_dir / "summary_tracked.json", "w") as f:
+        json.dump(summary, f, indent=4)
+    print(f"Summary saved to: {run_dir / 'summary_tracked.json'}")
+
+    save_config(config, run_dir)
+
+
+if __name__ == "__main__":
+    main()

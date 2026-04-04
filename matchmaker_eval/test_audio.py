@@ -10,7 +10,7 @@ from typing import Optional
 
 import pandas as pd
 import soundfile as sf
-from eval_audio import parse_annotation_csv, run_offline_alignment, run_score_following
+from eval import parse_annotation_csv, run_offline_alignment, run_score_following
 from matchmaker.matchmaker import KWARGS
 from tabulate import tabulate
 from utils import (
@@ -43,7 +43,7 @@ METADATA_PATH = {
     "vienna": WORKING_DIR / "data/reduced/metadata-vienna.csv",
     "pfvn": WORKING_DIR / "data/metadata-pfvn.csv",
     "chorale": WORKING_DIR / "data/metadata-chorale.csv",
-    "urmp": WORKING_DIR / "data/metadata-urmp.csv",
+    "urmp": WORKING_DIR / "data/metadata-urmp-aligned.csv",
     "winterreise": WORKING_DIR / "data/metadata-winterreise.csv",
     "zeilinger": WORKING_DIR / "data/metadata-zeilinger-note.csv",
 }
@@ -53,14 +53,13 @@ DISPLAY_COLUMNS = [
     "Piece",
     "mean",
     "median",
+    "0.3b",
+    "0.5b",
+    "1.0b",
+    "mean_ms",
+    "median_ms",
     "300ms",
     "1000ms",
-    "2000ms",
-    "mean_b",
-    "median_b",
-    "0.3b",
-    "1.0b",
-    "2.0b",
     "tracked",
 ]
 
@@ -324,7 +323,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--method",
         type=str,
-        choices=["hmm", "dixon", "arzt", "offline", "audio_outerhmm"],
         default="arzt",
         help="Method to use (hmm, dixon, arzt, or offline)",
     )
