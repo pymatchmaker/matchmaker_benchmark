@@ -19,9 +19,7 @@ from matchmaker.prob.hmm import (
 )
 from matchmaker.utils.eval import get_evaluation_results, transfer_positions
 from matchmaker.utils.tempo_models import KalmanTempoModel
-from midi2audio import FluidSynth
 from numpy.typing import NDArray
-from partitura.utils.fluidsynth import DEFAULT_SOUNDFONT as SOUND_FONT_PATH
 from pydantic_settings import BaseSettings
 
 WORKING_DIR = Path(__file__).parent.parent
@@ -37,15 +35,15 @@ METRICS_TRACKING = ["tracked", "max_deviation", "n_failed_segments"]
 METRICS_ALL = METRICS_MS + METRICS_BEAT + METRICS_TRACKING
 
 
-class MatchmakerEvalConfig(BaseSettings):
+class AudioEvalConfig(BaseSettings):
     method: str
     sample_rate: int = 44100
-    frame_rate: int = 30
+    frame_rate: float = 30
     dataset: Optional[str] = None
 
     @property
     def hop_length(self) -> int:
-        return self.sample_rate // self.frame_rate
+        return int(self.sample_rate // self.frame_rate)
 
     # attributes for experiment (for logging purpose)
     attr_exp: list[str] = [
@@ -54,6 +52,14 @@ class MatchmakerEvalConfig(BaseSettings):
         "frame_rate",
         "dataset",
     ]
+
+
+class SymbolicEvalConfig(BaseSettings):
+    method: str
+    dataset: Optional[str] = None
+    processor: Optional[str] = None
+
+    attr_exp: list[str] = ["method", "processor", "dataset"]
 
 
 
@@ -69,33 +75,10 @@ def save_config(config, save_dir):
         yaml.dump(config_dict, f)
 
 
-def convert_score_to_audio(score_path: str, sample_rate: int) -> Path:
-    file_extension = score_path.suffix
-    # Convert score to MIDI if it is in XML format
-    if file_extension.lower() in {".xml", ".musicxml"}:
-        score = partitura.load_score(str(score_path))
-        tmp_score_midi_path = score_path.parent / "tmp_midi_score.mid"
-        print(f"Saving score as midi: {tmp_score_midi_path}")
-        partitura.save_score_midi(score, tmp_score_midi_path.as_posix())
-        score_path = tmp_score_midi_path
-    elif file_extension.lower() not in {".mid", ".midi"}:
-        raise ValueError("Invalid score file format")
-
-    # Convert MIDI to audio
-    score_audio_path = score_path.with_suffix(".wav")
-    fs = FluidSynth(SOUND_FONT_PATH, sample_rate=sample_rate)
-    fs.midi_to_audio(score_path, score_audio_path)
-
-    # print(
-    #     f"Score Audio path: {score_audio_path}, duration (sec): {librosa.get_duration(path=score_audio_path)}"
-    # )
-    return score_audio_path
-
 
 def compute_event_pooled_summary(
     results: dict,
     run_dir: Path,
-    config,
     tracked_only: bool = True,
 ) -> dict:
     """
@@ -136,7 +119,8 @@ def compute_event_pooled_summary(
         gt_perf = gt[:, 1]  # perf times (seconds)
 
         # Score → perf prediction (ms metrics)
-        pred_perf = transfer_positions(wp.T, gt_score, config.frame_rate, domain="performance")
+        # wp TSV is saved in seconds (frame_rate=1), so use frame_rate=1 here
+        pred_perf = transfer_positions(wp.T, gt_score, 1, domain="performance")
         valid = np.isfinite(pred_perf) & np.isfinite(gt_perf)
         all_gt_perf.append(gt_perf[valid])
         all_pred_perf.append(pred_perf[valid])
@@ -144,7 +128,7 @@ def compute_event_pooled_summary(
         # Perf → score prediction (beat metrics)
         valid_gt_perf = np.isfinite(gt_perf)
         pred_score = transfer_positions(
-            wp.T, gt_perf[valid_gt_perf], config.frame_rate, domain="score"
+            wp.T, gt_perf[valid_gt_perf], 1, domain="score"
         )
         valid_b = np.isfinite(pred_score)
         all_gt_score_beats.append(gt_score[valid_gt_perf][valid_b])
@@ -195,7 +179,6 @@ def compute_event_pooled_summary(
 
     summary["piece_count"] = n_total
     summary["tracked_count"] = n_tracked
-    summary["selected_count"] = n_selected
     return summary
 
 

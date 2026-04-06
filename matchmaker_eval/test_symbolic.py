@@ -18,18 +18,21 @@ import numpy as np
 import pandas as pd
 import partitura as pt
 
-from eval import build_gt
+from eval import build_gt, parse_match_file_for_note_onsets
 from matchmaker import Matchmaker
-from matchmaker.matchmaker import KWARGS
+from matchmaker.matchmaker import DEFAULT_KWARGS
 from utils import (
-    MatchmakerEvalConfig,
+    SymbolicEvalConfig,
     compute_event_pooled_summary,
     save_config,
     save_results_to_csv,
 )
-from verify_tracking import check_tracking
+from verify_tracking import check_tracking, plot_tracking
 
 sys.setrecursionlimit(10000)
+
+TRACKING_THRESHOLD = 0.5  # beats
+TRACKING_MIN_FAILS = 2
 
 WORKING_DIR = Path(__file__).parent.parent
 DATASET_DIR = {
@@ -42,13 +45,15 @@ METADATA_PATH = {
     "asap": WORKING_DIR / "data/reduced/metadata-asap.csv",
     "batik": WORKING_DIR / "data/reduced/metadata-batik.csv",
     "vienna": WORKING_DIR / "data/reduced/metadata-vienna.csv",
+    "example": WORKING_DIR / "data/metadata-example.csv",
 }
 OUTPUT_DIR = WORKING_DIR / "output"
 
-def run_tests_and_eval_by_dataset(dataset_type, method, run_dir=None):
+
+def run_tests_and_eval_by_dataset(dataset_type, method, run_dir=None, save_plots=True):
     """Run symbolic alignment for all pieces in a dataset."""
     metadata = pd.read_csv(METADATA_PATH[dataset_type])
-    is_valid = dataset_type == "valid"
+    is_valid = dataset_type in ("valid", "example")
 
     results = defaultdict(list)
 
@@ -71,12 +76,13 @@ def run_tests_and_eval_by_dataset(dataset_type, method, run_dir=None):
             perf_ppart = perf[0]
 
             # Run alignment via Matchmaker (HMM or event-level OLTW)
+            mm_kwargs = DEFAULT_KWARGS["midi"].get(method, {}).copy()
             mm = Matchmaker(
                 score_file=str(score_xml),
                 performance_file=str(perf_midi),
                 input_type="midi",
                 method=method,
-                kwargs=KWARGS,
+                kwargs=mm_kwargs if mm_kwargs else None,
             )
             list(mm.run(verbose=False))
             wp = mm.score_follower.warping_path  # (2, T)
@@ -96,24 +102,47 @@ def run_tests_and_eval_by_dataset(dataset_type, method, run_dir=None):
                 gt,
                 frame_rate=1,
                 segment_duration=30,
-                threshold=0.5,
+                threshold=TRACKING_THRESHOLD,
                 mode="beat",
-                min_fails=2,
+                min_fails=TRACKING_MIN_FAILS,
             )
+
+            # Compute per-piece metrics via matchmaker
+            # Use mm's own score beats to get perf annotations — avoids mismatch
+            # caused by invisible notes in match file vs XML (ignore_invisible_objects)
+            score_onset_beats = mm.build_score_annotations(
+                level="note", return_type="beats"
+            )
+            eval_perf = parse_match_file_for_note_onsets(
+                match_path, score_onset_beats=score_onset_beats
+            )
+            piece_result = mm.run_evaluation(
+                eval_perf,
+                domain="score",
+                debug=run_dir is not None,
+                save_dir=run_dir,
+                run_name=str(i),
+            )
+            piece_result["tracked"] = tracking["tracked"]
+            piece_result["max_deviation"] = float(tracking["max_deviation"])
+            piece_result["n_failed_segments"] = int(tracking["n_failed"])
 
             # Save WP/GT
             if run_dir is not None:
                 np.savetxt(run_dir / f"wp_{i}.tsv", wp_T, delimiter="\t", fmt="%.6f")
                 np.savetxt(run_dir / f"gt_{i}.tsv", gt, delimiter="\t", fmt="%.6f")
                 with open(run_dir / f"{i}.json", "w") as f:
-                    json.dump(
-                        {
-                            "tracked": tracking["tracked"],
-                            "max_deviation": float(tracking["max_deviation"]),
-                            "n_failed_segments": int(tracking["n_failed"]),
-                        },
-                        f,
-                        indent=4,
+                    json.dump(piece_result, f, indent=4, default=float)
+                if save_plots:
+                    plot_tracking(
+                        wp_T,
+                        gt,
+                        frame_rate=1,
+                        title=f"{method} #{i}",
+                        save_path=run_dir / f"tracking_{i}.png",
+                        mode="beat",
+                        threshold=TRACKING_THRESHOLD,
+                        min_fails=TRACKING_MIN_FAILS,
                     )
 
             status = "TRACKED" if tracking["tracked"] else "FAILED"
@@ -140,7 +169,7 @@ def main():
         "--dataset",
         type=str,
         default="asap",
-        help="Dataset (valid, asap, batik, vienna)",
+        help="Dataset (valid, example, asap, batik, vienna)",
     )
     parser.add_argument(
         "--method",
@@ -148,25 +177,35 @@ def main():
         default="hmm",
         help="Method (hmm, pthmm, outerhmm, arzt, dixon)",
     )
+    parser.add_argument(
+        "--no-plots",
+        action="store_true",
+        help="Skip saving per-piece tracking plots (faster evaluation)",
+        default=False,
+    )
     args = parser.parse_args()
 
     method = args.method
     dataset = args.dataset
-    config = MatchmakerEvalConfig(method=method, dataset=dataset, frame_rate=1)
+    processor = DEFAULT_KWARGS.get("midi", {}).get(method, {}).get("processor")
+    config = SymbolicEvalConfig(method=method, dataset=dataset, processor=processor)
 
     ts = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
-    run_dir = OUTPUT_DIR / f"test_results_{ts}_sym_{method}_{dataset}"
+    run_dir = OUTPUT_DIR / f"test_{ts}_sym_{method}_{dataset}"
     run_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Method: {method}, Dataset: {dataset}, Output: {run_dir}")
 
-    results = run_tests_and_eval_by_dataset(dataset, method, run_dir)
+    results = run_tests_and_eval_by_dataset(
+        dataset, method, run_dir=run_dir,
+        save_plots=not args.no_plots,
+    )
 
     n_total = len(results["Index"])
     n_tracked = sum(results["tracked"])
     print(f"\nTracked: {n_tracked}/{n_total}")
 
-    summary = compute_event_pooled_summary(results, run_dir, config, tracked_only=True)
+    summary = compute_event_pooled_summary(results, run_dir, tracked_only=True)
     with open(run_dir / "summary_tracked.json", "w") as f:
         json.dump(summary, f, indent=4)
     print(f"Summary saved to: {run_dir / 'summary_tracked.json'}")

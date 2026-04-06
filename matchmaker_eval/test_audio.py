@@ -11,10 +11,10 @@ from typing import Optional
 import pandas as pd
 import soundfile as sf
 from eval import parse_annotation_csv, run_offline_alignment, run_score_following
-from matchmaker.matchmaker import KWARGS
+from matchmaker.matchmaker import DEFAULT_KWARGS
 from tabulate import tabulate
 from utils import (
-    MatchmakerEvalConfig,
+    AudioEvalConfig,
     compute_event_pooled_summary,
     save_config,
     save_results_to_csv,
@@ -43,7 +43,7 @@ METADATA_PATH = {
     "vienna": WORKING_DIR / "data/reduced/metadata-vienna.csv",
     "pfvn": WORKING_DIR / "data/metadata-pfvn.csv",
     "chorale": WORKING_DIR / "data/metadata-chorale.csv",
-    "urmp": WORKING_DIR / "data/metadata-urmp-aligned.csv",
+    "urmp": WORKING_DIR / "data/metadata-urmp.csv",
     "winterreise": WORKING_DIR / "data/metadata-winterreise.csv",
     "zeilinger": WORKING_DIR / "data/metadata-zeilinger-note.csv",
 }
@@ -64,7 +64,7 @@ DISPLAY_COLUMNS = [
 ]
 
 
-def report_results_to_wandb(averaged_result: dict, config: MatchmakerEvalConfig):
+def report_results_to_wandb(averaged_result: dict, config: AudioEvalConfig):
     wandb.init(
         entity="matchmaker",
         project="matchmaker",
@@ -84,7 +84,7 @@ def print_summary_table(results: dict):
 
 def run_tests_and_eval_by_dataset(
     dataset_type: str,
-    config: MatchmakerEvalConfig,
+    config: AudioEvalConfig,
     run_dir: Optional[Path] = None,
     dry_run: bool = False,
     granularity: str = "note",
@@ -116,6 +116,9 @@ def run_tests_and_eval_by_dataset(
 
         use_musical_beat = current_dataset in ["asap", "pfvn"]
 
+        # pfvn annotations are temporarily beat-level TODO: fix to note-level
+        piece_granularity = "beat" if current_dataset == "pfvn" else granularity
+
         # Determine base directory: some datasets (e.g. chorale) have paths
         # relative to a folder column, while others include the full path.
         has_folder = hasattr(row, "folder")
@@ -130,7 +133,11 @@ def run_tests_and_eval_by_dataset(
 
         # Get performance annotations: from note annotation file, match file, or annotation CSV
         trimmed_audio_path = None
-        has_match = hasattr(row, "match")
+        has_match = (
+            hasattr(row, "match")
+            and pd.notna(row.match)
+            and str(row.match).strip()
+        )
         if has_match:
             match_file = dataset_dir / row.match
             # Use match file parsing (via eval.py) to ensure annotation alignment
@@ -174,7 +181,7 @@ def run_tests_and_eval_by_dataset(
                     config,
                     use_musical_beat,
                     perf_annotations=perf_annotations,
-                    granularity=granularity,
+                    granularity=piece_granularity,
                 )
             else:
                 result = run_score_following(
@@ -187,7 +194,7 @@ def run_tests_and_eval_by_dataset(
                     run_name=f"{i}",
                     match_file=match_file,
                     perf_annotations=perf_annotations,
-                    granularity=granularity,
+                    granularity=piece_granularity,
                     matchmaker_kwargs=matchmaker_kwargs,
                     save_plots=save_plots,
                 )
@@ -219,13 +226,12 @@ def run_tests_and_eval_by_dataset(
 
 
 def build_sweep_kwargs(method: str, wconfig) -> dict:
-    """Build matchmaker kwargs by merging KWARGS defaults with sweep config."""
-    matchmaker_kwargs = copy.deepcopy(KWARGS)
-    method_kwargs = matchmaker_kwargs["audio"].setdefault(method, {})
+    """Build matchmaker kwargs by merging DEFAULT_KWARGS defaults with sweep config."""
+    method_kwargs = copy.deepcopy(DEFAULT_KWARGS.get("audio", {}).get(method, {}))
     for key, value in wconfig.items():
         if key not in ("dataset", "method"):
             method_kwargs[key] = value
-    return matchmaker_kwargs
+    return method_kwargs
 
 
 def main(args):
@@ -242,12 +248,16 @@ def main(args):
         dataset_type = wandb.config.get("dataset", dataset_type)
         matchmaker_kwargs = build_sweep_kwargs(method, wandb.config)
 
-    # Build config from KWARGS defaults, overridden by sweep config if present
-    kw = (matchmaker_kwargs or KWARGS).get("audio", {}).get(method, {})
-    config = MatchmakerEvalConfig(
+    # Build config from DEFAULT_KWARGS defaults, overridden by sweep config if present
+    kw = matchmaker_kwargs if matchmaker_kwargs is not None else DEFAULT_KWARGS.get("audio", {}).get(method, {})
+    cfg_kwargs = {k: v for k, v in kw.items() if k in ("sample_rate", "frame_rate")}
+    if "frame_rate" not in cfg_kwargs and "hop_length" in kw:
+        sr = cfg_kwargs.get("sample_rate", 44100)
+        cfg_kwargs["frame_rate"] = sr / kw["hop_length"]
+    config = AudioEvalConfig(
         method=method,
         dataset=dataset_type,
-        **{k: v for k, v in kw.items() if k in ("sample_rate", "frame_rate")},
+        **cfg_kwargs,
     )
 
     print(f"Config: {config.model_dump(include=config.attr_exp)}")
@@ -258,9 +268,7 @@ def main(args):
         if args.sweep:
             save_dir = OUTPUT_DIR / f"sweep_{config.method}_{ts}_{wandb.run.id}"
         else:
-            save_dir = (
-                OUTPUT_DIR / f"test_results_{ts}_{config.method}_{config.dataset}"
-            )
+            save_dir = OUTPUT_DIR / f"test_{ts}_aud_{config.method}_{config.dataset}"
         save_dir.mkdir(parents=True, exist_ok=True)
 
     run_dir = save_dir if not dry_run else None
@@ -271,7 +279,7 @@ def main(args):
         dry_run,
         granularity,
         matchmaker_kwargs=matchmaker_kwargs,
-        save_plots=not args.sweep,
+        save_plots=not args.sweep and not args.no_plots,
     )
 
     if not dry_run:
@@ -283,11 +291,9 @@ def main(args):
         )
 
         # Compute event-wise pooled summary (both all and tracked-only)
-        summary_all = compute_event_pooled_summary(
-            results, run_dir, config, tracked_only=False
-        )
+        summary_all = compute_event_pooled_summary(results, run_dir, tracked_only=False)
         summary_tracked = compute_event_pooled_summary(
-            results, run_dir, config, tracked_only=True
+            results, run_dir, tracked_only=True
         )
         for label, s in [("all", summary_all), ("tracked", summary_tracked)]:
             path = run_dir / f"summary_{label}.json"
@@ -303,7 +309,7 @@ def main(args):
                 "tracking_rate": summary_all.get("tracking_rate", 0),
             }
         )
-        if summary_tracked.get("selected_count", 0) > 0:
+        if summary_tracked.get("tracked_count", 0) > 0:
             wandb.log({"tracked_average": summary_tracked})
     elif not dry_run and use_wandb:
         report_results_to_wandb(summary_tracked, config)
@@ -344,6 +350,12 @@ if __name__ == "__main__":
         choices=["beat", "note"],
         default="note",
         help="Granularity to use (beat or note)",
+    )
+    parser.add_argument(
+        "--no-plots",
+        action="store_true",
+        help="skip saving per-piece plots (faster evaluation)",
+        default=False,
     )
     args = parser.parse_args()
 

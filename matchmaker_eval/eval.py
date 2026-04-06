@@ -27,7 +27,7 @@ from matchmaker.utils.eval import get_evaluation_results
 from numpy.typing import NDArray
 from partitura.musicanalysis.performance_codec import get_time_maps_from_alignment
 
-from utils import TOLERANCES_IN_BEATS, TOLERANCES_IN_MS, MatchmakerEvalConfig
+from utils import TOLERANCES_IN_BEATS, TOLERANCES_IN_MS, AudioEvalConfig
 from verify_tracking import check_tracking, plot_tracking
 
 
@@ -113,7 +113,7 @@ def build_gt(score_part, perf_ppart, alignment):
 def run_score_following(
     score_path: Path,
     perf_path: Union[Path, str],
-    config: MatchmakerEvalConfig,
+    config: AudioEvalConfig,
     use_musical_beat: bool = False,
     *,
     input_type: str = "audio",
@@ -127,20 +127,18 @@ def run_score_following(
     save_plots: bool = True,
 ) -> dict:
     """Run score following via Matchmaker (audio or MIDI HMM methods)."""
-    extra = {}
+    mm_kwargs = {"sample_rate": config.sample_rate, "frame_rate": config.frame_rate}
     if matchmaker_kwargs is not None:
-        extra["kwargs"] = matchmaker_kwargs
+        mm_kwargs.update(matchmaker_kwargs)
 
     mm = Matchmaker(
         score_file=score_path,
         performance_file=perf_path,
         input_type=input_type,
         method=config.method,
-        frame_rate=config.frame_rate,
-        sample_rate=config.sample_rate,
         wait=False,
         unfold_score=True,
-        **extra,
+        kwargs=mm_kwargs,
     )
 
     try:
@@ -162,7 +160,7 @@ def run_score_following(
             match_file, score_onset_beats=score_onset_beats
         )
 
-    results = mm.run_evaluation(
+    nested = mm.run_evaluation(
         perf_annotations,
         tolerances=TOLERANCES_IN_BEATS,
         musical_beat=use_musical_beat,
@@ -172,6 +170,16 @@ def run_score_following(
         run_name=run_name,
         level=granularity,
     )
+    # Flatten nested {"beat": {...}, "ms": {...}} into a single dict.
+    # Beat metrics keep their keys; ms metrics get a "_ms" suffix on mean/median.
+    results = {}
+    for k, v in nested.get("beat", {}).items():
+        results[k] = v
+    for k, v in nested.get("ms", {}).items():
+        results[f"{k}_ms" if k in ("mean", "median", "std") else k] = v
+    for k, v in nested.items():
+        if k not in ("beat", "ms"):
+            results[k] = v
 
     # Tracking verification
     try:

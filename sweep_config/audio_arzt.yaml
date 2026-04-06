@@ -38,5 +38,5 @@ parameters:
   step_size:
     value: 3
 
-  feature_type:
+  processor:
     values: ["chroma"]

@@ -16,9 +16,9 @@ parameters:
     value: "valid"
 
   method:
-    value: "audio_outerhmm"
+    value: "outerhmm"
 
-  feature_type:
+  processor:
     value: "cqt_spectral_flux"
 
   sample_rate:

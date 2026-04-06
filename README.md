@@ -1,13 +1,17 @@
-# matchmaker-benchmark
+# A Systematic Comparison of Methods for Real-time Music Alignment
 
-Benchmark for real-time music alignment using the [matchmaker](https://github.com/pymatchmaker/matchmaker) package. Supports both audio and MIDI (symbolic) score following.
+A benchmark for real-time music alignment using the [matchmaker](https://github.com/pymatchmaker/matchmaker) package, supporting both audio and MIDI (symbolic) score following.
 
 ## Setup
 
-### Code
+### Setting up the code
+
+Setting up the experiments as described here requires [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html). Follow the instructions for your OS.
+
+To setup the experiments, use the following script.
 
 ```bash
-git clone https://github.com/pymatchmaker/matchmaker-benchmark.git
+git clone https://github.com/pymatchmaker/matchmaker_benchmark.git
 git clone https://github.com/pymatchmaker/matchmaker.git
 
 conda env create -f environment.yml
@@ -21,17 +25,18 @@ conda install -c conda-forge gcc=12.1.0 glib fluidsynth
 
 ### Datasets
 
-Set dataset paths in `matchmaker_eval/test_audio.py` and `matchmaker_eval/test_symbolic.py`:
+> **Note:** Dataset hosting will be moved to a dedicated repository.
 
-```python
-DATASET_DIR = {
-    "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
-    "batik": Path("~/data/batik_plays_mozart").expanduser(),
-    "vienna": Path("~/data/vienna4x22").expanduser(),
-}
+Download all datasets with:
+
+```bash
+python matchmaker_eval/download_data.py                    # all datasets
+python matchmaker_eval/download_data.py --dataset asap     # single dataset
+python matchmaker_eval/download_data.py --data-dir ~/data  # custom directory
 ```
 
-Metadata CSV files are in `data/` (full) and `data/reduced/` (test set).
+Datasets are saved under `~/datasets/` by default. To use a different location, pass `--data-dir` and set the matching paths in `matchmaker_eval/test_audio.py` and `matchmaker_eval/test_symbolic.py`:
+Metadata CSV files are in `./data/`.
 
 ## Running experiments
 
@@ -42,7 +47,7 @@ Metadata CSV files are in `data/` (full) and `data/reduced/` (test set).
 python matchmaker_eval/test_audio.py --dataset asap --method arzt
 
 # Available methods: arzt, dixon, outerhmm
-# Available datasets: valid, asap, batik, vienna
+# Available datasets: valid, asap, batik, vienna, urmp, chorale
 ```
 
 Methods use frame-level features (chroma, LSE, CQT). Results saved in `output/`.
@@ -86,15 +91,11 @@ matchmaker_eval/
   eval.py              — single-piece alignment functions (audio + symbolic)
   test_audio.py        — audio benchmark runner
   test_symbolic.py     — symbolic benchmark runner
-  eval_symbolic.py     — symbolic eval (legacy, Alex's original code)
   utils.py             — shared utilities (config, summary, metrics)
   verify_tracking.py   — segment-based tracking verification
 data/
   metadata-*.csv       — dataset metadata (full)
   reduced/             — reduced metadata (test set)
-output/                — experiment results
-final_results/         — summary CSVs for paper tables
-scripts/               — utility scripts
 ```
 
 ## Acknowledgments

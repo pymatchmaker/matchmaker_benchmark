@@ -18,7 +18,7 @@ parameters:
   method:
     value: "dixon"
 
-  feature_type:
+  processor:
     values: ["lse"]
 
   sample_rate:
