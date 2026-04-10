@@ -70,18 +70,17 @@ InputMIDIFrame = Tuple[List[Tuple[Message, float]], float]
 import warnings
 warnings.filterwarnings("ignore")
 
-
 DATASET_DIR = {
-    "validation": Path("/home/alexander-neuhauser/datasets"),
-    "asap": Path("/home/alexander-neuhauser/datasets/asap-dataset-matchmaker"),
-    "batik": Path("/home/alexander-neuhauser/datasets/Batik_Audio"),
-    "vienna": Path("/home/alexander-neuhauser/datasets/vienna4x22"),
+    "validation": Path(os.path.expanduser("~/datasets")),
+    "asap": Path(os.path.expanduser("~/datasets/asap-dataset-matchmaker")),
+    "batik": Path(os.path.expanduser("~/datasets/batik_plays_mozart")),
+    "vienna": Path(os.path.expanduser("~/datasets/vienna4x22")),
 }
 METADATA_PATH = {
-    "validation": "../ismir2025_matchmaker/data/metadata-validation.csv",
-    "asap": "../ismir2025_matchmaker/data/reduced/metadata-asap.csv",
-    "batik": "../ismir2025_matchmaker/data/reduced/metadata-batik.csv",
-    "vienna":"../ismir2025_matchmaker/data/reduced/metadata-vienna.csv",
+    "validation": "../matchmaker_benchmark/data/metadata-validation.csv",
+    "asap": "../matchmaker_benchmark/data/reduced/metadata-asap.csv",
+    "batik": "../matchmaker_benchmark/data/reduced/metadata-batik.csv",
+    "vienna":"../matchmaker_benchmark/data/reduced/metadata-vienna.csv",
 }
 
 POLLING_PERIOD = None#0.01
@@ -269,6 +268,8 @@ def compute_pianoroll_features(
 def align(
     solo_perf_fn: PathLike,
     reference_fn: Union[PathLike, List[PathLike]],
+    reference_perf: PathLike,
+    reference_alignment,
     perf_midi,
     args,
     kwargs,
@@ -326,9 +327,10 @@ def align(
                                                                 processor_kwargs=processor_kwargs,
                                                                 polling_period=POLLING_PERIOD)
 
-
     mm = Matchmaker(
     score_file=reference_fn, # the score file (musicxml) is used as reference feature
+    #reference_perf=reference_perf,
+    #reference_alignment=reference_alignment,
     performance_file=perf_midi,
     input_type=args.input_type,
     feature_type=feature_type,
@@ -336,71 +338,70 @@ def align(
     kwargs=kwargs
     )
     
-    tracked_sonsets, tracked_ponsets = [], []
+    predicted_sonsets, target_ponsets = [], []
 
     if config["processor"] == "pianoroll":
         current_idx = 0
         for i, frame in enumerate(input_signal):
-            if frame.sum() != 0:
-                current_state = mm.score_follower(frame)
-                score_position = mm.score_follower.state_to_ref_time_map(current_state * POLLING_PERIOD)
-                
-                if score_position is not None:
-                    try:
-                        current_onset = mm.score_follower.state_space[current_idx]
-                    except IndexError:
-                        current_onset = mm.score_follower.state_space[-1]
-                    if score_position >= current_onset:
-                        if current_onset not in tracked_sonsets:
-                            tracked_sonsets.append(current_onset)
-                            tracked_ponsets.append(frame_times[i])
-                            current_idx += 1
+            current_state = mm.score_follower(frame)
+            score_position = mm.score_follower.state_to_ref_time_map(current_state * POLLING_PERIOD)
+            
+            if score_position is not None:
+                try:
+                    current_onset = mm.score_follower.state_space[current_idx]
+                except IndexError:
+                    current_onset = mm.score_follower.state_space[-1]
+                if score_position >= current_onset:
+                    if current_onset not in predicted_sonsets:
+                        predicted_sonsets.append(current_onset)
+                        target_ponsets.append(frame_times[i])
+                        current_idx += 1
     else:
         for i, frame in enumerate(input_signal):
             if frame is not None:
                 current_state = mm.score_follower(frame)
                 mm_score_position = mm.score_follower.state_space[current_state] # (= current_position)
-                tracked_sonsets.append(mm_score_position)
-                tracked_ponsets.append(frame_times[i])
+                predicted_sonsets.append(mm_score_position)
+                target_ponsets.append(frame_times[i])
 
-    tracked_sonsets = np.array(tracked_sonsets)
-    tracked_ponsets = np.array(tracked_ponsets)
+    predicted_sonsets = np.array(predicted_sonsets)
+    target_ponsets = np.array(target_ponsets)
 
     set_matched_sonsets = set(matched_array)
-    set_tracked_sonsets = set(tracked_sonsets)
-    tracking_ratio = len(set_matched_sonsets.intersection(set_tracked_sonsets))/len(set_matched_sonsets)
+    set_predicted_sonsets = set(predicted_sonsets)
+    tracking_ratio = len(set_matched_sonsets.intersection(set_predicted_sonsets))/len(set_matched_sonsets)
 
-    mapped_ponsets = stime_to_ptime_map(tracked_sonsets)    
+    mapped_predicted_ponsets = stime_to_ptime_map(predicted_sonsets)    
 
     list_of_nans = []
-    asynchrony = mapped_ponsets - tracked_ponsets
+    asynchrony = mapped_predicted_ponsets - target_ponsets
     if np.count_nonzero(np.isnan(asynchrony)) > 0:
         list_of_nans = np.where(np.isnan(asynchrony))
         print(f'Warning: asynchrony array contains {np.count_nonzero(np.isnan(asynchrony))} NaNs!')
     
     tolerances_in_seconds = [10, 25, 50, 100, 200, 300, 500, 1000, 2000]
     results_in_seconds = get_evaluation_results(
-        mapped_ponsets,
-        tracked_ponsets,
-        total_counts=len(tracked_sonsets),
+        mapped_predicted_ponsets,
+        target_ponsets,
+        total_counts=len(predicted_sonsets),
         tolerances=tolerances_in_seconds,
         in_seconds=True,
     )
 
-    mapped_sonsets = ptime_to_stime_map(tracked_ponsets)
+    mapped_target_sonsets = ptime_to_stime_map(target_ponsets)
 
     beat_tolerances = [0.05, 0.1, 0.3, 0.5, 1, 2]
     beat_results = get_evaluation_results(
-        tracked_sonsets,
-        mapped_sonsets,
-        total_counts=len(tracked_sonsets),
+        predicted_sonsets,
+        mapped_target_sonsets,
+        total_counts=len(predicted_sonsets),
         tolerances=beat_tolerances,
         in_seconds=False,
     )
     gt_ponsets = pna["onset_sec"]
     gt_sonsets = sna["onset_beat"]
 
-    predicted_alignments = tracked_ponsets, mapped_ponsets, tracked_sonsets, mapped_sonsets, gt_ponsets, gt_sonsets
+    predicted_alignments = target_ponsets, mapped_predicted_ponsets, predicted_sonsets, mapped_target_sonsets, gt_ponsets, gt_sonsets
 
     if save_alignments:
         results_path = os.path.join("predicted_alignments", args.method, args.dataset)
@@ -411,22 +412,22 @@ def align(
 
         with open(alignment_fn, 'w') as f:
             writer = csv.writer(f)
-            writer.writerow(['tracked_ponsets', 'mapped_ponsets', 'tracked_sonsets', 'mapped_sonsets'])
+            writer.writerow(['target_ponsets', 'mapped_predicted_ponsets', 'predicted_sonsets', 'mapped_target_sonsets'])
             writer.writerows(zip(predicted_alignments))
 
         plt.plot(gt_sonsets, gt_sonsets, label="gt")
-        plt.plot(tracked_sonsets, mapped_sonsets, label="predicted")
-        plt.xlabel('tracked sonsets')
-        plt.ylabel('mapped sonsets')
+        plt.plot(predicted_sonsets, mapped_target_sonsets, label="predicted")
+        plt.xlabel('predicted sonsets')
+        plt.ylabel('mapped target sonsets')
         plt.title('Sonsets')
         plt.legend()
         plt.savefig(alignment_fn.replace(".csv", ".png"))
         plt.clf()
 
         """plt.plot(gt_ponsets, gt_ponsets, label="gt")
-        plt.plot(mapped_ponsets, tracked_ponsets, label="predicted")
-        plt.xlabel('mapped ponsets')
-        plt.ylabel('tracked ponsets')
+        plt.plot(mapped_predicted_ponsets, target_ponsets, label="predicted")
+        plt.xlabel('mapped mapped_predicted_ponsets')
+        plt.ylabel('target ponsets')
         plt.title('Ponsets')
         plt.legend()
         plt.savefig(alignment_fn.replace(".csv", "-p.png"))
@@ -533,11 +534,24 @@ def run_tests_and_eval_by_dataset(args, kwargs):
         if args.dataset == "validation":
             dataset_dir = DATASET_DIR[row.dataset]
 
-        score_xml = dataset_dir / row.xml_score
+        if args.perf2perf == True:
+            raise NotImplementedError("TODO: uncomment reference_perf and reference_alignment in matchmaker class initialization (lines 332-333) after successful feature integration")
+            reference_match = str(dataset_dir / row.match)
+
+            reference_perf, ref_alignment = pt.load_match(
+                    filename=reference_match,
+                    create_score=False,
+                    first_note_at_zero=True,
+                    )
+        else:
+            reference_perf = None
+            ref_alignment = None
+
+        reference_fn = str(dataset_dir / row.xml_score)
         #if args.dataset == 'vienna':
         #    score_xml = dataset_dir / Path('musicxml_corrected'+row.xml_score[8:])
 
-        match = dataset_dir / row.match
+        match = str(dataset_dir / row.match)
         perf_midi = dataset_dir / row.midi_performance
         perf_audio = dataset_dir / row.audio_performance
 
@@ -552,9 +566,11 @@ def run_tests_and_eval_by_dataset(args, kwargs):
         print(row.title)
 
         ######################################## the magic happens here: ########################################
-        res, res_extended, list_of_nans, _ = align(solo_perf_fn=str(match), 
-                                  reference_fn=str(score_xml), 
-                                  perf_midi=str(perf_midi),
+        res, res_extended, list_of_nans, _ = align(solo_perf_fn=match, 
+                                  reference_fn=reference_fn, 
+                                  reference_perf=reference_perf,
+                                  reference_alignment=ref_alignment,
+                                  perf_midi=str(perf),
                                   args=args,
                                   kwargs=kwargs,
                                   save_alignments=SAVE_ALIGNMENTS)
@@ -654,6 +670,9 @@ if __name__ == "__main__":
         choices=["audio", "midi"],
         default="midi",
         help="Input type to use (audio or midi)",
+    )
+    parser.add_argument(
+        "--perf2perf", action="store_true", help="use performance as reference", default=False
     )
     parser.add_argument(
         "--wandb", action="store_true", help="report results to wandb", default=False
