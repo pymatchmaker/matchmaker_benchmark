@@ -268,6 +268,8 @@ def compute_pianoroll_features(
 def align(
     solo_perf_fn: PathLike,
     reference_fn: Union[PathLike, List[PathLike]],
+    reference_perf: PathLike,
+    reference_alignment,
     perf_midi,
     args,
     kwargs,
@@ -325,9 +327,12 @@ def align(
                                                                 processor_kwargs=processor_kwargs,
                                                                 polling_period=POLLING_PERIOD)
 
+    # TODO: uncomment reference_perf, reference_alignment in matchmaker after integrating perf2perf in the matchmaker class
 
     mm = Matchmaker(
     score_file=reference_fn, # the score file (musicxml) is used as reference feature
+    #reference_perf=reference_perf,
+    #reference_alignment=reference_alignment,
     performance_file=perf_midi,
     input_type=args.input_type,
     feature_type=feature_type,
@@ -531,7 +536,19 @@ def run_tests_and_eval_by_dataset(args, kwargs):
         if args.dataset == "validation":
             dataset_dir = DATASET_DIR[row.dataset]
 
-        score_xml = dataset_dir / row.xml_score
+        if args.perf2perf == True:
+            reference_match = str(dataset_dir / row.match)
+
+            reference_perf, ref_alignment = pt.load_match(
+                    filename=reference_match,
+                    create_score=False,
+                    first_note_at_zero=True,
+                    )
+        else:
+            reference_perf = None
+            ref_alignment = None
+
+        reference_fn = str(dataset_dir / row.xml_score)
         #if args.dataset == 'vienna':
         #    score_xml = dataset_dir / Path('musicxml_corrected'+row.xml_score[8:])
 
@@ -550,9 +567,11 @@ def run_tests_and_eval_by_dataset(args, kwargs):
         print(row.title)
 
         ######################################## the magic happens here: ########################################
-        res, res_extended, list_of_nans, _ = align(solo_perf_fn=str(match), 
-                                  reference_fn=str(score_xml), 
-                                  perf_midi=str(perf_midi),
+        res, res_extended, list_of_nans, _ = align(solo_perf_fn=match, 
+                                  reference_fn=reference_fn, 
+                                  reference_perf=reference_perf,
+                                  reference_alignment=ref_alignment,
+                                  perf_midi=str(perf),
                                   args=args,
                                   kwargs=kwargs,
                                   save_alignments=SAVE_ALIGNMENTS)
@@ -652,6 +671,9 @@ if __name__ == "__main__":
         choices=["audio", "midi"],
         default="midi",
         help="Input type to use (audio or midi)",
+    )
+    parser.add_argument(
+        "--perf2perf", action="store_true", help="use performance as reference", default=False
     )
     parser.add_argument(
         "--wandb", action="store_true", help="report results to wandb", default=False
