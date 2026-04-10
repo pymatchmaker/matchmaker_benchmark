@@ -78,10 +78,10 @@ DATASET_DIR = {
     "vienna": Path("/home/alexander-neuhauser/datasets/vienna4x22"),
 }
 METADATA_PATH = {
-    "validation": "../ismir2025_matchmaker/data/metadata-validation.csv",
-    "asap": "../ismir2025_matchmaker/data/reduced/metadata-asap.csv",
-    "batik": "../ismir2025_matchmaker/data/reduced/metadata-batik.csv",
-    "vienna":"../ismir2025_matchmaker/data/reduced/metadata-vienna.csv",
+    "validation": "../matchmaker_benchmark/data/metadata-validation.csv",
+    "asap": "../matchmaker_benchmark/data/reduced/metadata-asap.csv",
+    "batik": "../matchmaker_benchmark/data/reduced/metadata-batik.csv",
+    "vienna":"../matchmaker_benchmark/data/reduced/metadata-vienna.csv",
 }
 
 POLLING_PERIOD = None#0.01
@@ -341,7 +341,6 @@ def align(
     if config["processor"] == "pianoroll":
         current_idx = 0
         for i, frame in enumerate(input_signal):
-            #if frame.sum() != 0:
             current_state = mm.score_follower(frame)
             score_position = mm.score_follower.state_to_ref_time_map(current_state * POLLING_PERIOD)
             
@@ -537,7 +536,7 @@ def run_tests_and_eval_by_dataset(args, kwargs):
         #if args.dataset == 'vienna':
         #    score_xml = dataset_dir / Path('musicxml_corrected'+row.xml_score[8:])
 
-        match = dataset_dir / row.match
+        match = str(dataset_dir / row.match)
         perf_midi = dataset_dir / row.midi_performance
         perf_audio = dataset_dir / row.audio_performance
 
