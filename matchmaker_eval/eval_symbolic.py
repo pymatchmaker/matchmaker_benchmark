@@ -70,12 +70,11 @@ InputMIDIFrame = Tuple[List[Tuple[Message, float]], float]
 import warnings
 warnings.filterwarnings("ignore")
 
-
 DATASET_DIR = {
-    "validation": Path("/home/alexander-neuhauser/datasets"),
-    "asap": Path("/home/alexander-neuhauser/datasets/asap-dataset-matchmaker"),
-    "batik": Path("/home/alexander-neuhauser/datasets/Batik_Audio"),
-    "vienna": Path("/home/alexander-neuhauser/datasets/vienna4x22"),
+    "validation": Path(os.path.expanduser("~/datasets")),
+    "asap": Path(os.path.expanduser("~/datasets/asap-dataset-matchmaker")),
+    "batik": Path(os.path.expanduser("~/datasets/batik_plays_mozart")),
+    "vienna": Path(os.path.expanduser("~/datasets/vienna4x22")),
 }
 METADATA_PATH = {
     "validation": "../matchmaker_benchmark/data/metadata-validation.csv",
