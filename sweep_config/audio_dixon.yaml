@@ -28,10 +28,10 @@ parameters:
     value: 30
 
   window_size:
-    values: [10, 20]
+    values: [10]
 
   max_run_count:
     value: 3
 
   distance_func:
-    values: ["euclidean", "cosine"]
+    values: ["euclidean"]

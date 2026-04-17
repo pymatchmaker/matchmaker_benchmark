@@ -1,19 +1,12 @@
 """
-Check if a tracker followed the score throughout a piece (v2).
+Check if a tracker followed the score throughout a piece.
 
-Divides performance time into fixed 30-second segments.  For each GT
-annotation in a segment, finds the tracker's first-arrival performance
-time for that score position and computes |predicted_perf - gt_perf|.
-Reports the median of those absolute errors (in seconds) as the segment
-deviation.  A piece is FAILED if enough segments exceed the threshold.
-
-Key difference from v1:
-  - v1: N equal segments, compares median positions
-  - v2: Fixed 30-second segments, per-point absolute alignment errors
-
-Evaluation is in the **performance domain** (errors always in seconds),
-so results are independent of whether the WP stores frame indices,
-beat positions, or state indices.
+Evaluates in the **score domain** (perf→score): divides performance time
+into fixed 30-second segments. For each GT annotation in a segment, looks
+up the tracker's last-known score position at that performance time and
+computes |predicted_beat - gt_beat|. Reports the median of those absolute
+beat errors as the segment deviation. A piece FAILS if ≥ min_fails
+segments exceed the threshold.
 
 Input:
   wp.tsv   Warping path (tab-separated)
@@ -33,10 +26,9 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import numpy as np
 
-SEGMENT_THRESHOLD = 1.0  # max allowed median |error| per segment (seconds)
+SEGMENT_THRESHOLD = 1.0  # max allowed median |beat error| per segment (beats)
 SEGMENT_DURATION = 30.0  # seconds
 MIN_FAILS = 2  # piece fails if >= this many segments exceed SEGMENT_THRESHOLD
-MAX_DEV_CAP = 5.0  # seconds — any segment exceeding this → immediate fail
 
 
 def _wp_to_score(
@@ -80,51 +72,65 @@ def check_tracking(
     mode: str = "beat",
     state_space: Optional[np.ndarray] = None,
     min_fails: int = MIN_FAILS,
-    max_dev_cap: float = MAX_DEV_CAP,
 ) -> dict:
     """
     Check tracking quality using fixed-duration segments.
 
-    Evaluates in the **performance domain**: for each GT annotation,
-    finds the tracker's first-arrival performance time at that score
-    position (via searchsorted on wp_score), then computes the absolute
-    error against the GT performance time.  Errors are always in seconds.
+    Evaluates in the **score domain** (perf→score): at each GT performance
+    onset time, looks up the tracker's last-known score position from the
+    warping path and computes the absolute beat error.
 
     Parameters
     ----------
     wp : (N, 2) array — col 0: score position, col 1: perf frame indices
-    gt : (M, 2) array — col 0: score position, col 1: perf time (seconds)
+    gt : (M, 2) array — col 0: score position (beats), col 1: perf time (seconds)
     frame_rate : float — converts perf frames to seconds
     segment_duration : float — segment length in seconds (default: 30)
-    threshold : float — max allowed median absolute error per segment in seconds (default: 1.0)
+    threshold : float — max allowed median absolute beat error per segment (default: 1.0)
     mode : "beat" or "state"
     state_space : optional array mapping state index → score position.
         Required when mode="state".
+    min_fails : int — piece fails if >= this many segments exceed threshold
 
     Returns
     -------
     dict with: segments, max_deviation, tracked, reason
     """
     wp_score = _wp_to_score(wp, frame_rate, mode, state_space)
-    wp_perf = wp[:, 1] / frame_rate  # seconds
+    wp_perf = wp[:, 1].astype(float)  # frame indices
 
     gt_score = gt[:, 0]
     gt_perf = gt[:, 1]
 
-    # Forward lookup (score → perf): first WP entry where wp_score >= gt_score
-    # This gives the tracker's first-arrival perf time at each GT score position.
-    indices = np.searchsorted(wp_score, gt_score, side="left")
-    predicted_perf = np.full(len(gt_score), np.nan)
-    valid = indices < len(wp_score)
-    predicted_perf[valid] = wp_perf[indices[valid]]
+    # Reverse lookup (perf → score): at each GT perf time, find tracker's
+    # last-known score position (step-function, no future information).
+    # Sort by perf frame, take last entry per unique frame (stable sort).
+    sort_idx = np.argsort(wp_perf, kind="stable")
+    wp_perf_sorted = wp_perf[sort_idx]
+    wp_score_sorted = wp_score[sort_idx]
 
-    errors_all = np.abs(predicted_perf - gt_perf)  # always in seconds
+    unique_frames, first_idx = np.unique(wp_perf_sorted, return_index=True)
+    reduced_scores = np.empty(len(unique_frames))
+    for g in range(len(unique_frames)):
+        start = first_idx[g]
+        end = (
+            first_idx[g + 1] if g + 1 < len(unique_frames) else len(wp_score_sorted)
+        )
+        reduced_scores[g] = wp_score_sorted[end - 1]  # last (final decision)
 
-    # Cover full performance duration (max of WP and GT), so early tracker death is penalized
+    query_frames = gt_perf * frame_rate
+    indices = np.searchsorted(unique_frames, query_frames, side="right") - 1
+    predicted_score = np.full(len(gt_score), np.nan)
+    valid = indices >= 0
+    predicted_score[valid] = reduced_scores[indices[valid]]
+
+    errors_all = np.abs(predicted_score - gt_score)  # in beats
+
+    # Cover full performance duration so early tracker death is penalized
+    finite_gt = gt_perf[np.isfinite(gt_perf)]
+    wp_perf_sec = wp_perf / frame_rate
     total_dur = (
-        max(wp_perf[-1], gt_perf[np.isfinite(gt_perf)][-1])
-        if np.any(np.isfinite(gt_perf))
-        else wp_perf[-1]
+        max(wp_perf_sec[-1], finite_gt[-1]) if len(finite_gt) > 0 else wp_perf_sec[-1]
     )
     n_segments = max(1, int(np.ceil(total_dur / segment_duration)))
     segments = []
@@ -160,15 +166,10 @@ def check_tracking(
     ]
     max_dev = max(valid_devs) if valid_devs else 0.0
     n_failed = sum(1 for seg in segments if seg["failed"])
-    tracked = n_failed < min_fails and max_dev <= max_dev_cap
+    tracked = n_failed < min_fails
 
     if not tracked:
-        reasons = []
-        if n_failed >= min_fails:
-            reasons.append(f"{n_failed}/{n_segments} segments failed (>={min_fails})")
-        if max_dev > max_dev_cap:
-            reasons.append(f"max_dev={max_dev:.1f}s > cap {max_dev_cap:.0f}s")
-        reason = "; ".join(reasons)
+        reason = f"{n_failed}/{n_segments} segments failed (>={min_fails})"
     else:
         reason = "OK"
 
@@ -207,9 +208,8 @@ def plot_tracking(
     mode: str = "beat",
     state_space: Optional[np.ndarray] = None,
     min_fails: int = MIN_FAILS,
-    max_dev_cap: float = MAX_DEV_CAP,
 ):
-    """Plot warping path vs GT with per-point error analysis per segment."""
+    """Plot warping path vs GT with per-point beat error analysis per segment."""
     result = check_tracking(
         wp,
         gt,
@@ -219,7 +219,6 @@ def plot_tracking(
         mode=mode,
         state_space=state_space,
         min_fails=min_fails,
-        max_dev_cap=max_dev_cap,
     )
     segments = result["segments"]
     max_dev = result["max_deviation"]
@@ -230,11 +229,24 @@ def plot_tracking(
     gt_score = gt[:, 0]
     gt_perf = gt[:, 1]
 
-    # Forward lookup (same as check_tracking)
-    indices = np.searchsorted(wp_score, gt_score, side="left")
-    predicted_perf = np.full(len(gt_score), np.nan)
-    valid_idx = indices < len(wp_score)
-    predicted_perf[valid_idx] = wp_perf[indices[valid_idx]]
+    # Reverse lookup (perf → score, same as check_tracking)
+    wp_perf_frames = wp[:, 1].astype(float)
+    sort_idx = np.argsort(wp_perf_frames, kind="stable")
+    wp_pf_sorted = wp_perf_frames[sort_idx]
+    wp_sc_sorted = wp_score[sort_idx]
+    unique_frames, first_idx = np.unique(wp_pf_sorted, return_index=True)
+    reduced_scores = np.empty(len(unique_frames))
+    for g in range(len(unique_frames)):
+        start = first_idx[g]
+        end = (
+            first_idx[g + 1] if g + 1 < len(unique_frames) else len(wp_sc_sorted)
+        )
+        reduced_scores[g] = wp_sc_sorted[end - 1]
+    query_frames = gt_perf * frame_rate
+    indices = np.searchsorted(unique_frames, query_frames, side="right") - 1
+    predicted_score = np.full(len(gt_score), np.nan)
+    valid_idx = indices >= 0
+    predicted_score[valid_idx] = reduced_scores[indices[valid_idx]]
 
     # Figure (3-panel)
     fig = plt.figure(figsize=(16, 12))
@@ -255,18 +267,17 @@ def plot_tracking(
     ax1.plot(
         wp_perf, wp_score, color="navy", lw=1.2, alpha=0.9, zorder=3, label="Tracker"
     )
-    # Error lines: horizontal (same score position, different perf times)
-    for gs_val, gp_val, pp_val in zip(gt_score, gt_perf, predicted_perf):
-        if np.isfinite(pp_val):
+    # Error lines: vertical (same perf time, different score positions)
+    for gs_val, gp_val, ps_val in zip(gt_score, gt_perf, predicted_score):
+        if np.isfinite(ps_val):
             ax1.plot(
-                [gp_val, pp_val], [gs_val, gs_val], color="red", alpha=0.15, lw=0.5
+                [gp_val, gp_val], [gs_val, ps_val], color="red", alpha=0.15, lw=0.5
             )
     n_failed = result["n_failed"]
     status = "TRACKED" if tracked else f"FAILED ({result['reason']})"
     mf_label = f", min_fails={min_fails}" if min_fails > 1 else ""
-    cap_label = f", cap={max_dev_cap:.0f}s" if max_dev_cap < float("inf") else ""
     ax1.set_title(
-        f"{title}  —  {status}  [{segment_duration:.0f}s segments{mf_label}{cap_label}]",
+        f"{title}  —  {status}  [{segment_duration:.0f}s segments{mf_label}]",
         fontsize=14,
         color="green" if tracked else "red",
         fontweight="bold",
@@ -289,13 +300,13 @@ def plot_tracking(
             lw=0.5,
         )
     ax2.axhline(
-        threshold, color="red", ls="--", lw=1.5, label=f"threshold={threshold:.1f}s"
+        threshold, color="red", ls="--", lw=1.5, label=f"threshold={threshold:.1f}b"
     )
     ax2.axhline(0, color="black", lw=0.5)
-    ax2.set_ylabel("Median |error| per segment (s)")
+    ax2.set_ylabel("Median |beat error| per segment")
     yl = max(threshold * 2, max_dev * 1.3) if max_dev > 0 else threshold * 2
     ax2.set_ylim(0, yl)
-    ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.1f}s"))
+    ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.1f}b"))
     ax2.legend(loc="upper right", fontsize=9)
 
     # Panel 3: numeric table
@@ -308,7 +319,7 @@ def plot_tracking(
                 f"S{i+1}",
                 f"{seg['t0']:.0f}-{seg['t1']:.0f}s",
                 f"{seg['n_points']}",
-                f"{seg['deviation']:.2f}s" if not np.isnan(seg["deviation"]) else "N/A",
+                f"{seg['deviation']:.2f}b" if not np.isnan(seg["deviation"]) else "N/A",
                 "FAIL" if seg["failed"] else "OK",
             ]
         )
@@ -373,14 +384,14 @@ def main():
 
     # Print result
     print(
-        f"{title}  Tracked: {result['tracked']}  |  max_dev: {result['max_deviation']:.2f}s  |  {result['reason']}"
+        f"{title}  Tracked: {result['tracked']}  |  max_dev: {result['max_deviation']:.2f}b  |  {result['reason']}"
     )
     for i, seg in enumerate(result["segments"]):
         d = seg["deviation"]
         if not np.isnan(d):
             flag = " !" if d > SEGMENT_THRESHOLD else ""
             print(
-                f"  S{i+1:>2} [{seg['t0']:>5.0f}-{seg['t1']:>5.0f}s]: {d:.2f}s ({seg['n_points']} pts){flag}"
+                f"  S{i+1:>2} [{seg['t0']:>5.0f}-{seg['t1']:>5.0f}s]: {d:.2f}b ({seg['n_points']} pts){flag}"
             )
         else:
             print(f"  S{i+1:>2} [{seg['t0']:>5.0f}-{seg['t1']:>5.0f}s]: nan (0 pts)")

@@ -29,7 +29,7 @@ parameters:
     value: 0.1
 
   distance_func:
-    values: ["Euclidean", "Manhattan", "Cosine"]
+    values: ["Manhattan", "Cosine"]
 
   # Sweep parameters
   window_size:
