@@ -202,11 +202,11 @@ def save_score_following_result(
 ):
     run_name = name or "results"
     save_path = save_dir / f"wp_{run_name}.tsv"
-    save_nparray_to_csv(model.warping_path.T, save_path.as_posix())
+    save_nparray_to_csv(model.alignment_path.T, save_path.as_posix())
 
     dist = scipy.spatial.distance.cdist(
         model.reference_features,
-        model.input_features[: model.warping_path[1][-1]],
+        model.input_features[: model.alignment_path[1][-1]],
         metric=model.distance_func,
     )  # [d, wy]
     plt.figure(figsize=(15, 15))
@@ -219,7 +219,7 @@ def save_score_following_result(
     plt.ylabel("Score Audio frame", fontsize=15)
 
     # plot online DTW path
-    ref_paths, target_paths = model.warping_path[0], model.warping_path[1]
+    ref_paths, target_paths = model.alignment_path[0], model.alignment_path[1]
     for n in range(len(ref_paths)):
         plt.plot(
             target_paths[n], ref_paths[n], ".", color="lime", alpha=0.5, markersize=3
@@ -306,8 +306,8 @@ def build_matchmaker_hmm(score_path):
         inserted_states=True,
     )
 
-    state_space = ioi_matrix[0]
-    n_states = len(state_space)
+    score_positions = ioi_matrix[0]
+    n_states = len(score_positions)
 
     observation_model = BernoulliGaussianPitchIOIObservationModel(
         pitch_profiles=pitch_profiles,
@@ -334,7 +334,7 @@ def build_matchmaker_hmm(score_path):
     matchmaker = PitchIOIHMM(
         observation_model=observation_model,
         transition_matrix=transition_matrix,
-        score_onsets=state_space,
+        score_onsets=score_positions,
         initial_probabilities=initial_probabilities,
         has_insertions=True,
         tempo_model=tempo_model,

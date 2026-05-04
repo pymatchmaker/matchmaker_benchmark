@@ -113,16 +113,16 @@ KWARGS = {
              "window_size": 30,
              },
         "hmm": 
-            {"processor": "pitch_ioi",
+            {"processor": "pitch_chord",
              "tempo_model": KalmanTempoModel,
              "piano_range": True,
              },
         "pthmm":
-            {"processor": "pitch_ioi", # "pitch"
+            {"processor": "pitch_chord", # "pitch"
              "piano_range": True,
              },
         "outerhmm":
-            {"processor": "pitch_ioi",
+            {"processor": "pitch_chord",
              "piano_range": True,
              },
         },
@@ -174,7 +174,7 @@ def compute_features_from_symbolic(
 ):
     processor_mapping = {
         "pitch": PitchProcessor,
-        "pitch_ioi": PitchIOIProcessor,
+        "pitch_chord": PitchIOIProcessor,
         "pianoroll": PianoRollProcessor,
         "pitch_class_pianoroll": PitchClassPianoRollProcessor,
     }
@@ -311,7 +311,7 @@ def align(
     elif args.method == "pthmm":
         config["processor"] = 'pitch'
         processor_kwargs["return_pitch_list"] = False
-        feature_type = "pitch_ioi"
+        feature_type = "pitch_chord"
     
     elif args.method == "outerhmm":
         processor_kwargs["return_pitch_list"] = False
@@ -348,9 +348,9 @@ def align(
             
             if score_position is not None:
                 try:
-                    current_onset = mm.score_follower.state_space[current_idx]
+                    current_onset = mm.score_follower.score_positions[current_idx]
                 except IndexError:
-                    current_onset = mm.score_follower.state_space[-1]
+                    current_onset = mm.score_follower.score_positions[-1]
                 if score_position >= current_onset:
                     if current_onset not in predicted_sonsets:
                         predicted_sonsets.append(current_onset)
@@ -360,7 +360,7 @@ def align(
         for i, frame in enumerate(input_signal):
             if frame is not None:
                 current_state = mm.score_follower(frame)
-                mm_score_position = mm.score_follower.state_space[current_state] # (= current_position)
+                mm_score_position = mm.score_follower.score_positions[current_state] # (= current_position)
                 predicted_sonsets.append(mm_score_position)
                 target_ponsets.append(frame_times[i])
 

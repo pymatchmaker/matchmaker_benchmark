@@ -85,7 +85,7 @@ def run_tests_and_eval_by_dataset(dataset_type, method, run_dir=None, save_plots
                 kwargs=mm_kwargs if mm_kwargs else None,
             )
             list(mm.run(verbose=False))
-            wp = mm.score_follower.warping_path  # (2, T)
+            wp = mm.score_follower.alignment_path  # (2, T)
 
             # Convert WP perf axis to absolute seconds (HMM WPs are IOI-
             # accumulated from 0; OLTW event WPs are already absolute).

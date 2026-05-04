@@ -48,7 +48,7 @@ from partitura.performance import PerformedPart
 RNG = np.random.RandomState(1984)
 
 
-def sanitize_warping_path(wp):
+def sanitize_alignment_path(wp):
     wp1 = wp[0]
     unique_wp1 = np.unique(wp1)
     unique_wp1_idxs = [np.where(wp1 == ui)[0] for ui in unique_wp1]
@@ -60,12 +60,12 @@ def sanitize_warping_path(wp):
 
 # def transfer_positions(wp, ref_ann, frame_rate):
 #     """
-#     Transfer the positions of the reference annotations to the target annotations using the warping path.
+#     Transfer the positions of the reference annotations to the target annotations using the alignment path.
 
 #     Parameters
 #     ----------
 #     wp : np.array with shape (2, T)
-#         array of warping path.
+#         array of alignment path.
 #     ref_ann : List[float]
 #         reference annotations.
 #     frame_rate : float
@@ -77,19 +77,19 @@ def sanitize_warping_path(wp):
 #     return target_ann
 
 
-def transfer_positions(wp, ref_anns, frame_rate, is_hmm=False, state_space=None):
+def transfer_positions(wp, ref_anns, frame_rate, is_hmm=False, score_positions=None):
     """
-    Transfer the positions of the reference annotations to the target annotations using the warping path.
+    Transfer the positions of the reference annotations to the target annotations using the alignment path.
 
     Parameters
     ----------
     wp : np.array with shape (2, T)
-        array of warping path.
+        array of alignment path.
     ref_ann : List[float]
         reference annotations.
     """
     if is_hmm:
-        x = state_space[wp[0]]
+        x = score_positions[wp[0]]
         y = wp[1] / frame_rate
     else:
         x, y = wp[0] / frame_rate, wp[1] / frame_rate
@@ -333,7 +333,7 @@ def evaluate_performance_oltw_arzt(
         ]
 
     tracked_beats = transfer_positions(
-        wp=score_follower.warping_path,
+        wp=score_follower.alignment_path,
         ref_anns=perf_beats,
         frame_rate=1 / polling_period,
     )
@@ -364,7 +364,7 @@ def save_score_following_result(
 ):
     run_name = name or "results"
     save_path = save_dir / f"wp_{run_name}.tsv"
-    save_nparray_to_csv(model.warping_path.T, save_path.as_posix())
+    save_nparray_to_csv(model.alignment_path.T, save_path.as_posix())
 
     plt.figure(figsize=(15, 15))
     plt.title(
@@ -375,8 +375,8 @@ def save_score_following_result(
     plt.ylabel("Score (sec)", fontsize=15)
 
     # plot online DTW path
-    x = model.state_space[model.warping_path[0]]
-    y = model.warping_path[1] / frame_rate
+    x = model.score_positions[model.alignment_path[0]]
+    y = model.alignment_path[1] / frame_rate
     for ref, target in zip(x, y):
         plt.plot(target, ref, ".", color="purple", alpha=0.5, markersize=3)
 
@@ -576,7 +576,7 @@ def evaluate_performance_oltw_dixon(
             perf_beats.min(), np.cumsum(np.diff(perf_beats) * tempo_scaling)
         ]
     tracked_beats = transfer_positions(
-        wp=score_follower.warping_path,
+        wp=score_follower.alignment_path,
         ref_anns=perf_beats,
         frame_rate=1 / polling_period,
     )
@@ -669,7 +669,7 @@ def evaluate_performance_hmm(
     (
         observation_model,
         transition_matrix,
-        state_space,
+        score_positions,
         initial_probabilities,
         tempo_model,
     ) = preprocess_score(score=score)
@@ -681,7 +681,7 @@ def evaluate_performance_hmm(
 
     with midi_stream as stream:
         score_follower = PitchIOIHMM(
-            reference_features=state_space,
+            reference_features=score_positions,
             queue=stream.queue,
         )
         for current_position in score_follower.run():
@@ -714,11 +714,11 @@ def evaluate_performance_hmm(
     # import pdb
     # pdb.set_trace()
     tracked_beats = transfer_positions(
-        wp=score_follower.warping_path,
+        wp=score_follower.alignment_path,
         ref_anns=score_beats,
         frame_rate=1 / polling_period,
         is_hmm=True,
-        state_space=score_follower.state_space,  # TODO check if this is correct
+        score_positions=score_follower.score_positions,  # TODO check if this is correct
     )
     eval_results = evaluate_alignment(
         target_ponsets=perf_beats,
@@ -775,7 +775,7 @@ def preprocess_score(score) -> np.ndarray:
         n_states=len(ioi_matrix[0]),
         inserted_states=True,
     )
-    state_space = ioi_matrix[0]
+    score_positions = ioi_matrix[0]
     initial_probabilities = gumbel_init_dist(
         n_states=len(ioi_matrix[0]),
     )
@@ -783,7 +783,7 @@ def preprocess_score(score) -> np.ndarray:
     return (
         observation_model,
         transition_matrix,
-        state_space,
+        score_positions,
         initial_probabilities,
         tempo_model,
     )

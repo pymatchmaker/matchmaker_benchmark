@@ -127,7 +127,15 @@ def run_score_following(
     save_plots: bool = True,
 ) -> dict:
     """Run score following via Matchmaker (audio or MIDI HMM methods)."""
-    mm_kwargs = {"sample_rate": config.sample_rate, "frame_rate": config.frame_rate}
+    # Start from Matchmaker's per-method defaults so method-specific keys
+    # (e.g., processor, s_j) survive; override sample_rate/frame_rate from
+    # the AudioEvalConfig and any sweep kwargs.
+    from matchmaker import DEFAULT_KWARGS as _MM_DEFAULTS
+
+    mm_kwargs = dict(_MM_DEFAULTS.get(input_type, {}).get(config.method, {}))
+    if input_type == "audio":
+        mm_kwargs["sample_rate"] = config.sample_rate
+        mm_kwargs["frame_rate"] = config.frame_rate
     if matchmaker_kwargs is not None:
         mm_kwargs.update(matchmaker_kwargs)
 
@@ -148,9 +156,9 @@ def run_score_following(
         traceback.print_exc()
         mm._has_run = True
 
-    wp = mm.score_follower.warping_path
+    wp = mm.score_follower.alignment_path
     if wp is None or (hasattr(wp, "size") and wp.size == 0) or len(wp) == 0:
-        raise RuntimeError("Empty warping path — score follower produced no alignment")
+        raise RuntimeError("Empty alignment path — score follower produced no alignment")
 
     if perf_annotations is None and match_file is not None:
         score_onset_beats = mm.build_score_annotations(

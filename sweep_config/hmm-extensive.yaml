@@ -17,7 +17,7 @@ parameters:
     value: "midi"
 
   processor:
-    value: "pitch_ioi"
+    value: "pitch_chord"
 
   piano_range:
     values: [True, False]

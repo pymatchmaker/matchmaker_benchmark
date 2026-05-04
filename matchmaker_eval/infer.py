@@ -75,7 +75,7 @@ def main():
     for current_position in mm.run():
         print(f"Current position: {current_position}")
 
-    wp = mm.score_follower.warping_path
+    wp = mm.score_follower.alignment_path
     result_stats = mm.run_evaluation(perf_annots_path)
 
     save_dir = (
@@ -84,7 +84,7 @@ def main():
     save_dir.mkdir(parents=True, exist_ok=True)
     save_config(config, save_dir)
 
-    # Save warping path
+    # Save alignment path
     save_path = save_dir / f"wp_results.tsv"
     save_nparray_to_csv(wp.T, save_path.as_posix())
 

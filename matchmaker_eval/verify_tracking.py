@@ -35,7 +35,7 @@ def _wp_to_score(
     wp: np.ndarray,
     frame_rate: float,
     mode: str = "beat",
-    state_space: Optional[np.ndarray] = None,
+    score_positions: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     """Convert wp score axis to GT-compatible units.
 
@@ -44,7 +44,7 @@ def _wp_to_score(
     wp : (N, 2) — col 0: score (frames, state indices, or beat positions), col 1: perf frames
     frame_rate : float
     mode : "beat" or "state"
-    state_space : array mapping state index → score position.
+    score_positions : array mapping state index → score position.
                   Required when mode="state".
 
     Returns
@@ -53,11 +53,11 @@ def _wp_to_score(
     """
     if mode == "beat":
         return wp[:, 0].astype(float)
-    elif mode == "state" and state_space is not None:
+    elif mode == "state" and score_positions is not None:
         state_idx = wp[:, 0].astype(int)
         offset = int(state_idx.min())
-        mapped = np.clip(state_idx - offset, 0, len(state_space) - 1)
-        return state_space[mapped].astype(float)
+        mapped = np.clip(state_idx - offset, 0, len(score_positions) - 1)
+        return score_positions[mapped].astype(float)
     else:
         # Frame mode: score frames → seconds
         return wp[:, 0] / frame_rate
@@ -70,7 +70,7 @@ def check_tracking(
     segment_duration: float = SEGMENT_DURATION,
     threshold: float = SEGMENT_THRESHOLD,
     mode: str = "beat",
-    state_space: Optional[np.ndarray] = None,
+    score_positions: Optional[np.ndarray] = None,
     min_fails: int = MIN_FAILS,
 ) -> dict:
     """
@@ -78,17 +78,17 @@ def check_tracking(
 
     Evaluates in the **score domain** (perf→score): at each GT performance
     onset time, looks up the tracker's last-known score position from the
-    warping path and computes the absolute beat error.
+    alignment path and computes the absolute beat error.
 
     Parameters
     ----------
-    wp : (N, 2) array — col 0: score position, col 1: perf frame indices
+    wp : (N, 2) array — col 0: score position, col 1: perf time (seconds)
     gt : (M, 2) array — col 0: score position (beats), col 1: perf time (seconds)
-    frame_rate : float — converts perf frames to seconds
+    frame_rate : float — kept for backward-compat callers
     segment_duration : float — segment length in seconds (default: 30)
     threshold : float — max allowed median absolute beat error per segment (default: 1.0)
     mode : "beat" or "state"
-    state_space : optional array mapping state index → score position.
+    score_positions : optional array mapping state index → score position.
         Required when mode="state".
     min_fails : int — piece fails if >= this many segments exceed threshold
 
@@ -96,30 +96,28 @@ def check_tracking(
     -------
     dict with: segments, max_deviation, tracked, reason
     """
-    wp_score = _wp_to_score(wp, frame_rate, mode, state_space)
-    wp_perf = wp[:, 1].astype(float)  # frame indices
+    wp_score = _wp_to_score(wp, frame_rate, mode, score_positions)
+    wp_perf = wp[:, 1].astype(float)  # seconds
 
     gt_score = gt[:, 0]
     gt_perf = gt[:, 1]
 
     # Reverse lookup (perf → score): at each GT perf time, find tracker's
     # last-known score position (step-function, no future information).
-    # Sort by perf frame, take last entry per unique frame (stable sort).
     sort_idx = np.argsort(wp_perf, kind="stable")
     wp_perf_sorted = wp_perf[sort_idx]
     wp_score_sorted = wp_score[sort_idx]
 
-    unique_frames, first_idx = np.unique(wp_perf_sorted, return_index=True)
-    reduced_scores = np.empty(len(unique_frames))
-    for g in range(len(unique_frames)):
+    unique_times, first_idx = np.unique(wp_perf_sorted, return_index=True)
+    reduced_scores = np.empty(len(unique_times))
+    for g in range(len(unique_times)):
         start = first_idx[g]
         end = (
-            first_idx[g + 1] if g + 1 < len(unique_frames) else len(wp_score_sorted)
+            first_idx[g + 1] if g + 1 < len(unique_times) else len(wp_score_sorted)
         )
         reduced_scores[g] = wp_score_sorted[end - 1]  # last (final decision)
 
-    query_frames = gt_perf * frame_rate
-    indices = np.searchsorted(unique_frames, query_frames, side="right") - 1
+    indices = np.searchsorted(unique_times, gt_perf, side="right") - 1
     predicted_score = np.full(len(gt_score), np.nan)
     valid = indices >= 0
     predicted_score[valid] = reduced_scores[indices[valid]]
@@ -128,9 +126,8 @@ def check_tracking(
 
     # Cover full performance duration so early tracker death is penalized
     finite_gt = gt_perf[np.isfinite(gt_perf)]
-    wp_perf_sec = wp_perf / frame_rate
     total_dur = (
-        max(wp_perf_sec[-1], finite_gt[-1]) if len(finite_gt) > 0 else wp_perf_sec[-1]
+        max(wp_perf[-1], finite_gt[-1]) if len(finite_gt) > 0 else wp_perf[-1]
     )
     n_segments = max(1, int(np.ceil(total_dur / segment_duration)))
     segments = []
@@ -206,10 +203,10 @@ def plot_tracking(
     segment_duration: float = SEGMENT_DURATION,
     threshold: float = SEGMENT_THRESHOLD,
     mode: str = "beat",
-    state_space: Optional[np.ndarray] = None,
+    score_positions: Optional[np.ndarray] = None,
     min_fails: int = MIN_FAILS,
 ):
-    """Plot warping path vs GT with per-point beat error analysis per segment."""
+    """Plot alignment path vs GT with per-point beat error analysis per segment."""
     result = check_tracking(
         wp,
         gt,
@@ -217,33 +214,31 @@ def plot_tracking(
         segment_duration=segment_duration,
         threshold=threshold,
         mode=mode,
-        state_space=state_space,
+        score_positions=score_positions,
         min_fails=min_fails,
     )
     segments = result["segments"]
     max_dev = result["max_deviation"]
     tracked = result["tracked"]
 
-    wp_score = _wp_to_score(wp, frame_rate, mode, state_space)
-    wp_perf = wp[:, 1] / frame_rate
+    wp_score = _wp_to_score(wp, frame_rate, mode, score_positions)
+    wp_perf = wp[:, 1].astype(float)  # seconds
     gt_score = gt[:, 0]
     gt_perf = gt[:, 1]
 
     # Reverse lookup (perf → score, same as check_tracking)
-    wp_perf_frames = wp[:, 1].astype(float)
-    sort_idx = np.argsort(wp_perf_frames, kind="stable")
-    wp_pf_sorted = wp_perf_frames[sort_idx]
+    sort_idx = np.argsort(wp_perf, kind="stable")
+    wp_pf_sorted = wp_perf[sort_idx]
     wp_sc_sorted = wp_score[sort_idx]
-    unique_frames, first_idx = np.unique(wp_pf_sorted, return_index=True)
-    reduced_scores = np.empty(len(unique_frames))
-    for g in range(len(unique_frames)):
+    unique_times, first_idx = np.unique(wp_pf_sorted, return_index=True)
+    reduced_scores = np.empty(len(unique_times))
+    for g in range(len(unique_times)):
         start = first_idx[g]
         end = (
-            first_idx[g + 1] if g + 1 < len(unique_frames) else len(wp_sc_sorted)
+            first_idx[g + 1] if g + 1 < len(unique_times) else len(wp_sc_sorted)
         )
         reduced_scores[g] = wp_sc_sorted[end - 1]
-    query_frames = gt_perf * frame_rate
-    indices = np.searchsorted(unique_frames, query_frames, side="right") - 1
+    indices = np.searchsorted(unique_times, gt_perf, side="right") - 1
     predicted_score = np.full(len(gt_score), np.nan)
     valid_idx = indices >= 0
     predicted_score[valid_idx] = reduced_scores[indices[valid_idx]]
@@ -253,7 +248,7 @@ def plot_tracking(
     gs = fig.add_gridspec(3, 1, height_ratios=[3, 1.2, 1.5], hspace=0.35)
     ax1, ax2, ax3 = [fig.add_subplot(gs[i]) for i in range(3)]
 
-    # Panel 1: warping path + GT
+    # Panel 1: alignment path + GT
     for seg in segments:
         ax1.axvspan(
             seg["t0"],
@@ -369,16 +364,16 @@ def main():
     wp = np.loadtxt(args.wp, delimiter="\t", skiprows=1)
     gt = np.loadtxt(args.gt, delimiter="\t", skiprows=1)
 
-    state_space = None
-    if args.state_space is not None:
-        state_space = np.loadtxt(args.state_space)
+    score_positions = None
+    if args.score_positions is not None:
+        score_positions = np.loadtxt(args.score_positions)
 
     result = check_tracking(
         wp,
         gt,
         args.frame_rate,
         mode=args.mode,
-        state_space=state_space,
+        score_positions=score_positions,
     )
     title = _auto_title(args.wp)
 
@@ -403,7 +398,7 @@ def main():
         title=title,
         save_path=args.save,
         mode=args.mode,
-        state_space=state_space,
+        score_positions=score_positions,
     )
 
 
