@@ -50,7 +50,9 @@ METADATA_PATH = {
 OUTPUT_DIR = WORKING_DIR / "output"
 
 
-def run_tests_and_eval_by_dataset(dataset_type, method, run_dir=None, save_plots=True):
+def run_tests_and_eval_by_dataset(
+    dataset_type, method, run_dir=None, save_plots=True
+):
     """Run symbolic alignment for all pieces in a dataset."""
     metadata = pd.read_csv(METADATA_PATH[dataset_type])
     is_valid = dataset_type in ("valid", "example")
