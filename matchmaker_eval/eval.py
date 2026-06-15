@@ -23,7 +23,7 @@ import pandas as pd
 import partitura as pt
 import scipy
 from matchmaker import Matchmaker
-from matchmaker.utils.eval import get_evaluation_results
+from matchmaker.utils.eval import get_evaluation_results, resolve_gt
 from numpy.typing import NDArray
 from partitura.musicanalysis.performance_codec import get_time_maps_from_alignment
 
@@ -125,11 +125,9 @@ def run_score_following(
     matchmaker_kwargs: Optional[dict] = None,
     granularity: str = "note",
     save_plots: bool = True,
+    gt: Optional[Union[str, Path, np.ndarray]] = None,
 ) -> dict:
-    """Run score following via Matchmaker (audio or MIDI HMM methods)."""
-    # Start from Matchmaker's per-method defaults so method-specific keys
-    # (e.g., processor, s_j) survive; override sample_rate/frame_rate from
-    # the AudioEvalConfig and any sweep kwargs.
+    """Run score following via Matchmaker (audio or MIDI methods)."""
     from matchmaker import DEFAULT_KWARGS as _MM_DEFAULTS
 
     mm_kwargs = dict(_MM_DEFAULTS.get(input_type, {}).get(config.method, {}))
@@ -158,9 +156,15 @@ def run_score_following(
 
     wp = mm.score_follower.alignment_path
     if wp is None or (hasattr(wp, "size") and wp.size == 0) or len(wp) == 0:
-        raise RuntimeError("Empty alignment path — score follower produced no alignment")
+        raise RuntimeError(
+            "Empty alignment path — score follower produced no alignment"
+        )
 
-    if perf_annotations is None and match_file is not None:
+    gt_pairs = None
+    if gt is not None:
+        sb, ps = resolve_gt(gt, mm.score_part.note_array())
+        gt_pairs = np.column_stack([sb, ps])
+    elif perf_annotations is None and match_file is not None:
         score_onset_beats = mm.build_score_annotations(
             level="note", musical_beat=use_musical_beat, return_type="beats"
         )
@@ -178,6 +182,7 @@ def run_score_following(
         save_dir=save_dir,
         run_name=run_name,
         level=granularity,
+        gt=gt_pairs,
     )
     # Flatten nested {"beat": {...}, "ms": {...}} into a single dict.
     # Beat metrics keep their keys; ms metrics get a "_ms" suffix on mean/median.
@@ -193,13 +198,7 @@ def run_score_following(
     # Tracking verification
     try:
         wp_for_check = wp.T
-        score_annots_for_gt = mm.build_score_annotations(
-            level=granularity, musical_beat=use_musical_beat, return_type="beats"
-        )
-        min_len = min(len(score_annots_for_gt), len(perf_annotations))
-        gt_for_check = np.column_stack(
-            [score_annots_for_gt[:min_len], perf_annotations[:min_len]]
-        )
+        gt_for_check = gt_pairs
         tracking = check_tracking(
             wp_for_check, gt_for_check, config.frame_rate, mode="beat"
         )
@@ -224,7 +223,6 @@ def run_score_following(
             json.dump(results, f, indent=4)
 
     return results
-
 
 
 # ---------------------------------------------------------------------------
@@ -258,9 +256,9 @@ def run_offline_alignment(
         input_type="audio",
         unfold_score=True,
     )
-    audio_1 = generate_score_audio(
-        mm.score_part, mm.tempo, config.sample_rate
-    ).astype(np.float32)
+    audio_1 = generate_score_audio(mm.score_part, mm.tempo, config.sample_rate).astype(
+        np.float32
+    )
     audio_2, _ = librosa.load(perf_path.as_posix(), sr=config.sample_rate)
 
     cqt_1 = np.abs(

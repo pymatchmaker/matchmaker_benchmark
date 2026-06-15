@@ -134,9 +134,7 @@ def run_tests_and_eval_by_dataset(
         # Get performance annotations: from note annotation file, match file, or annotation CSV
         trimmed_audio_path = None
         has_match = (
-            hasattr(row, "match")
-            and pd.notna(row.match)
-            and str(row.match).strip()
+            hasattr(row, "match") and pd.notna(row.match) and str(row.match).strip()
         )
         if has_match:
             match_file = dataset_dir / row.match
@@ -172,6 +170,17 @@ def run_tests_and_eval_by_dataset(
                 trimmed_audio_path = Path(tmp.name)
                 perf_audio = trimmed_audio_path
 
+        # Unified GT: match-file datasets pass the .match file directly (score
+        # beats read from the match file); no-match datasets use a precomputed
+        # data/gt/<dataset>/<i>.tsv of (score_beat, perf_sec).
+        piece_gt = None
+        if has_match:
+            piece_gt = match_file
+        else:
+            gt_path = WORKING_DIR / "data" / "gt" / current_dataset / f"{i}.tsv"
+            if gt_path.exists():
+                piece_gt = gt_path
+
         try:
             if config.method == "offline":
                 result = run_offline_alignment(
@@ -193,10 +202,10 @@ def run_tests_and_eval_by_dataset(
                     save_dir=run_dir,
                     run_name=f"{i}",
                     match_file=match_file,
-                    perf_annotations=perf_annotations,
                     granularity=piece_granularity,
                     matchmaker_kwargs=matchmaker_kwargs,
                     save_plots=save_plots,
+                    gt=piece_gt,
                 )
         except Exception as e:
             print(f"Error: {e}")
@@ -249,7 +258,11 @@ def main(args):
         matchmaker_kwargs = build_sweep_kwargs(method, wandb.config)
 
     # Build config from DEFAULT_KWARGS defaults, overridden by sweep config if present
-    kw = matchmaker_kwargs if matchmaker_kwargs is not None else DEFAULT_KWARGS.get("audio", {}).get(method, {})
+    kw = (
+        matchmaker_kwargs
+        if matchmaker_kwargs is not None
+        else DEFAULT_KWARGS.get("audio", {}).get(method, {})
+    )
     cfg_kwargs = {k: v for k, v in kw.items() if k in ("sample_rate", "frame_rate")}
     if "frame_rate" not in cfg_kwargs and "hop_length" in kw:
         sr = cfg_kwargs.get("sample_rate", 44100)
