@@ -70,8 +70,8 @@ For MIDI, `arzt` and `dixon` use event-level OLTW variants (`OnlineTimeWarpingAr
 ### Output
 
 Each run creates a directory in `output/` containing:
-- `wp_{i}.tsv` — warping path per piece (score_beat, perf_time)
-- `gt_{i}.tsv` — ground truth per piece (score_beat, perf_time)
+- `wp_{i}.tsv` — warping path per piece (perf_sec, score_beat)
+- `gt_{i}.tsv` — ground truth per piece (perf_sec, score_beat)
 - `{i}.json` — per-piece tracking result
 - `summary_tracked.json` — event-pooled summary over tracked pieces
 

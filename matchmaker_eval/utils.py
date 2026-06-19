@@ -119,9 +119,9 @@ def compute_event_pooled_summary(
         gt_score = gt[:, 1]  # score positions (beats) — col 1 in new format
 
         # Score → perf prediction (ms metrics)
-        # wp TSV col order: perf_sec, score_beat; flip to [score_beat, perf_sec] for transfer_positions
-        wp_flipped = wp[:, [1, 0]].T
-        pred_perf = transfer_positions(wp_flipped, gt_score, 1, domain="performance")
+        # wp TSV col order: perf_sec, score_beat — already matches transfer_positions input
+        wp_t = wp.T
+        pred_perf = transfer_positions(wp_t, gt_score, 1, domain="performance")
         valid = np.isfinite(pred_perf) & np.isfinite(gt_perf)
         all_gt_perf.append(gt_perf[valid])
         all_pred_perf.append(pred_perf[valid])
@@ -129,7 +129,7 @@ def compute_event_pooled_summary(
         # Perf → score prediction (beat metrics)
         valid_gt_perf = np.isfinite(gt_perf)
         pred_score = transfer_positions(
-            wp_flipped, gt_perf[valid_gt_perf], 1, domain="score"
+            wp_t, gt_perf[valid_gt_perf], 1, domain="score"
         )
         valid_b = np.isfinite(pred_score)
         all_gt_score_beats.append(gt_score[valid_gt_perf][valid_b])

@@ -94,14 +94,14 @@ def parse_match_file_for_note_onsets(
 
 
 def build_gt(score_part, perf_ppart, alignment):
-    """Build GT array: (score_beat, perf_sec) for each unique score onset."""
+    """Build GT array: (perf_sec, score_beat) for each unique score onset."""
     _, stime_to_ptime = get_time_maps_from_alignment(
         perf_ppart, score_part, alignment, onset_aggregation_fun=np.min
     )
     gt_beats = np.unique(score_part.note_array()["onset_beat"])
     gt_times = stime_to_ptime(gt_beats)
     valid = np.isfinite(gt_times)
-    return np.column_stack([gt_beats[valid], gt_times[valid]])
+    return np.column_stack([gt_times[valid], gt_beats[valid]])
 
 
 # ---------------------------------------------------------------------------
@@ -161,8 +161,8 @@ def run_score_following(
 
     gt_pairs = None
     if gt is not None:
-        sb, ps = resolve_gt(gt, mm.score_part.note_array())
-        gt_pairs = np.column_stack([sb, ps])
+        ps, sb = resolve_gt(gt, mm.score_part.note_array())
+        gt_pairs = np.column_stack([ps, sb])
 
     nested = mm.run_evaluation(
         gt=gt_pairs,
@@ -197,7 +197,7 @@ def run_score_following(
             )
             min_len = min(len(score_annots_for_gt), len(perf_annotations))
             gt_for_check = np.column_stack(
-                [score_annots_for_gt[:min_len], perf_annotations[:min_len]]
+                [perf_annotations[:min_len], score_annots_for_gt[:min_len]]
             )
         tracking = check_tracking(
             wp_for_check, gt_for_check, config.frame_rate, mode="beat"

@@ -10,9 +10,9 @@ segments exceed the threshold.
 
 Input:
   wp.tsv   Warping path (tab-separated)
-           Column 0 = score position (beats or state indices), Column 1 = perf position (frame index)
+           Column 0 = perf position (frame index), Column 1 = score position (beats or state indices)
   gt.tsv   Ground truth (tab-separated)
-           Column 0 = score position (beats), Column 1 = perf time (seconds)
+           Column 0 = perf time (seconds), Column 1 = score position (beats)
 
 Usage:
   python verify_tracking.py --wp output/.../wp_1.tsv --gt data/gt/valid/gt_1.tsv --frame-rate 30
@@ -41,7 +41,7 @@ def _wp_to_score(
 
     Parameters
     ----------
-    wp : (N, 2) — col 0: score (frames, state indices, or beat positions), col 1: perf frames
+    wp : (N, 2) — col 0: perf frames, col 1: score (frames, state indices, or beat positions)
     frame_rate : float
     mode : "beat" or "state"
     score_positions : array mapping state index → score position.
@@ -52,15 +52,15 @@ def _wp_to_score(
     wp_score : (N,) array in GT-compatible units
     """
     if mode == "beat":
-        return wp[:, 0].astype(float)
+        return wp[:, 1].astype(float)
     elif mode == "state" and score_positions is not None:
-        state_idx = wp[:, 0].astype(int)
+        state_idx = wp[:, 1].astype(int)
         offset = int(state_idx.min())
         mapped = np.clip(state_idx - offset, 0, len(score_positions) - 1)
         return score_positions[mapped].astype(float)
     else:
         # Frame mode: score frames → seconds
-        return wp[:, 0] / frame_rate
+        return wp[:, 1] / frame_rate
 
 
 def check_tracking(
@@ -82,8 +82,8 @@ def check_tracking(
 
     Parameters
     ----------
-    wp : (N, 2) array — col 0: score position, col 1: perf time (seconds)
-    gt : (M, 2) array — col 0: score position (beats), col 1: perf time (seconds)
+    wp : (N, 2) array — col 0: perf time (seconds), col 1: score position
+    gt : (M, 2) array — col 0: perf time (seconds), col 1: score position (beats)
     frame_rate : float — kept for backward-compat callers
     segment_duration : float — segment length in seconds (default: 30)
     threshold : float — max allowed median absolute beat error per segment (default: 1.0)
@@ -97,10 +97,10 @@ def check_tracking(
     dict with: segments, max_deviation, tracked, reason
     """
     wp_score = _wp_to_score(wp, frame_rate, mode, score_positions)
-    wp_perf = wp[:, 1].astype(float)  # seconds
+    wp_perf = wp[:, 0].astype(float)  # seconds
 
-    gt_score = gt[:, 0]
-    gt_perf = gt[:, 1]
+    gt_perf = gt[:, 0]
+    gt_score = gt[:, 1]
 
     # Reverse lookup (perf → score): at each GT perf time, find tracker's
     # last-known score position (step-function, no future information).
@@ -222,9 +222,9 @@ def plot_tracking(
     tracked = result["tracked"]
 
     wp_score = _wp_to_score(wp, frame_rate, mode, score_positions)
-    wp_perf = wp[:, 1].astype(float)  # seconds
-    gt_score = gt[:, 0]
-    gt_perf = gt[:, 1]
+    wp_perf = wp[:, 0].astype(float)  # seconds
+    gt_perf = gt[:, 0]
+    gt_score = gt[:, 1]
 
     # Reverse lookup (perf → score, same as check_tracking)
     sort_idx = np.argsort(wp_perf, kind="stable")

@@ -82,15 +82,15 @@ def run_tests_and_eval_by_dataset(
                 kwargs=mm_kwargs if mm_kwargs else None,
             )
             list(mm.run(verbose=False))
-            wp = mm.score_follower.alignment_path  # (2, T)
+            wp = mm.score_follower.alignment_path  # (2, T): perf, score
 
             # Convert WP perf axis to absolute seconds (HMM WPs are IOI-
             # accumulated from 0; OLTW event WPs are already absolute).
-            wp_perf_sec = mm._wp_perf_to_seconds(wp[1].astype(float))
-            wp = np.stack([wp[0].astype(float), wp_perf_sec])
+            wp_perf_sec = mm._wp_perf_to_seconds(wp[0].astype(float))
+            wp = np.stack([wp_perf_sec, wp[1].astype(float)])
 
-            sb, ps = resolve_gt(match_path, mm.score_part.note_array())
-            gt = np.column_stack([sb, ps])
+            ps, sb = resolve_gt(match_path, mm.score_part.note_array())
+            gt = np.column_stack([ps, sb])
 
             wp_T = wp.T if wp.shape[0] == 2 else wp
             tracking = check_tracking(
@@ -129,8 +129,8 @@ def run_tests_and_eval_by_dataset(
 
             # Save WP/GT — column order: perf_sec, score_beat
             if run_dir is not None:
-                np.savetxt(run_dir / f"wp_{i}.tsv", wp_T[:, [1, 0]], delimiter="\t", fmt="%.6f", header="perf_sec\tscore_beat", comments="")
-                np.savetxt(run_dir / f"gt_{i}.tsv", gt[:, [1, 0]], delimiter="\t", fmt="%.6f", header="perf_sec\tscore_beat", comments="")
+                np.savetxt(run_dir / f"wp_{i}.tsv", wp_T, delimiter="\t", fmt="%.6f", header="perf_sec\tscore_beat", comments="")
+                np.savetxt(run_dir / f"gt_{i}.tsv", gt, delimiter="\t", fmt="%.6f", header="perf_sec\tscore_beat", comments="")
                 with open(run_dir / f"{i}.json", "w") as f:
                     json.dump(nested, f, indent=4, default=float)
                 if save_plots:
