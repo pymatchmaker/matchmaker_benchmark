@@ -1,7 +1,6 @@
 """Single-piece alignment functions for audio and symbolic score following.
 
 Audio functions (used by test_audio.py):
-  - parse_annotation_csv
   - parse_match_file_for_note_onsets
   - run_score_following (input_type="audio")
   - run_offline_alignment
@@ -19,7 +18,6 @@ from typing import Callable, Optional, Union
 
 import librosa
 import numpy as np
-import pandas as pd
 import partitura as pt
 import scipy
 from matchmaker import Matchmaker
@@ -66,27 +64,6 @@ def parse_match_file_for_note_onsets(
         return stime_to_ptime_map(np.unique(snote_array["onset_beat"]))
     else:
         raise ValueError(f"Invalid level: {level}")
-
-
-def parse_annotation_csv(annotation_file: Union[str, Path]) -> np.ndarray:
-    """Parse a note annotation file (CSV with TIME header or tab-delimited)."""
-    annotation_file = Path(annotation_file)
-    with open(annotation_file, "r") as f:
-        first_line = f.readline().strip()
-    if "TIME" in first_line.upper():
-        df = pd.read_csv(annotation_file)
-        if "TIME" in df.columns:
-            return df["TIME"].values
-        time_cols = [c for c in df.columns if "time" in c.lower()]
-        if time_cols:
-            return df[time_cols[0]].values
-        return df.iloc[:, 0].values
-    else:
-        try:
-            data = np.loadtxt(annotation_file)
-        except ValueError:
-            data = np.loadtxt(annotation_file, usecols=(0,))
-        return data if data.ndim == 1 else data[:, 0]
 
 
 # ---------------------------------------------------------------------------
@@ -164,16 +141,9 @@ def run_score_following(
     if gt is not None:
         sb, ps = resolve_gt(gt, mm.score_part.note_array())
         gt_pairs = np.column_stack([sb, ps])
-    elif perf_annotations is None and match_file is not None:
-        score_onset_beats = mm.build_score_annotations(
-            level="note", musical_beat=use_musical_beat, return_type="beats"
-        )
-        perf_annotations = parse_match_file_for_note_onsets(
-            match_file, score_onset_beats=score_onset_beats
-        )
 
     nested = mm.run_evaluation(
-        perf_annotations,
+        gt=gt_pairs,
         tolerances=TOLERANCES_IN_BEATS,
         musical_beat=use_musical_beat,
         domain="score",
@@ -182,7 +152,6 @@ def run_score_following(
         save_dir=save_dir,
         run_name=run_name,
         level=granularity,
-        gt=gt_pairs,
     )
     # Flatten nested {"beat": {...}, "ms": {...}} into a single dict.
     # Beat metrics keep their keys; ms metrics get a "_ms" suffix on mean/median.
@@ -198,7 +167,16 @@ def run_score_following(
     # Tracking verification
     try:
         wp_for_check = wp.T
-        gt_for_check = gt_pairs
+        if gt_pairs is not None:
+            gt_for_check = gt_pairs
+        else:
+            score_annots_for_gt = mm.build_score_annotations(
+                level=granularity, musical_beat=use_musical_beat, return_type="beats"
+            )
+            min_len = min(len(score_annots_for_gt), len(perf_annotations))
+            gt_for_check = np.column_stack(
+                [score_annots_for_gt[:min_len], perf_annotations[:min_len]]
+            )
         tracking = check_tracking(
             wp_for_check, gt_for_check, config.frame_rate, mode="beat"
         )

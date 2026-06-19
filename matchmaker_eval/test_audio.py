@@ -8,9 +8,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
 import pandas as pd
 import soundfile as sf
-from eval import parse_annotation_csv, run_offline_alignment, run_score_following
+from eval import run_offline_alignment, run_score_following
 from matchmaker.matchmaker import DEFAULT_KWARGS
 from tabulate import tabulate
 from utils import (
@@ -131,28 +132,29 @@ def run_tests_and_eval_by_dataset(
         # score_midi = base_dir / row.midi_score
         perf_audio = base_dir / row.audio_performance
 
-        # Get performance annotations: from note annotation file, match file, or annotation CSV
+        # Unified GT: match-file datasets pass the .match file directly (score
+        # beats read from the match file); no-match datasets use a precomputed
+        # data/gt/<dataset>/<i>.tsv of (perf_sec, score_beat).
         trimmed_audio_path = None
         has_match = (
             hasattr(row, "match") and pd.notna(row.match) and str(row.match).strip()
         )
         if has_match:
             match_file = dataset_dir / row.match
-            # Use match file parsing (via eval.py) to ensure annotation alignment
-            # with build_score_annotations, especially when ignore_invisible_objects
-            # changes the note count.
             perf_annotations = None
+            piece_gt = match_file
         else:
             match_file = None
-            annotation_file = base_dir / row.performance_annotations
-            if not annotation_file.exists():
-                print(f"Annotation file not found: {annotation_file}, skipping")
+            gt_path = WORKING_DIR / "data" / "gt" / current_dataset / f"{i}.tsv"
+            if not gt_path.exists():
+                print(f"GT file not found: {gt_path}, skipping")
                 continue
-            perf_annotations = parse_annotation_csv(annotation_file)
+            gt_arr = np.loadtxt(gt_path, delimiter="\t", skiprows=1, ndmin=2)
+            perf_annotations = gt_arr[:, 0]  # perf_sec column
+            piece_gt = gt_path
 
-        # Trim leading silence (URMP only): shift audio and annotations by first onset
+        # Trim leading silence (URMP only): shift audio and GT by first onset
         trim_offset = 0.0
-        trimmed_audio_path = None
         if (
             current_dataset == "urmp"
             and perf_annotations is not None
@@ -162,6 +164,7 @@ def run_tests_and_eval_by_dataset(
             trim_offset = max(0, perf_annotations[0] - margin)
             if trim_offset > 1.0:  # only trim if >1s of silence
                 perf_annotations = perf_annotations - trim_offset
+                piece_gt = np.column_stack([gt_arr[:, 1], gt_arr[:, 0] - trim_offset])
                 audio_data, sr = sf.read(str(perf_audio))
                 start_sample = int(trim_offset * sr)
                 audio_trimmed = audio_data[start_sample:]
@@ -169,17 +172,6 @@ def run_tests_and_eval_by_dataset(
                 sf.write(tmp.name, audio_trimmed, sr)
                 trimmed_audio_path = Path(tmp.name)
                 perf_audio = trimmed_audio_path
-
-        # Unified GT: match-file datasets pass the .match file directly (score
-        # beats read from the match file); no-match datasets use a precomputed
-        # data/gt/<dataset>/<i>.tsv of (score_beat, perf_sec).
-        piece_gt = None
-        if has_match:
-            piece_gt = match_file
-        else:
-            gt_path = WORKING_DIR / "data" / "gt" / current_dataset / f"{i}.tsv"
-            if gt_path.exists():
-                piece_gt = gt_path
 
         try:
             if config.method == "offline":

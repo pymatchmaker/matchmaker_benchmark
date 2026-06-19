@@ -112,15 +112,16 @@ def compute_event_pooled_summary(
         if not wp_file.exists() or not gt_file.exists():
             continue
 
-        wp = np.loadtxt(wp_file, delimiter="\t")
-        gt = np.loadtxt(gt_file, delimiter="\t")
+        wp = np.loadtxt(wp_file, delimiter="\t", skiprows=1)
+        gt = np.loadtxt(gt_file, delimiter="\t", skiprows=1)
 
-        gt_score = gt[:, 0]  # score positions (beats or seconds)
-        gt_perf = gt[:, 1]  # perf times (seconds)
+        gt_perf = gt[:, 0]  # perf times (seconds) — col 0 in new format
+        gt_score = gt[:, 1]  # score positions (beats) — col 1 in new format
 
         # Score → perf prediction (ms metrics)
-        # wp TSV is saved in seconds (frame_rate=1), so use frame_rate=1 here
-        pred_perf = transfer_positions(wp.T, gt_score, 1, domain="performance")
+        # wp TSV col order: perf_sec, score_beat; flip to [score_beat, perf_sec] for transfer_positions
+        wp_flipped = wp[:, [1, 0]].T
+        pred_perf = transfer_positions(wp_flipped, gt_score, 1, domain="performance")
         valid = np.isfinite(pred_perf) & np.isfinite(gt_perf)
         all_gt_perf.append(gt_perf[valid])
         all_pred_perf.append(pred_perf[valid])
@@ -128,7 +129,7 @@ def compute_event_pooled_summary(
         # Perf → score prediction (beat metrics)
         valid_gt_perf = np.isfinite(gt_perf)
         pred_score = transfer_positions(
-            wp.T, gt_perf[valid_gt_perf], 1, domain="score"
+            wp_flipped, gt_perf[valid_gt_perf], 1, domain="score"
         )
         valid_b = np.isfinite(pred_score)
         all_gt_score_beats.append(gt_score[valid_gt_perf][valid_b])

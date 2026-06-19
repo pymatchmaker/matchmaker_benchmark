@@ -18,9 +18,9 @@ import numpy as np
 import pandas as pd
 import partitura as pt
 
-from eval import build_gt, parse_match_file_for_note_onsets
 from matchmaker import Matchmaker
 from matchmaker.matchmaker import DEFAULT_KWARGS
+from matchmaker.utils.eval import resolve_gt
 from utils import (
     SymbolicEvalConfig,
     compute_event_pooled_summary,
@@ -71,12 +71,6 @@ def run_tests_and_eval_by_dataset(
         print(f"[{i}/{len(metadata)}] {row.title}")
 
         try:
-            perf, alignment, score = pt.load_match(
-                str(match_path), create_score=True, first_note_at_zero=False
-            )
-            score_part = score[0] if hasattr(score, "__getitem__") else score
-            perf_ppart = perf[0]
-
             # Run alignment via Matchmaker (HMM or event-level OLTW)
             mm_kwargs = DEFAULT_KWARGS["midi"].get(method, {}).copy()
             mm = Matchmaker(
@@ -94,10 +88,9 @@ def run_tests_and_eval_by_dataset(
             wp_perf_sec = mm._wp_perf_to_seconds(wp[1].astype(float))
             wp = np.stack([wp[0].astype(float), wp_perf_sec])
 
-            # Build GT
-            gt = build_gt(score_part, perf_ppart, alignment)
+            sb, ps = resolve_gt(match_path, mm.score_part.note_array())
+            gt = np.column_stack([sb, ps])
 
-            # Check tracking
             wp_T = wp.T if wp.shape[0] == 2 else wp
             tracking = check_tracking(
                 wp_T,
@@ -109,17 +102,8 @@ def run_tests_and_eval_by_dataset(
                 min_fails=TRACKING_MIN_FAILS,
             )
 
-            # Compute per-piece metrics via matchmaker
-            # Use mm's own score beats to get perf annotations — avoids mismatch
-            # caused by invisible notes in match file vs XML (ignore_invisible_objects)
-            score_onset_beats = mm.build_score_annotations(
-                level="note", return_type="beats"
-            )
-            eval_perf = parse_match_file_for_note_onsets(
-                match_path, score_onset_beats=score_onset_beats
-            )
             piece_result = mm.run_evaluation(
-                eval_perf,
+                gt=gt,
                 domain="score",
                 debug=run_dir is not None,
                 save_dir=run_dir,
@@ -129,10 +113,10 @@ def run_tests_and_eval_by_dataset(
             piece_result["max_deviation"] = float(tracking["max_deviation"])
             piece_result["n_failed_segments"] = int(tracking["n_failed"])
 
-            # Save WP/GT
+            # Save WP/GT — column order: perf_sec, score_beat
             if run_dir is not None:
-                np.savetxt(run_dir / f"wp_{i}.tsv", wp_T, delimiter="\t", fmt="%.6f")
-                np.savetxt(run_dir / f"gt_{i}.tsv", gt, delimiter="\t", fmt="%.6f")
+                np.savetxt(run_dir / f"wp_{i}.tsv", wp_T[:, [1, 0]], delimiter="\t", fmt="%.6f", header="perf_sec\tscore_beat", comments="")
+                np.savetxt(run_dir / f"gt_{i}.tsv", gt[:, [1, 0]], delimiter="\t", fmt="%.6f", header="perf_sec\tscore_beat", comments="")
                 with open(run_dir / f"{i}.json", "w") as f:
                     json.dump(piece_result, f, indent=4, default=float)
                 if save_plots:
