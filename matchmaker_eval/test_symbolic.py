@@ -108,6 +108,7 @@ def run_tests_and_eval_by_dataset(
                 debug=run_dir is not None,
                 save_dir=run_dir,
                 run_name=str(i),
+                make_plot=save_plots,
             )
             piece_result["tracked"] = tracking["tracked"]
             piece_result["max_deviation"] = float(tracking["max_deviation"])
