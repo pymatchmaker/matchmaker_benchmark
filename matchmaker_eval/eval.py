@@ -153,13 +153,13 @@ def run_score_following(
         run_name=run_name,
         level=granularity,
     )
-    # Flatten nested {"beat": {...}, "ms": {...}} into a single dict.
-    # Beat metrics keep their keys; ms metrics get a "_ms" suffix on mean/median.
+    # Flatten nested {"beat": {...}, "ms": {...}} into a single dict for the
+    # per-piece results table, prefixing metric keys with beat_ / ms_.
     results = {}
     for k, v in nested.get("beat", {}).items():
-        results[k] = v
+        results[f"beat_{k}"] = v
     for k, v in nested.get("ms", {}).items():
-        results[f"{k}_ms" if k in ("mean", "median", "std") else k] = v
+        results[f"ms_{k}"] = v
     for k, v in nested.items():
         if k not in ("beat", "ms"):
             results[k] = v
@@ -183,6 +183,9 @@ def run_score_following(
         results["tracked"] = tracking["tracked"]
         results["max_deviation"] = tracking["max_deviation"]
         results["n_failed_segments"] = tracking["n_failed"]
+        nested["tracked"] = tracking["tracked"]
+        nested["max_deviation"] = tracking["max_deviation"]
+        nested["n_failed_segments"] = tracking["n_failed"]
 
         if save_plots and save_dir is not None and run_name:
             plot_tracking(
@@ -198,7 +201,7 @@ def run_score_following(
 
     if save_dir is not None and run_name and not dry_run:
         with open(Path(save_dir) / f"{run_name}.json", "w") as f:
-            json.dump(results, f, indent=4)
+            json.dump(nested, f, indent=4)
 
     return results
 

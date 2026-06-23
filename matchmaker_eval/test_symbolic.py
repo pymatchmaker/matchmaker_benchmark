@@ -22,6 +22,7 @@ from matchmaker import Matchmaker
 from matchmaker.matchmaker import DEFAULT_KWARGS
 from matchmaker.utils.eval import resolve_gt
 from utils import (
+    TOLERANCES_IN_BEATS,
     SymbolicEvalConfig,
     compute_event_pooled_summary,
     save_config,
@@ -102,24 +103,36 @@ def run_tests_and_eval_by_dataset(
                 min_fails=TRACKING_MIN_FAILS,
             )
 
-            piece_result = mm.run_evaluation(
+            nested = mm.run_evaluation(
                 gt=gt,
+                tolerances=TOLERANCES_IN_BEATS,
                 domain="score",
                 debug=run_dir is not None,
                 save_dir=run_dir,
                 run_name=str(i),
                 make_plot=save_plots,
             )
-            piece_result["tracked"] = tracking["tracked"]
-            piece_result["max_deviation"] = float(tracking["max_deviation"])
-            piece_result["n_failed_segments"] = int(tracking["n_failed"])
+            nested["tracked"] = tracking["tracked"]
+            nested["max_deviation"] = float(tracking["max_deviation"])
+            nested["n_failed_segments"] = int(tracking["n_failed"])
+
+            # Flatten nested {"beat": {...}, "ms": {...}} for the per-piece results
+            # table (matches test_audio columns); the per-piece JSON stays nested.
+            piece_result = {}
+            for k, v in nested.get("beat", {}).items():
+                piece_result[f"beat_{k}"] = v
+            for k, v in nested.get("ms", {}).items():
+                piece_result[f"ms_{k}"] = v
+            for k, v in nested.items():
+                if k not in ("beat", "ms"):
+                    piece_result[k] = v
 
             # Save WP/GT — column order: perf_sec, score_beat
             if run_dir is not None:
                 np.savetxt(run_dir / f"wp_{i}.tsv", wp_T[:, [1, 0]], delimiter="\t", fmt="%.6f", header="perf_sec\tscore_beat", comments="")
                 np.savetxt(run_dir / f"gt_{i}.tsv", gt[:, [1, 0]], delimiter="\t", fmt="%.6f", header="perf_sec\tscore_beat", comments="")
                 with open(run_dir / f"{i}.json", "w") as f:
-                    json.dump(piece_result, f, indent=4, default=float)
+                    json.dump(nested, f, indent=4, default=float)
                 if save_plots:
                     plot_tracking(
                         wp_T,
@@ -137,9 +150,8 @@ def run_tests_and_eval_by_dataset(
 
             results["Index"].append(i)
             results["Piece"].append(row.title)
-            results["tracked"].append(tracking["tracked"])
-            results["max_deviation"].append(tracking["max_deviation"])
-            results["n_failed_segments"].append(tracking["n_failed"])
+            for k, v in piece_result.items():
+                results[k].append(v)
 
         except Exception as e:
             print(f"  ERROR: {e}")
@@ -192,10 +204,15 @@ def main():
     n_tracked = sum(results["tracked"])
     print(f"\nTracked: {n_tracked}/{n_total}")
 
-    summary = compute_event_pooled_summary(results, run_dir, tracked_only=True)
-    with open(run_dir / "summary_tracked.json", "w") as f:
-        json.dump(summary, f, indent=4)
-    print(f"Summary saved to: {run_dir / 'summary_tracked.json'}")
+    save_results_to_csv(results, (run_dir / "test_results.tsv").as_posix())
+
+    summary_all = compute_event_pooled_summary(results, run_dir, tracked_only=False)
+    summary_tracked = compute_event_pooled_summary(results, run_dir, tracked_only=True)
+    for label, s in [("all", summary_all), ("tracked", summary_tracked)]:
+        path = run_dir / f"summary_{label}.json"
+        with open(path, "w") as f:
+            json.dump(s, f, indent=4)
+        print(f"Results saved to: {path}")
 
     save_config(config, run_dir)
 
