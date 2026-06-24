@@ -128,8 +128,10 @@ def run_tests_and_eval_by_dataset(
         else:
             base_dir = dataset_dir
 
-        score_xml = base_dir / row.xml_score
-        # score_midi = base_dir / row.midi_score
+        if current_dataset == "winterreise":
+            score_xml = WORKING_DIR / row.xml_score
+        else:
+            score_xml = base_dir / row.xml_score
         perf_audio = base_dir / row.audio_performance
 
         # Unified GT: match-file datasets pass the .match file directly (score
