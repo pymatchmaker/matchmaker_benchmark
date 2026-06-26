@@ -22,6 +22,7 @@ sys.setrecursionlimit(10000)
 import numpy as np
 import pandas as pd
 import partitura as pt
+from utils import source_annotation
 
 
 def match_by_pitch(
@@ -149,7 +150,7 @@ def main():
     new_rows = []
     for _, row in meta.iterrows():
         score_path = args.data_dir / row.xml_score
-        note_path = args.data_dir / row.performance_annotations
+        note_path = args.data_dir / source_annotation(row, "winterreise")
         label = f"{row.title}_{Path(row.audio_performance).stem.split('_')[-1]}"
 
         try:

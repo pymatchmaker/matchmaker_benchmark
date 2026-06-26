@@ -18,6 +18,7 @@ from typing import Callable, Optional, Union
 
 import librosa
 import numpy as np
+import pandas as pd
 import partitura as pt
 import scipy
 from matchmaker import Matchmaker
@@ -32,6 +33,27 @@ from verify_tracking import check_tracking, plot_tracking
 # ---------------------------------------------------------------------------
 # Annotation parsing
 # ---------------------------------------------------------------------------
+
+
+def parse_annotation_csv(annotation_file: Union[str, Path]) -> np.ndarray:
+    """Parse a note annotation file (CSV with TIME header or tab-delimited)."""
+    annotation_file = Path(annotation_file)
+    with open(annotation_file, "r") as f:
+        first_line = f.readline().strip()
+    if "TIME" in first_line.upper():
+        df = pd.read_csv(annotation_file)
+        if "TIME" in df.columns:
+            return df["TIME"].values
+        time_cols = [c for c in df.columns if "time" in c.lower()]
+        if time_cols:
+            return df[time_cols[0]].values
+        return df.iloc[:, 0].values
+    else:
+        try:
+            data = np.loadtxt(annotation_file)
+        except ValueError:
+            data = np.loadtxt(annotation_file, usecols=(0,))
+        return data if data.ndim == 1 else data[:, 0]
 
 
 def parse_match_file_for_note_onsets(
@@ -273,6 +295,9 @@ def run_offline_alignment(
     score_annots = mm.build_score_annotations(
         level=granularity, musical_beat=use_musical_beat, return_type="seconds"
     )
+    score_beats = mm.build_score_annotations(
+        level=granularity, musical_beat=use_musical_beat, return_type="beats"
+    )
     na = mm.score_part.note_array()
     start_beat = max(0, int(np.ceil(np.unique(na["onset_beat"]).min())))
     n_perf = len(perf_annotations) if perf_annotations is not None else 0
@@ -293,6 +318,7 @@ def run_offline_alignment(
 
     min_length = min(len(score_annots), len(perf_annots))
     score_annots = score_annots[:min_length]
+    score_beats = score_beats[:min_length]
     perf_annots = perf_annots[:min_length]
 
     max_perf_time = wp[1].max() / config.frame_rate
@@ -303,12 +329,19 @@ def run_offline_alignment(
         & (perf_annots >= 0)
     )
     score_annots = score_annots[valid]
+    score_beats = score_beats[valid]
     perf_annots = perf_annots[valid]
 
     predicted = transfer_offline_positions(wp, perf_annots, config.frame_rate)
-    return get_evaluation_results(
-        score_annots,
-        predicted,
-        total_counts=len(score_annots),
+    predicted_beats = np.interp(predicted, score_annots, score_beats)
+    beat_res = get_evaluation_results(
+        score_beats, predicted_beats, total_counts=len(score_beats),
+        tolerances=TOLERANCES_IN_BEATS, in_seconds=False,
+    )
+    ms_res = get_evaluation_results(
+        score_annots, predicted, total_counts=len(score_annots),
         tolerances=TOLERANCES_IN_MS,
     )
+    results = {f"beat_{k}": v for k, v in beat_res.items()}
+    results.update({f"ms_{k}": v for k, v in ms_res.items()})
+    return results

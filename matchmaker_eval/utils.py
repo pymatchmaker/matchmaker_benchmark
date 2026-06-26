@@ -341,3 +341,14 @@ def build_matchmaker_hmm(score_path):
         tempo_model=tempo_model,
     )
     return matchmaker
+
+
+def source_annotation(row, dataset):
+    audio = Path(row.audio_performance)
+    if dataset == "kraisler":
+        return f"annotations/{audio.parent.name}_beats.csv"
+    if dataset == "chorale":
+        return f"annotations/{audio.stem}_notes.csv"
+    if dataset == "winterreise":
+        return f"aligned/{row.title}_{audio.stem.split('_')[-1]}_aligned.txt"
+    return row.performance_annotations

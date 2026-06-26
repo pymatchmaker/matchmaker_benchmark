@@ -2,7 +2,6 @@ import argparse
 import copy
 import json
 import sys
-import tempfile
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -10,7 +9,6 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-import soundfile as sf
 from eval import run_offline_alignment, run_score_following
 from matchmaker.matchmaker import DEFAULT_KWARGS
 from tabulate import tabulate
@@ -30,7 +28,7 @@ DATASET_DIR = {
     "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
     "batik": Path("~/data/batik_plays_mozart").expanduser(),
     "vienna": Path("~/data/vienna4x22").expanduser(),
-    "pfvn": Path("~/data/KRAISLER").expanduser(),
+    "kraisler": Path("~/data/KRAISLER").expanduser(),
     "chorale": Path("~/data/chorale-bricks").expanduser(),
     "urmp": Path("~/data/URMP").expanduser(),
     "winterreise": Path("~/data/winterreise").expanduser(),
@@ -42,7 +40,7 @@ METADATA_PATH = {
     "asap": WORKING_DIR / "data/reduced/metadata-asap.csv",
     "batik": WORKING_DIR / "data/reduced/metadata-batik.csv",
     "vienna": WORKING_DIR / "data/reduced/metadata-vienna.csv",
-    "pfvn": WORKING_DIR / "data/metadata-pfvn.csv",
+    "kraisler": WORKING_DIR / "data/metadata-kraisler.csv",
     "chorale": WORKING_DIR / "data/metadata-chorale.csv",
     "urmp": WORKING_DIR / "data/metadata-urmp.csv",
     "winterreise": WORKING_DIR / "data/metadata-winterreise.csv",
@@ -115,10 +113,10 @@ def run_tests_and_eval_by_dataset(
             current_dataset = dataset_type
             dataset_dir = DATASET_DIR[dataset_type]
 
-        use_musical_beat = current_dataset in ["asap", "pfvn"]
+        use_musical_beat = current_dataset in ["asap", "kraisler"]
 
-        # pfvn annotations are temporarily beat-level TODO: fix to note-level
-        piece_granularity = "beat" if current_dataset == "pfvn" else granularity
+        # kraisler annotations are temporarily beat-level TODO: fix to note-level
+        piece_granularity = "beat" if current_dataset == "kraisler" else granularity
 
         # Determine base directory: some datasets (e.g. chorale) have paths
         # relative to a folder column, while others include the full path.
@@ -137,7 +135,6 @@ def run_tests_and_eval_by_dataset(
         # Unified GT: match-file datasets pass the .match file directly (score
         # beats read from the match file); no-match datasets use a precomputed
         # data/gt/<dataset>/<i>.tsv of (perf_sec, score_beat).
-        trimmed_audio_path = None
         has_match = (
             hasattr(row, "match") and pd.notna(row.match) and str(row.match).strip()
         )
@@ -147,33 +144,16 @@ def run_tests_and_eval_by_dataset(
             piece_gt = match_file
         else:
             match_file = None
-            gt_path = WORKING_DIR / "data" / "gt" / current_dataset / f"{i}.tsv"
+            if dataset_type in ("urmp", "kraisler", "winterreise", "chorale"):
+                gt_path = WORKING_DIR / row.performance_annotations
+            else:
+                gt_path = WORKING_DIR / "data" / "gt" / current_dataset / f"{i}.tsv"
             if not gt_path.exists():
                 print(f"GT file not found: {gt_path}, skipping")
                 continue
             gt_arr = np.loadtxt(gt_path, delimiter="\t", skiprows=1, ndmin=2)
             perf_annotations = gt_arr[:, 0]  # perf_sec column
             piece_gt = gt_path
-
-        # Trim leading silence (URMP only): shift audio and GT by first onset
-        trim_offset = 0.0
-        if (
-            current_dataset == "urmp"
-            and perf_annotations is not None
-            and len(perf_annotations) > 0
-        ):
-            margin = 0.5  # keep 0.5s before first note
-            trim_offset = max(0, perf_annotations[0] - margin)
-            if trim_offset > 1.0:  # only trim if >1s of silence
-                perf_annotations = perf_annotations - trim_offset
-                piece_gt = np.column_stack([gt_arr[:, 1], gt_arr[:, 0] - trim_offset])
-                audio_data, sr = sf.read(str(perf_audio))
-                start_sample = int(trim_offset * sr)
-                audio_trimmed = audio_data[start_sample:]
-                tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-                sf.write(tmp.name, audio_trimmed, sr)
-                trimmed_audio_path = Path(tmp.name)
-                perf_audio = trimmed_audio_path
 
         try:
             if config.method == "offline":
@@ -204,9 +184,6 @@ def run_tests_and_eval_by_dataset(
         except Exception as e:
             print(f"Error: {e}")
             continue
-        finally:
-            if trimmed_audio_path is not None:
-                trimmed_audio_path.unlink(missing_ok=True)
 
         # add metadata to results
         results["Index"].append(i)
@@ -331,7 +308,7 @@ if __name__ == "__main__":
         type=str,
         choices=list(METADATA_PATH.keys()),
         default="asap",
-        help="Dataset to use (asap, vienna, batik, pfvn, or valid)",
+        help="Dataset to use (asap, vienna, batik, kraisler, or valid)",
     )
     parser.add_argument(
         "--method",
