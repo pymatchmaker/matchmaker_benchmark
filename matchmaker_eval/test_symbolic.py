@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 import partitura as pt
 
+from eval import run_evaluation
 from matchmaker import Matchmaker
 from matchmaker.matchmaker import DEFAULT_KWARGS
 from matchmaker.utils.eval import resolve_gt
@@ -103,7 +104,8 @@ def run_tests_and_eval_by_dataset(
                 min_fails=TRACKING_MIN_FAILS,
             )
 
-            nested = mm.run_evaluation(
+            nested = run_evaluation(
+                mm,
                 gt=gt,
                 tolerances=TOLERANCES_IN_BEATS,
                 domain="score",
