@@ -3,9 +3,11 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from eval import run_evaluation
 from matchmaker import Matchmaker
 from matchmaker.matchmaker import DEFAULT_KWARGS
 from utils import (
+    TOLERANCES_IN_BEATS,
     AudioEvalConfig,
     save_config,
     save_nparray_to_csv,
@@ -90,8 +92,13 @@ def main():
     save_dir.mkdir(parents=True, exist_ok=True)
     save_config(config, save_dir)
 
-    result_stats = mm.run_evaluation(
-        gt=gt_path, debug=True, save_dir=save_dir, run_name="infer"
+    result_stats = run_evaluation(
+        mm,
+        gt=gt_path,
+        tolerances=TOLERANCES_IN_BEATS,
+        debug=True,
+        save_dir=save_dir,
+        run_name="infer",
     )
 
     # Save alignment path

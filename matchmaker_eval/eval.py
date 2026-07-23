@@ -22,12 +22,128 @@ import pandas as pd
 import partitura as pt
 import scipy
 from matchmaker import Matchmaker
-from matchmaker.utils.eval import get_evaluation_results, resolve_gt
+from matchmaker.utils.eval import (
+    evaluate_alignment,
+    get_evaluation_results,
+    resolve_gt,
+    transfer_positions,
+)
 from numpy.typing import NDArray
 from partitura.musicanalysis.performance_codec import get_time_maps_from_alignment
 
-from utils import TOLERANCES_IN_BEATS, TOLERANCES_IN_MS, AudioEvalConfig
+from utils import (
+    TOLERANCES_IN_BEATS,
+    TOLERANCES_IN_MS,
+    AudioEvalConfig,
+    save_debug_results,
+)
 from verify_tracking import check_tracking, plot_tracking
+
+
+# ---------------------------------------------------------------------------
+# Evaluation against ground truth (post-processing of a completed Matchmaker run)
+# ---------------------------------------------------------------------------
+
+
+def run_evaluation(
+    mm: Matchmaker,
+    gt: Union[str, Path, np.ndarray] = None,
+    tolerances: Optional[list] = None,
+    musical_beat: bool = False,
+    debug: bool = False,
+    save_dir: Optional[Path] = None,
+    run_name: Optional[str] = None,
+    domain: str = "score",
+    plot_dist_matrix: bool = True,
+    make_plot: bool = True,
+    level: str = "note",
+) -> dict:
+    """Evaluate a completed Matchmaker run against ground truth.
+
+    When domain="score" (default), returns beat-based metrics as primary
+    and ms-based metrics under "ms" key. When domain="performance",
+    returns ms-based metrics only (legacy behavior).
+
+    Parameters
+    ----------
+    mm : Matchmaker
+        A Matchmaker instance that has already been run (``mm.run()``).
+    gt : PathLike or np.ndarray
+        Ground truth: a .match file, a .tsv (perf_sec, score_beat) file,
+        or an (N, 2) array of [perf_sec, score_beat].
+    tolerances : list or None
+        Tolerances for evaluation. If None, uses default for the domain.
+    debug : bool
+        Whether to save debug outputs.
+    domain : str
+        "score" (default, beat-based primary) or "performance" (ms-based, legacy).
+
+    Returns
+    -------
+    dict
+        Evaluation results. If domain="score", includes both beat and ms metrics.
+    """
+    if tolerances is None:
+        tolerances = TOLERANCES_IN_BEATS if domain == "score" else TOLERANCES_IN_MS
+    if not mm._has_run:
+        raise ValueError("Must call run() before evaluation")
+
+    wp = mm.score_follower.alignment_path
+    score_beat = wp[1].astype(float)
+    perf_sec = mm._wp_perf_to_seconds(wp[0].astype(float))
+
+    perf_annots, score_annots_beats = resolve_gt(gt, mm.score_part.note_array())
+
+    eval_results = evaluate_alignment(
+        score_beat,
+        perf_sec,
+        score_annots_beats,
+        perf_annots,
+        beat_tolerances=tolerances if domain == "score" else TOLERANCES_IN_BEATS,
+        ms_tolerances=TOLERANCES_IN_MS,
+    )
+
+    # Real-Time Factor (domain-independent)
+    if mm.alignment_duration is not None:
+        finite_perf = perf_annots[np.isfinite(perf_annots)]
+        if len(finite_perf) > 0:
+            perf_duration = float(np.max(finite_perf) - np.min(finite_perf))
+            if perf_duration > 0:
+                eval_results["rtf"] = float(
+                    f"{mm.alignment_duration / perf_duration:.4f}"
+                )
+
+    if mm.input_type == "audio":
+        eval_results.update(mm.get_latency_stats())
+
+    if debug and save_dir is not None:
+        wp_sec = np.array([perf_sec, score_beat])
+        sf = mm.score_follower
+        save_debug_results(
+            alignment_path=wp_sec,
+            score_annots=score_annots_beats,
+            perf_annots=perf_annots,
+            perf_annots_predicted=transfer_positions(
+                wp_sec,
+                score_annots_beats,
+                frame_rate=1,
+                domain="performance",
+            ),
+            eval_results=eval_results,
+            frame_rate=mm.frame_rate,
+            save_dir=save_dir,
+            run_name=run_name or "results",
+            score_positions=sf.score_positions,
+            ref_features=sf.reference_features if plot_dist_matrix else None,
+            input_features=(
+                getattr(sf, "input_features", None) if plot_dist_matrix else None
+            ),
+            distance_func=getattr(sf, "distance_func", None),
+            ref_frame_to_beat=getattr(sf, "_ref_frame_to_beat", None),
+            make_plot=make_plot,
+        )
+
+    return eval_results
 
 
 # ---------------------------------------------------------------------------
@@ -164,7 +280,8 @@ def run_score_following(
         ps, sb = resolve_gt(gt, mm.score_part.note_array())
         gt_pairs = np.column_stack([ps, sb])
 
-    nested = mm.run_evaluation(
+    nested = run_evaluation(
+        mm,
         gt=gt_pairs,
         tolerances=TOLERANCES_IN_BEATS,
         musical_beat=use_musical_beat,
