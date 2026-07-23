@@ -89,14 +89,14 @@ def run_evaluation(
         raise ValueError("Must call run() before evaluation")
 
     wp = mm.score_follower.alignment_path
-    wp_score = wp[1].astype(float)
-    wp_perf_sec = mm._wp_perf_to_seconds(wp[0].astype(float))
+    score_beat = wp[1].astype(float)
+    perf_sec = mm._wp_perf_to_seconds(wp[0].astype(float))
 
     perf_annots, score_annots_beats = resolve_gt(gt, mm.score_part.note_array())
 
     eval_results = evaluate_alignment(
-        wp_score,
-        wp_perf_sec,
+        score_beat,
+        perf_sec,
         score_annots_beats,
         perf_annots,
         beat_tolerances=tolerances if domain == "score" else TOLERANCES_IN_BEATS,
@@ -117,7 +117,7 @@ def run_evaluation(
         eval_results.update(mm.get_latency_stats())
 
     if debug and save_dir is not None:
-        wp_sec = np.array([wp_perf_sec, wp_score])
+        wp_sec = np.array([perf_sec, score_beat])
         sf = mm.score_follower
         save_debug_results(
             alignment_path=wp_sec,
