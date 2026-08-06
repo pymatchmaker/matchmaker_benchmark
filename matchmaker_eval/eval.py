@@ -241,6 +241,7 @@ def run_score_following(
     granularity: str = "note",
     save_plots: bool = True,
     gt: Optional[Union[str, Path, np.ndarray]] = None,
+    tempo: Optional[float] = 120.0,
 ) -> dict:
     """Run score following via Matchmaker (audio or MIDI methods)."""
     from matchmaker import DEFAULT_KWARGS as _MM_DEFAULTS
@@ -259,6 +260,7 @@ def run_score_following(
         method=config.method,
         wait=False,
         unfold_score=True,
+        tempo=tempo,
         kwargs=mm_kwargs,
     )
 
