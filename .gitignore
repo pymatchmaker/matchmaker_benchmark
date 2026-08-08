@@ -181,3 +181,6 @@ plots/
 reports/
 *exports/
 scripts/
+
+# Benchmark-derived ground truth is versioned; large audio is shared separately.
+!data/preprocessed/**/*.tsv

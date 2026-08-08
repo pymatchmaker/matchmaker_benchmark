@@ -1,6 +1,7 @@
 import argparse
 import copy
 import json
+import os
 import sys
 from collections import defaultdict
 from datetime import datetime
@@ -23,15 +24,29 @@ import wandb
 
 sys.setrecursionlimit(10000)
 
+DATASETS_ROOT = Path(
+    os.environ.get("MATCHMAKER_DATASETS_ROOT", "~/data")
+).expanduser()
+
+
+def dataset_directory(name: str, legacy_name: Optional[str] = None) -> Path:
+    """Prefer normalized bundle names, with legacy local names as fallback."""
+    normalized = DATASETS_ROOT / name
+    legacy = DATASETS_ROOT / (legacy_name or name)
+    return normalized if normalized.exists() or not legacy.exists() else legacy
+
+
 WORKING_DIR = Path(__file__).parent.parent
 DATASET_DIR = {
     "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
     "batik": Path("~/data/batik_plays_mozart").expanduser(),
     "vienna": Path("~/data/vienna4x22").expanduser(),
-    "kraisler": Path("~/data/KRAISLER").expanduser(),
-    "chorale": Path("~/data/chorale-bricks").expanduser(),
-    "urmp": Path("~/data/URMP").expanduser(),
-    "winterreise": Path("~/data/winterreise").expanduser(),
+    "kraisler": dataset_directory("kraisler", "KRAISLER"),
+    "chorale": dataset_directory("chorale", "chorale-bricks"),
+    "urmp": dataset_directory("urmp", "URMP"),
+    "urmp-original": dataset_directory("urmp", "URMP"),
+    "synthetic-aud": dataset_directory("synthetic", "synthetic_performances"),
+    "winterreise": dataset_directory("winterreise"),
     "zeilinger": Path("~/data/Zeilinger_data").expanduser(),
 }
 METADATA_PATH = {
@@ -42,7 +57,9 @@ METADATA_PATH = {
     "vienna": WORKING_DIR / "data/reduced/metadata-vienna.csv",
     "kraisler": WORKING_DIR / "data/metadata-kraisler.csv",
     "chorale": WORKING_DIR / "data/metadata-chorale.csv",
-    "urmp": WORKING_DIR / "data/metadata-urmp.csv",
+    "urmp": WORKING_DIR / "data/metadata-urmp-trimmed.csv",
+    "urmp-original": WORKING_DIR / "data/metadata-urmp.csv",
+    "synthetic-aud": WORKING_DIR / "data/metadata-synthetic-aud.csv",
     "winterreise": WORKING_DIR / "data/metadata-winterreise.csv",
     "zeilinger": WORKING_DIR / "data/metadata-zeilinger-note.csv",
 }
@@ -63,6 +80,24 @@ DISPLAY_COLUMNS = [
     "ms_1000ms",
     "tracked",
 ]
+
+
+def resolve_asset_path(
+    path_value: str,
+    raw_base_dir: Path,
+    dataset_root_dir: Optional[Path] = None,
+) -> Path:
+    """Resolve raw-dataset paths and benchmark-generated assets uniformly."""
+    path = Path(str(path_value)).expanduser()
+    if path.is_absolute():
+        return path
+    if path.parts[:2] == ("data", "preprocessed"):
+        return WORKING_DIR / path
+    if path.parts[:1] == ("dataset_root",):
+        if dataset_root_dir is None:
+            raise ValueError(f"dataset_root path requires a dataset root: {path}")
+        return dataset_root_dir.joinpath(*path.parts[1:])
+    return raw_base_dir / path
 
 
 def report_results_to_wandb(averaged_result: dict, config: AudioEvalConfig):
@@ -121,8 +156,7 @@ def run_tests_and_eval_by_dataset(
 
         use_musical_beat = current_dataset in ["asap", "kraisler"]
 
-        # kraisler annotations are temporarily beat-level TODO: fix to note-level
-        piece_granularity = "beat" if current_dataset == "kraisler" else granularity
+        piece_granularity = granularity
 
         # Determine base directory: some datasets (e.g. chorale) have paths
         # relative to a folder column, while others include the full path.
@@ -132,11 +166,8 @@ def run_tests_and_eval_by_dataset(
         else:
             base_dir = dataset_dir
 
-        if current_dataset == "winterreise":
-            score_xml = WORKING_DIR / row.xml_score
-        else:
-            score_xml = base_dir / row.xml_score
-        perf_audio = base_dir / row.audio_performance
+        score_xml = resolve_asset_path(row.xml_score, base_dir, dataset_dir)
+        perf_audio = resolve_asset_path(row.audio_performance, base_dir, dataset_dir)
 
         if config.method in TEMPO_DEPENDENT_METHODS and not is_valid_dataset:
             tempo_estimate = tempo_metadata.loc[tempo_metadata["audio_performance_file"] == row.audio_performance, "estimated_bpm"].values[0]
@@ -145,20 +176,33 @@ def run_tests_and_eval_by_dataset(
 
         # Unified GT: match-file datasets pass the .match file directly (score
         # beats read from the match file); no-match datasets use a precomputed
-        # data/gt/<dataset>/<i>.tsv of (perf_sec, score_beat).
+        # data/preprocessed/<dataset>/ground_truth/<i>.tsv.
         has_match = (
             hasattr(row, "match") and pd.notna(row.match) and str(row.match).strip()
         )
         if has_match:
-            match_file = dataset_dir / row.match
+            match_file = resolve_asset_path(row.match, dataset_dir, dataset_dir)
             perf_annotations = None
             piece_gt = match_file
         else:
             match_file = None
-            if dataset_type in ("urmp", "kraisler", "winterreise", "chorale"):
-                gt_path = WORKING_DIR / row.performance_annotations
+            if dataset_type in (
+                "urmp",
+                "urmp-original",
+                "kraisler",
+                "winterreise",
+                "chorale",
+            ):
+                gt_path = resolve_asset_path(row.performance_annotations, base_dir)
             else:
-                gt_path = WORKING_DIR / "data" / "gt" / current_dataset / f"{i}.tsv"
+                gt_path = (
+                    WORKING_DIR
+                    / "data"
+                    / "preprocessed"
+                    / current_dataset
+                    / "ground_truth"
+                    / f"{i}.tsv"
+                )
             if not gt_path.exists():
                 print(f"GT file not found: {gt_path}, skipping")
                 continue

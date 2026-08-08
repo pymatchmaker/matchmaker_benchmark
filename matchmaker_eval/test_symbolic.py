@@ -9,10 +9,12 @@ Mirrors test_audio.py structure:
 
 import argparse
 import json
+import os
 import sys
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -40,10 +42,23 @@ TRACKING_THRESHOLD = 0.5  # beats
 TRACKING_MIN_FAILS = 2
 
 WORKING_DIR = Path(__file__).parent.parent
+DATASETS_ROOT = Path(
+    os.environ.get("MATCHMAKER_DATASETS_ROOT", "~/data")
+).expanduser()
+
+
+def dataset_directory(name: str, legacy_name: Optional[str] = None) -> Path:
+    """Prefer normalized bundle names, with legacy local names as fallback."""
+    normalized = DATASETS_ROOT / name
+    legacy = DATASETS_ROOT / (legacy_name or name)
+    return normalized if normalized.exists() or not legacy.exists() else legacy
+
+
 DATASET_DIR = {
     "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
     "batik": Path("~/data/batik_plays_mozart").expanduser(),
     "vienna": Path("~/data/vienna4x22").expanduser(),
+    "synthetic-sym": dataset_directory("synthetic", "synthetic_performances"),
 }
 METADATA_PATH = {
     "valid": WORKING_DIR / "data/metadata-validation.csv",
@@ -51,12 +66,23 @@ METADATA_PATH = {
     "batik": WORKING_DIR / "data/reduced/metadata-batik.csv",
     "vienna": WORKING_DIR / "data/reduced/metadata-vienna.csv",
     "example": WORKING_DIR / "data/metadata-example.csv",
+    "synthetic-sym": WORKING_DIR / "data/metadata-synthetic-sym.csv",
 }
 OUTPUT_DIR = WORKING_DIR / "output"
 
 TEMPO_DEPENDENT_METHODS = ["pfkorz"]
 
 TEMPO_METADATA_PATH = WORKING_DIR / "data/perf_tempo_estimate"
+
+
+def resolve_asset_path(path_value: str, raw_base_dir: Path) -> Path:
+    """Resolve raw-dataset paths and benchmark-generated assets uniformly."""
+    path = Path(str(path_value)).expanduser()
+    if path.is_absolute():
+        return path
+    if path.parts[:2] == ("data", "preprocessed"):
+        return WORKING_DIR / path
+    return raw_base_dir / path
 
 
 def run_tests_and_eval_by_dataset(
@@ -78,9 +104,9 @@ def run_tests_and_eval_by_dataset(
         else:
             dataset_dir = DATASET_DIR[dataset_type]
 
-        match_path = dataset_dir / row.match
-        score_xml = dataset_dir / row.xml_score
-        perf_midi = dataset_dir / row.midi_performance
+        match_path = resolve_asset_path(row.match, dataset_dir)
+        score_xml = resolve_asset_path(row.xml_score, dataset_dir)
+        perf_midi = resolve_asset_path(row.midi_performance, dataset_dir)
         print(f"[{i}/{len(metadata)}] {row.title}")
 
         if method in TEMPO_DEPENDENT_METHODS and not is_valid:
@@ -187,7 +213,8 @@ def main():
         "--dataset",
         type=str,
         default="asap",
-        help="Dataset (valid, example, asap, batik, vienna)",
+        choices=list(METADATA_PATH.keys()),
+        help="Dataset to evaluate",
     )
     parser.add_argument(
         "--method",

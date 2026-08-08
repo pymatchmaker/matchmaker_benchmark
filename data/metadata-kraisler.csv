@@ -1,21 +1,61 @@
-composer,title,xml_score,performance_annotations,audio_performance
-Tchaikovsky,Valse sentimentale,score_musicxml/track01.musicxml,data/gt/kraisler/1.tsv,performance_wav/01/01_mix_studio.wav
-Rachmaninoff,Preghiera,score_musicxml/track02.musicxml,data/gt/kraisler/2.tsv,performance_wav/02/02_mix_studio.wav
-Saint-Saëns,Danse Macabre,score_musicxml/track03.musicxml,data/gt/kraisler/3.tsv,performance_wav/03/03_mix_studio.wav
-Tchaikovsky,Violin Concerto in D major,score_musicxml/track04.musicxml,data/gt/kraisler/4.tsv,performance_wav/04/04_mix_studio.wav
-Saint-Saëns,Violin Concerto No. 3 in B minor,score_musicxml/track05.musicxml,data/gt/kraisler/5.tsv,performance_wav/05/05_mix_studio.wav
-Schumann,3 Romances,score_musicxml/track06.musicxml,data/gt/kraisler/6.tsv,performance_wav/06/06_mix_studio.wav
-Brahms,Violin Sonata No. 1 in G major,score_musicxml/track07.musicxml,data/gt/kraisler/7.tsv,performance_wav/07/07_mix_studio.wav
-Grieg,Violin Sonata No. 3 in C minor,score_musicxml/track08.musicxml,data/gt/kraisler/8.tsv,performance_wav/08/08_mix_studio.wav
-Franck,Violin Sonata in A major,score_musicxml/track09.musicxml,data/gt/kraisler/9.tsv,performance_wav/09/09_mix_studio.wav
-Chopin,Nocturne No. 20 in C♯ minor,score_musicxml/track10.musicxml,data/gt/kraisler/10.tsv,performance_wav/10/10_mix_studio.wav
-Schumann,Dichterliebe_48_1,score_musicxml/track11.musicxml,data/gt/kraisler/11.tsv,performance_wav/11/11_mix_studio.wav
-Schumann,Dichterliebe_48_5,score_musicxml/track12.musicxml,data/gt/kraisler/12.tsv,performance_wav/12/12_mix_studio.wav
-Beethoven,Violin Sonata No. 5,score_musicxml/track13.musicxml,data/gt/kraisler/13.tsv,performance_wav/13/13_mix_studio.wav
-Ponce,Estrellita,score_musicxml/track14.musicxml,data/gt/kraisler/14.tsv,performance_wav/14/14_mix_studio.wav
-Rachmaninoff,Vocalise,score_musicxml/track15.musicxml,data/gt/kraisler/15.tsv,performance_wav/15/15_mix_studio.wav
-Tchaikovsky,Mélodie from Souvenir d’un Lieu Cher,score_musicxml/track16.musicxml,data/gt/kraisler/16.tsv,performance_wav/16/16_mix_studio.wav
-Mozart,Violin Concerto No. 3,score_musicxml/track17.musicxml,data/gt/kraisler/17.tsv,performance_wav/17/17_mix_studio.wav
-Kreisler,Liebesleid,score_musicxml/track18.musicxml,data/gt/kraisler/18.tsv,performance_wav/18/18_mix_studio.wav
-Mendelssohn,Violin Concerto in E minor,score_musicxml/track19.musicxml,data/gt/kraisler/19.tsv,performance_wav/19/19_mix_studio.wav
-Kreisler,Liebesfreud,score_musicxml/track20.musicxml,data/gt/kraisler/20.tsv,performance_wav/20/20_mix_studio.wav
+composer,title,audio_variant,xml_score,performance_annotations,audio_performance
+Tchaikovsky,Valse sentimentale,mix_dry,score_musicxml/01.musicxml,data/preprocessed/kraisler/ground_truth/01.tsv,performance_wav/01_mix_dry.wav
+Tchaikovsky,Valse sentimentale,mix_hall,score_musicxml/01.musicxml,data/preprocessed/kraisler/ground_truth/01.tsv,performance_wav/01_mix_hall.wav
+Tchaikovsky,Valse sentimentale,mix_studio,score_musicxml/01.musicxml,data/preprocessed/kraisler/ground_truth/01.tsv,performance_wav/01_mix_studio.wav
+Rachmaninoff,Preghiera,mix_dry,score_musicxml/02.musicxml,data/preprocessed/kraisler/ground_truth/02.tsv,performance_wav/02_mix_dry.wav
+Rachmaninoff,Preghiera,mix_hall,score_musicxml/02.musicxml,data/preprocessed/kraisler/ground_truth/02.tsv,performance_wav/02_mix_hall.wav
+Rachmaninoff,Preghiera,mix_studio,score_musicxml/02.musicxml,data/preprocessed/kraisler/ground_truth/02.tsv,performance_wav/02_mix_studio.wav
+Saint-Saëns,Danse Macabre,mix_dry,score_musicxml/03.musicxml,data/preprocessed/kraisler/ground_truth/03.tsv,performance_wav/03_mix_dry.wav
+Saint-Saëns,Danse Macabre,mix_hall,score_musicxml/03.musicxml,data/preprocessed/kraisler/ground_truth/03.tsv,performance_wav/03_mix_hall.wav
+Saint-Saëns,Danse Macabre,mix_studio,score_musicxml/03.musicxml,data/preprocessed/kraisler/ground_truth/03.tsv,performance_wav/03_mix_studio.wav
+Tchaikovsky,Violin Concerto in D major,mix_dry,score_musicxml/04.musicxml,data/preprocessed/kraisler/ground_truth/04.tsv,performance_wav/04_mix_dry.wav
+Tchaikovsky,Violin Concerto in D major,mix_hall,score_musicxml/04.musicxml,data/preprocessed/kraisler/ground_truth/04.tsv,performance_wav/04_mix_hall.wav
+Tchaikovsky,Violin Concerto in D major,mix_studio,score_musicxml/04.musicxml,data/preprocessed/kraisler/ground_truth/04.tsv,performance_wav/04_mix_studio.wav
+Saint-Saëns,Violin Concerto No. 3 in B minor,mix_dry,score_musicxml/05.musicxml,data/preprocessed/kraisler/ground_truth/05.tsv,performance_wav/05_mix_dry.wav
+Saint-Saëns,Violin Concerto No. 3 in B minor,mix_hall,score_musicxml/05.musicxml,data/preprocessed/kraisler/ground_truth/05.tsv,performance_wav/05_mix_hall.wav
+Saint-Saëns,Violin Concerto No. 3 in B minor,mix_studio,score_musicxml/05.musicxml,data/preprocessed/kraisler/ground_truth/05.tsv,performance_wav/05_mix_studio.wav
+Schumann,3 Romances,mix_dry,score_musicxml/06.musicxml,data/preprocessed/kraisler/ground_truth/06.tsv,performance_wav/06_mix_dry.wav
+Schumann,3 Romances,mix_hall,score_musicxml/06.musicxml,data/preprocessed/kraisler/ground_truth/06.tsv,performance_wav/06_mix_hall.wav
+Schumann,3 Romances,mix_studio,score_musicxml/06.musicxml,data/preprocessed/kraisler/ground_truth/06.tsv,performance_wav/06_mix_studio.wav
+Brahms,Violin Sonata No. 1 in G major,mix_dry,score_musicxml/07.musicxml,data/preprocessed/kraisler/ground_truth/07.tsv,performance_wav/07_mix_dry.wav
+Brahms,Violin Sonata No. 1 in G major,mix_hall,score_musicxml/07.musicxml,data/preprocessed/kraisler/ground_truth/07.tsv,performance_wav/07_mix_hall.wav
+Brahms,Violin Sonata No. 1 in G major,mix_studio,score_musicxml/07.musicxml,data/preprocessed/kraisler/ground_truth/07.tsv,performance_wav/07_mix_studio.wav
+Grieg,Violin Sonata No. 3 in C minor,mix_dry,score_musicxml/08.musicxml,data/preprocessed/kraisler/ground_truth/08.tsv,performance_wav/08_mix_dry.wav
+Grieg,Violin Sonata No. 3 in C minor,mix_hall,score_musicxml/08.musicxml,data/preprocessed/kraisler/ground_truth/08.tsv,performance_wav/08_mix_hall.wav
+Grieg,Violin Sonata No. 3 in C minor,mix_studio,score_musicxml/08.musicxml,data/preprocessed/kraisler/ground_truth/08.tsv,performance_wav/08_mix_studio.wav
+Franck,Violin Sonata in A major,mix_dry,score_musicxml/09.musicxml,data/preprocessed/kraisler/ground_truth/09.tsv,performance_wav/09_mix_dry.wav
+Franck,Violin Sonata in A major,mix_hall,score_musicxml/09.musicxml,data/preprocessed/kraisler/ground_truth/09.tsv,performance_wav/09_mix_hall.wav
+Franck,Violin Sonata in A major,mix_studio,score_musicxml/09.musicxml,data/preprocessed/kraisler/ground_truth/09.tsv,performance_wav/09_mix_studio.wav
+Chopin,Nocturne No. 20 in C♯ minor,mix_dry,score_musicxml/10.musicxml,data/preprocessed/kraisler/ground_truth/10.tsv,performance_wav/10_mix_dry.wav
+Chopin,Nocturne No. 20 in C♯ minor,mix_hall,score_musicxml/10.musicxml,data/preprocessed/kraisler/ground_truth/10.tsv,performance_wav/10_mix_hall.wav
+Chopin,Nocturne No. 20 in C♯ minor,mix_studio,score_musicxml/10.musicxml,data/preprocessed/kraisler/ground_truth/10.tsv,performance_wav/10_mix_studio.wav
+Schumann,Dichterliebe_48_1,mix_dry,score_musicxml/11.musicxml,data/preprocessed/kraisler/ground_truth/11.tsv,performance_wav/11_mix_dry.wav
+Schumann,Dichterliebe_48_1,mix_hall,score_musicxml/11.musicxml,data/preprocessed/kraisler/ground_truth/11.tsv,performance_wav/11_mix_hall.wav
+Schumann,Dichterliebe_48_1,mix_studio,score_musicxml/11.musicxml,data/preprocessed/kraisler/ground_truth/11.tsv,performance_wav/11_mix_studio.wav
+Schumann,Dichterliebe_48_5,mix_dry,score_musicxml/12.musicxml,data/preprocessed/kraisler/ground_truth/12.tsv,performance_wav/12_mix_dry.wav
+Schumann,Dichterliebe_48_5,mix_hall,score_musicxml/12.musicxml,data/preprocessed/kraisler/ground_truth/12.tsv,performance_wav/12_mix_hall.wav
+Schumann,Dichterliebe_48_5,mix_studio,score_musicxml/12.musicxml,data/preprocessed/kraisler/ground_truth/12.tsv,performance_wav/12_mix_studio.wav
+Beethoven,Violin Sonata No. 5,mix_dry,score_musicxml/13.musicxml,data/preprocessed/kraisler/ground_truth/13.tsv,performance_wav/13_mix_dry.wav
+Beethoven,Violin Sonata No. 5,mix_hall,score_musicxml/13.musicxml,data/preprocessed/kraisler/ground_truth/13.tsv,performance_wav/13_mix_hall.wav
+Beethoven,Violin Sonata No. 5,mix_studio,score_musicxml/13.musicxml,data/preprocessed/kraisler/ground_truth/13.tsv,performance_wav/13_mix_studio.wav
+Ponce,Estrellita,mix_dry,score_musicxml/14.musicxml,data/preprocessed/kraisler/ground_truth/14.tsv,performance_wav/14_mix_dry.wav
+Ponce,Estrellita,mix_hall,score_musicxml/14.musicxml,data/preprocessed/kraisler/ground_truth/14.tsv,performance_wav/14_mix_hall.wav
+Ponce,Estrellita,mix_studio,score_musicxml/14.musicxml,data/preprocessed/kraisler/ground_truth/14.tsv,performance_wav/14_mix_studio.wav
+Rachmaninoff,Vocalise,mix_dry,score_musicxml/15.musicxml,data/preprocessed/kraisler/ground_truth/15.tsv,performance_wav/15_mix_dry.wav
+Rachmaninoff,Vocalise,mix_hall,score_musicxml/15.musicxml,data/preprocessed/kraisler/ground_truth/15.tsv,performance_wav/15_mix_hall.wav
+Rachmaninoff,Vocalise,mix_studio,score_musicxml/15.musicxml,data/preprocessed/kraisler/ground_truth/15.tsv,performance_wav/15_mix_studio.wav
+Tchaikovsky,Mélodie from Souvenir d’un Lieu Cher,mix_dry,score_musicxml/16.musicxml,data/preprocessed/kraisler/ground_truth/16.tsv,performance_wav/16_mix_dry.wav
+Tchaikovsky,Mélodie from Souvenir d’un Lieu Cher,mix_hall,score_musicxml/16.musicxml,data/preprocessed/kraisler/ground_truth/16.tsv,performance_wav/16_mix_hall.wav
+Tchaikovsky,Mélodie from Souvenir d’un Lieu Cher,mix_studio,score_musicxml/16.musicxml,data/preprocessed/kraisler/ground_truth/16.tsv,performance_wav/16_mix_studio.wav
+Mozart,Violin Concerto No. 3,mix_dry,score_musicxml/17.musicxml,data/preprocessed/kraisler/ground_truth/17.tsv,performance_wav/17_mix_dry.wav
+Mozart,Violin Concerto No. 3,mix_hall,score_musicxml/17.musicxml,data/preprocessed/kraisler/ground_truth/17.tsv,performance_wav/17_mix_hall.wav
+Mozart,Violin Concerto No. 3,mix_studio,score_musicxml/17.musicxml,data/preprocessed/kraisler/ground_truth/17.tsv,performance_wav/17_mix_studio.wav
+Kreisler,Liebesleid,mix_dry,score_musicxml/18.musicxml,data/preprocessed/kraisler/ground_truth/18.tsv,performance_wav/18_mix_dry.wav
+Kreisler,Liebesleid,mix_hall,score_musicxml/18.musicxml,data/preprocessed/kraisler/ground_truth/18.tsv,performance_wav/18_mix_hall.wav
+Kreisler,Liebesleid,mix_studio,score_musicxml/18.musicxml,data/preprocessed/kraisler/ground_truth/18.tsv,performance_wav/18_mix_studio.wav
+Mendelssohn,Violin Concerto in E minor,mix_dry,score_musicxml/19.musicxml,data/preprocessed/kraisler/ground_truth/19.tsv,performance_wav/19_mix_dry.wav
+Mendelssohn,Violin Concerto in E minor,mix_hall,score_musicxml/19.musicxml,data/preprocessed/kraisler/ground_truth/19.tsv,performance_wav/19_mix_hall.wav
+Mendelssohn,Violin Concerto in E minor,mix_studio,score_musicxml/19.musicxml,data/preprocessed/kraisler/ground_truth/19.tsv,performance_wav/19_mix_studio.wav
+Kreisler,Liebesfreud,mix_dry,score_musicxml/20.musicxml,data/preprocessed/kraisler/ground_truth/20.tsv,performance_wav/20_mix_dry.wav
+Kreisler,Liebesfreud,mix_hall,score_musicxml/20.musicxml,data/preprocessed/kraisler/ground_truth/20.tsv,performance_wav/20_mix_hall.wav
+Kreisler,Liebesfreud,mix_studio,score_musicxml/20.musicxml,data/preprocessed/kraisler/ground_truth/20.tsv,performance_wav/20_mix_studio.wav

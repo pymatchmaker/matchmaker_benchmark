@@ -3,10 +3,10 @@
 For each piece, merges the per-instrument Notes_<k>_*.txt onsets/pitches,
 aligns them to the score notes by pitch (Needleman-Wunsch), collapses to the
 unique score onset beats, re-zeroes the leading silence (0.5s margin), and writes:
-  - data/gt/urmp/<i>.tsv       (perf_sec, score_beat), re-zeroed
-  - AuMix_<folder>_trim.wav    next to the original, trimmed by the same offset
-metadata-urmp.csv audio_performance is repointed at the trimmed audio. Always
-reads the original AuMix_<folder>.wav, so re-running is safe.
+  - data/preprocessed/urmp/ground_truth/trimmed/<i>.tsv
+  - <urmp-dir>/trimmed_audio/AuMix_<folder>_trim.wav
+  - data/metadata-urmp-trimmed.csv
+The original metadata and per-piece raw URMP files remain unchanged.
 
 Usage:
     python preprocess_urmp.py
@@ -24,8 +24,10 @@ import soundfile as sf
 from matchmaker import Matchmaker
 
 WORKING_DIR = Path(__file__).parent.parent
-GT_DIR = WORKING_DIR / "data" / "gt" / "urmp"
-METADATA = WORKING_DIR / "data" / "metadata-urmp.csv"
+PREPROCESSED_DIR = WORKING_DIR / "data" / "preprocessed" / "urmp"
+GT_DIR = PREPROCESSED_DIR / "ground_truth" / "trimmed"
+SOURCE_METADATA = WORKING_DIR / "data" / "metadata-urmp.csv"
+OUTPUT_METADATA = WORKING_DIR / "data" / "metadata-urmp-trimmed.csv"
 MARGIN = 0.5
 
 
@@ -81,12 +83,15 @@ def main():
         "--urmp-dir", type=Path, default=Path("~/data/URMP").expanduser()
     )
     args = parser.parse_args()
+    audio_dir = args.urmp_dir / "trimmed_audio"
 
-    meta = pd.read_csv(METADATA, skipinitialspace=True)
+    meta = pd.read_csv(SOURCE_METADATA, skipinitialspace=True)
     meta.columns = meta.columns.str.strip()
     GT_DIR.mkdir(parents=True, exist_ok=True)
+    audio_dir.mkdir(parents=True, exist_ok=True)
 
     audio_col = []
+    gt_col = []
     for i, row in enumerate(meta.itertuples(), 1):
         piece_dir = args.urmp_dir / row.folder
         original = piece_dir / f"AuMix_{row.folder}.wav"
@@ -114,9 +119,9 @@ def main():
         if trim_offset > 1.0:
             perf = perf - trim_offset
             audio, sr = sf.read(str(original))
-            trimmed = piece_dir / f"AuMix_{row.folder}_trim.wav"
+            trimmed = audio_dir / f"AuMix_{row.folder}_trim.wav"
             sf.write(str(trimmed), audio[int(trim_offset * sr):], sr)
-            audio_name = trimmed.name
+            audio_name = f"dataset_root/trimmed_audio/{trimmed.name}"
             print(f"[{i}] {row.folder}: trimmed {trim_offset:.2f}s")
 
         gt = np.column_stack([perf, beats])
@@ -125,10 +130,12 @@ def main():
             header="perf_sec\tscore_beat", comments="",
         )
         audio_col.append(audio_name)
+        gt_col.append(f"data/preprocessed/urmp/ground_truth/trimmed/{i}.tsv")
 
     meta["audio_performance"] = audio_col
-    meta.to_csv(METADATA, index=False)
-    print(f"Updated {METADATA} and {GT_DIR} ({len(meta)} pieces)")
+    meta["performance_annotations"] = gt_col
+    meta.to_csv(OUTPUT_METADATA, index=False)
+    print(f"Updated {OUTPUT_METADATA} and {PREPROCESSED_DIR} ({len(meta)} pieces)")
 
 
 if __name__ == "__main__":
