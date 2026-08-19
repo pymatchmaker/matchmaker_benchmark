@@ -31,7 +31,7 @@ def main():
     parser.add_argument(
         "--dataset",
         type=str,
-        default="asap",
+        default="vienna",
         help="Dataset (valid, example, asap, batik, vienna)",
     )
     args = parser.parse_args()
@@ -65,7 +65,7 @@ def main():
 
         perf_end_time = pna[-1]["onset_sec"] + pna[-1]["duration_sec"]
 
-        total_num_beats_score = sna[-1]["onset_beat"] + sna[-1]["duration_beat"]
+        total_num_beats_score = sna[-1]["onset_beat"] + sna[-1]["duration_beat"] - sna[0]["onset_beat"]
 
         bpm = round(total_num_beats_score / perf_end_time * 60.0)
 
