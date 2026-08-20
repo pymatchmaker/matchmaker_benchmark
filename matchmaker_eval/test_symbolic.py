@@ -41,9 +41,9 @@ TRACKING_MIN_FAILS = 2
 
 WORKING_DIR = Path(__file__).parent.parent
 DATASET_DIR = {
-    "asap": Path("~/Documents/Datasets/datasets/asap-dataset-matchmaker").expanduser(),
-    "batik": Path("~/datasets/batik_plays_mozart").expanduser(),
-    "vienna": Path("~/Documents/Datasets/datasets/vienna4x22").expanduser(),
+    "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
+    "batik": Path("~/data/batik_plays_mozart").expanduser(),
+    "vienna": Path("~/data/vienna4x22").expanduser(),
 }
 METADATA_PATH = {
     "valid": WORKING_DIR / "data/metadata-validation.csv",
@@ -53,6 +53,8 @@ METADATA_PATH = {
     "example": WORKING_DIR / "data/metadata-example.csv",
 }
 OUTPUT_DIR = WORKING_DIR / "output"
+
+TEMPO_DEPENDENT_METHODS = ["pfkorz"]
 
 TEMPO_METADATA_PATH = WORKING_DIR / "data/perf_tempo_estimate"
 
@@ -81,7 +83,10 @@ def run_tests_and_eval_by_dataset(
         perf_midi = dataset_dir / row.midi_performance
         print(f"[{i}/{len(metadata)}] {row.title}")
 
-        tempo_estimate = tempo_metadata.loc[tempo_metadata["midi_performance_file"] == row.midi_performance, "estimated_bpm"].values[0]
+        if method in TEMPO_DEPENDENT_METHODS and not is_valid:
+            tempo_estimate = tempo_metadata.loc[tempo_metadata["midi_performance_file"] == row.midi_performance, "estimated_bpm"].values[0]
+        else:
+            tempo_estimate = None
 
         try:
             # Run alignment via Matchmaker (HMM or event-level OLTW)

@@ -20,17 +20,14 @@ from utils import (
 )
 
 import wandb
-import warnings
-
-warnings.filterwarnings("ignore", category=UserWarning)
 
 sys.setrecursionlimit(10000)
 
 WORKING_DIR = Path(__file__).parent.parent
 DATASET_DIR = {
-    "asap": Path("~/Documents/Datasets/datasets/asap-dataset-matchmaker").expanduser(),
-    "batik": Path("~/datasets/batik_plays_mozart").expanduser(),
-    "vienna": Path("~/Documents/Datasets/datasets/vienna4x22").expanduser(),
+    "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
+    "batik": Path("~/data/batik_plays_mozart").expanduser(),
+    "vienna": Path("~/data/vienna4x22").expanduser(),
     "kraisler": Path("~/data/KRAISLER").expanduser(),
     "chorale": Path("~/data/chorale-bricks").expanduser(),
     "urmp": Path("~/data/URMP").expanduser(),
@@ -50,6 +47,7 @@ METADATA_PATH = {
     "zeilinger": WORKING_DIR / "data/metadata-zeilinger-note.csv",
 }
 OUTPUT_DIR = WORKING_DIR / "output"
+TEMPO_DEPENDENT_METHODS = ["pfkorz"]
 TEMPO_METADATA_PATH = WORKING_DIR / "data/perf_tempo_estimate"
 DISPLAY_COLUMNS = [
     "Index",
@@ -106,8 +104,8 @@ def run_tests_and_eval_by_dataset(
     metadata[str_cols] = metadata[str_cols].apply(lambda x: x.str.strip())
     is_valid_dataset = dataset_type in ("valid", "example")
     if not is_valid_dataset:
-            tempo_metadata_fn = TEMPO_METADATA_PATH / f"{dataset_type}_tempo_estimates.csv"
-            tempo_metadata = pd.read_csv(tempo_metadata_fn)
+        tempo_metadata_fn = TEMPO_METADATA_PATH / f"{dataset_type}_tempo_estimates.csv"
+        tempo_metadata = pd.read_csv(tempo_metadata_fn)
     
     results = defaultdict(list)
     for i, row in enumerate(metadata.itertuples(), 1):
@@ -140,7 +138,10 @@ def run_tests_and_eval_by_dataset(
             score_xml = base_dir / row.xml_score
         perf_audio = base_dir / row.audio_performance
 
-        tempo_estimate = tempo_metadata.loc[tempo_metadata["audio_performance_file"] == row.audio_performance, "estimated_bpm"].values[0]
+        if config.method in TEMPO_DEPENDENT_METHODS and not is_valid_dataset:
+            tempo_estimate = tempo_metadata.loc[tempo_metadata["audio_performance_file"] == row.audio_performance, "estimated_bpm"].values[0]
+        else:
+            tempo_estimate = None
 
         # Unified GT: match-file datasets pass the .match file directly (score
         # beats read from the match file); no-match datasets use a precomputed
