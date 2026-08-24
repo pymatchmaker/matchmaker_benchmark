@@ -31,6 +31,9 @@ from utils import (
 )
 from verify_tracking import check_tracking, plot_tracking
 
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 sys.setrecursionlimit(10000)
 
 TRACKING_THRESHOLD = 0.5  # beats
@@ -51,6 +54,10 @@ METADATA_PATH = {
 }
 OUTPUT_DIR = WORKING_DIR / "output"
 
+TEMPO_DEPENDENT_METHODS = ["pfkorz"]
+
+TEMPO_METADATA_PATH = WORKING_DIR / "data/perf_tempo_estimate"
+
 
 def run_tests_and_eval_by_dataset(
     dataset_type, method, run_dir=None, save_plots=True
@@ -58,6 +65,10 @@ def run_tests_and_eval_by_dataset(
     """Run symbolic alignment for all pieces in a dataset."""
     metadata = pd.read_csv(METADATA_PATH[dataset_type])
     is_valid = dataset_type in ("valid", "example")
+
+    if not is_valid:
+        tempo_metadata_fn = TEMPO_METADATA_PATH / f"{dataset_type}_tempo_estimates.csv"
+        tempo_metadata = pd.read_csv(tempo_metadata_fn)
 
     results = defaultdict(list)
 
@@ -72,6 +83,11 @@ def run_tests_and_eval_by_dataset(
         perf_midi = dataset_dir / row.midi_performance
         print(f"[{i}/{len(metadata)}] {row.title}")
 
+        if method in TEMPO_DEPENDENT_METHODS and not is_valid:
+            tempo_estimate = tempo_metadata.loc[tempo_metadata["midi_performance_file"] == row.midi_performance, "estimated_bpm"].values[0]
+        else:
+            tempo_estimate = None
+
         try:
             # Run alignment via Matchmaker (HMM or event-level OLTW)
             mm_kwargs = DEFAULT_KWARGS["midi"].get(method, {}).copy()
@@ -80,6 +96,7 @@ def run_tests_and_eval_by_dataset(
                 performance_file=str(perf_midi),
                 input_type="midi",
                 method=method,
+                tempo=tempo_estimate,
                 kwargs=mm_kwargs if mm_kwargs else None,
             )
             list(mm.run(verbose=False))
