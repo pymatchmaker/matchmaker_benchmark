@@ -11,14 +11,14 @@ from partitura.score import merge_parts
 
 WORKING_DIR = Path(__file__).parent.parent
 DATASET_DIR = {
-    "asap": Path("~/Documents/Datasets/datasets/asap-dataset-matchmaker").expanduser(),
-    "batik": Path("~/datasets/batik_plays_mozart").expanduser(),
-    "vienna": Path("~/Documents/Datasets/datasets/vienna4x22").expanduser(),
-    "kraisler": Path("~/datasets/kraisler").expanduser(),
-    "chorale": Path("~/datasets/chorale").expanduser(),
-    "urmp": Path("~/datasets/urmp").expanduser(),
-    "winterreise": Path("~/datasets/winterreise").expanduser(),
-    "zeilinger": Path("~/datasets/zeilinger").expanduser(),
+    "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
+    "batik": Path("~/data/batik_plays_mozart").expanduser(),
+    "vienna": Path("~/data/vienna4x22").expanduser(),
+    "kraisler": Path("~/data/KRAISLER").expanduser(),
+    "chorale": Path("~/data/chorale-bricks").expanduser(),
+    "urmp": Path("~/data/URMP").expanduser(),
+    "winterreise": Path("~/data/winterreise").expanduser(),
+    "zeilinger": Path("~/data/Zeilinger_data").expanduser(),
 }
 METADATA_PATH = {
     "valid": WORKING_DIR / "data/metadata-validation.csv",
@@ -28,9 +28,9 @@ METADATA_PATH = {
     "example": WORKING_DIR / "data/metadata-example.csv",
     "kraisler": WORKING_DIR / "data/metadata-kraisler.csv",
     "chorale": WORKING_DIR / "data/metadata-chorale.csv",
-    "urmp": WORKING_DIR / "data/metadata-urmp.csv",
+    "urmp": WORKING_DIR / "data/metadata-urmp-trimmed.csv",
     "winterreise": WORKING_DIR / "data/metadata-winterreise.csv",
-    "zeilinger": WORKING_DIR / "data/metadata-zeilinger-note.csv",
+    "zeilinger": WORKING_DIR / "data/metadata-zeilinger.csv",
 }
 
 TEMPO_METADATA_PATH = WORKING_DIR / "data/perf_tempo_estimate"
@@ -58,10 +58,13 @@ def main():
 
     for i, row in enumerate(metadata.itertuples(), 1):
         dataset_dir = DATASET_DIR[dataset]
-        if dataset in ["asap", "batik", "vienna"]:   
-            score_xml = dataset_dir / row.xml_score
+        if dataset == "winterreise":
+            score_xml = WORKING_DIR / row.xml_score
         else:
-            score_xml = dataset_dir / row.folder / row.xml_score
+            if not hasattr(row, 'folder'):   
+                score_xml = dataset_dir / row.xml_score
+            else:
+                score_xml = dataset_dir / row.folder / row.xml_score
 
         if score_xml.suffix == ".mid":
             score = pt.load_score_midi(score_xml)
@@ -84,25 +87,35 @@ def main():
             perf_end_time = pna[-1]["onset_sec"] + pna[-1]["duration_sec"]
 
         else:
-            perf_audio = dataset_dir / row.audio_performance
+            if dataset == "urmp":
+                if row.audio_performance.startswith("dataset_root"):
+                    perf_audio = dataset_dir / row.audio_performance.replace("dataset_root/", "")
+                else:
+                    perf_audio = dataset_dir / row.folder / row.audio_performance
+            else:
+                # check if 'folder' is a field in the metadata
+                if hasattr(row, 'folder'):
+                    perf_audio = dataset_dir / row.folder / row.audio_performance
+                else:
+                    perf_audio = dataset_dir / row.audio_performance
             y, sr = librosa.load(perf_audio, sr=None)
             perf_end_time = len(y) / sr
-            print(f"Audio performance: {perf_audio}, duration: {perf_end_time:.2f} seconds")
-            return
 
         bpm = round(total_num_beats_score / perf_end_time * 60.0)
-
-        tempo_metadata.append(
-            {
-                "dataset": dataset,
-                "title": row.title,
-                "score_file": row.xml_score,
-                "midi_performance_file": row.midi_performance,
-                "audio_performance_file": row.audio_performance,
-                "estimated_bpm": bpm,
-            }
-        )
-
+        metadata_dict = dict()
+        metadata_dict["dataset"] = dataset
+        metadata_dict["title"] = row.title
+        metadata_dict["audio_performance_file"] = row.audio_performance
+        metadata_dict["estimated_bpm"] = bpm
+        if dataset == "urmp":
+            if hasattr(row, 'folder'):
+                metadata_dict["folder"] = row.folder
+            else:
+                metadata_dict["folder"] = None
+        else:
+            if hasattr(row, 'folder'):
+                metadata_dict["folder"] = row.folder
+        tempo_metadata.append(metadata_dict)
 
     df = pd.DataFrame(tempo_metadata)
     df.to_csv(tempo_metadata_fn, index=False)
