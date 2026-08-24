@@ -72,7 +72,9 @@ def main():
             score = pt.load_musicxml(score_xml)
         spart = merge_parts(score.parts)
         sna = spart.note_array()
-        total_num_beats_score = sna[-1]["onset_beat"] + sna[-1]["duration_beat"] - sna[0]["onset_beat"]
+        score_end = (sna["onset_beat"] + sna["duration_beat"]).max()
+        score_start = sna["onset_beat"].min()
+        total_num_beats_score = score_end - score_start
 
         if dataset in ["asap", "batik", "vienna"]:
             perf_midi = dataset_dir / row.midi_performance
@@ -84,7 +86,7 @@ def main():
                 ppart = perf.performedparts[1]
                 pna = ppart.note_array()
 
-            perf_end_time = pna[-1]["onset_sec"] + pna[-1]["duration_sec"]
+            perf_end_time = (pna["onset_sec"] + pna["duration_sec"]).max()
 
         else:
             if dataset == "urmp":
