@@ -1,5 +1,4 @@
 import argparse
-from pathlib import Path
 
 import pandas as pd
 import librosa
@@ -8,32 +7,15 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 import partitura as pt
 from partitura.score import merge_parts
+from utils import (
+    AUDIO_METADATA_PATH,
+    DATASET_DIR,
+    TEMPO_METADATA_PATH,
+    WORKING_DIR,
+)
 
-WORKING_DIR = Path(__file__).parent.parent
-DATASET_DIR = {
-    "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
-    "batik": Path("~/data/batik_plays_mozart").expanduser(),
-    "vienna": Path("~/data/vienna4x22").expanduser(),
-    "kraisler": Path("~/data/KRAISLER").expanduser(),
-    "chorale": Path("~/data/chorale-bricks").expanduser(),
-    "urmp": Path("~/data/URMP").expanduser(),
-    "winterreise": Path("~/data/winterreise").expanduser(),
-    "zeilinger": Path("~/data/Zeilinger_data").expanduser(),
-}
-METADATA_PATH = {
-    "valid": WORKING_DIR / "data/metadata-validation.csv",
-    "asap": WORKING_DIR / "data/reduced/metadata-asap.csv",
-    "batik": WORKING_DIR / "data/reduced/metadata-batik.csv",
-    "vienna": WORKING_DIR / "data/reduced/metadata-vienna.csv",
-    "example": WORKING_DIR / "data/metadata-example.csv",
-    "kraisler": WORKING_DIR / "data/metadata-kraisler.csv",
-    "chorale": WORKING_DIR / "data/metadata-chorale.csv",
-    "urmp": WORKING_DIR / "data/metadata-urmp-trimmed.csv",
-    "winterreise": WORKING_DIR / "data/metadata-winterreise.csv",
-    "zeilinger": WORKING_DIR / "data/metadata-zeilinger.csv",
-}
-
-TEMPO_METADATA_PATH = WORKING_DIR / "data/perf_tempo_estimate"
+METADATA_PATH = dict(AUDIO_METADATA_PATH)
+METADATA_PATH["zeilinger"] = WORKING_DIR / "data/metadata-zeilinger.csv"
 
 
 def main():

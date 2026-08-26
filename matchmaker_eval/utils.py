@@ -1,29 +1,70 @@
 import csv
 import json
+import os
 from pathlib import Path
 from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import partitura
-import partitura as pt
 import scipy
 import yaml
-from matchmaker.prob.hmm import (
-    BernoulliGaussianPitchIOIObservationModel,
-    PitchIOIHMM,
-    compute_discrete_pitch_profiles,
-    compute_ioi_matrix,
-    gumbel_init_dist,
-    gumbel_transition_matrix,
-)
 from matchmaker.utils.eval import get_evaluation_results, transfer_positions
-from matchmaker.utils.tempo_models import KalmanTempoModel
 from numpy.typing import NDArray
 from pydantic_settings import BaseSettings
 
 WORKING_DIR = Path(__file__).parent.parent
+DATASETS_ROOT = Path(
+    os.environ.get("MATCHMAKER_DATASETS_ROOT", "~/data")
+).expanduser()
+
+
+def dataset_directory(name: str, legacy_name: Optional[str] = None) -> Path:
+    """Prefer normalized dataset names, falling back to legacy local names."""
+    normalized = DATASETS_ROOT / name
+    legacy = DATASETS_ROOT / (legacy_name or name)
+    return normalized if normalized.exists() or not legacy.exists() else legacy
+
+
+DATASET_DIR = {
+    "asap": dataset_directory("asap-dataset-matchmaker"),
+    "batik": dataset_directory("batik_plays_mozart"),
+    "vienna": dataset_directory("vienna4x22"),
+    "kraisler": dataset_directory("kraisler", "KRAISLER"),
+    "chorale": dataset_directory("chorale", "chorale-bricks"),
+    "urmp": dataset_directory("urmp", "URMP"),
+    "urmp-original": dataset_directory("urmp", "URMP"),
+    "synthetic-aud": dataset_directory("synthetic", "synthetic_performances"),
+    "synthetic-sym": dataset_directory("synthetic", "synthetic_performances"),
+    "winterreise": dataset_directory("winterreise"),
+    "zeilinger": dataset_directory("zeilinger", "Zeilinger_data"),
+}
+AUDIO_METADATA_PATH = {
+    "valid": WORKING_DIR / "data/metadata-validation.csv",
+    "example": WORKING_DIR / "data/metadata-example.csv",
+    "asap": WORKING_DIR / "data/reduced/metadata-asap.csv",
+    "batik": WORKING_DIR / "data/reduced/metadata-batik.csv",
+    "vienna": WORKING_DIR / "data/reduced/metadata-vienna.csv",
+    "kraisler": WORKING_DIR / "data/metadata-kraisler.csv",
+    "chorale": WORKING_DIR / "data/metadata-chorale.csv",
+    "urmp": WORKING_DIR / "data/metadata-urmp-trimmed.csv",
+    "urmp-original": WORKING_DIR / "data/metadata-urmp.csv",
+    "synthetic-aud": WORKING_DIR / "data/metadata-synthetic-aud.csv",
+    "winterreise": WORKING_DIR / "data/metadata-winterreise.csv",
+    "zeilinger": WORKING_DIR / "data/metadata-zeilinger-note.csv",
+}
+SYMBOLIC_METADATA_PATH = {
+    "valid": WORKING_DIR / "data/metadata-validation.csv",
+    "example": WORKING_DIR / "data/metadata-example.csv",
+    "asap": WORKING_DIR / "data/reduced/metadata-asap.csv",
+    "batik": WORKING_DIR / "data/reduced/metadata-batik.csv",
+    "vienna": WORKING_DIR / "data/reduced/metadata-vienna.csv",
+    "synthetic-sym": WORKING_DIR / "data/metadata-synthetic-sym.csv",
+}
+OUTPUT_DIR = WORKING_DIR / "output"
+TEMPO_DEPENDENT_METHODS = frozenset({"pfkorz"})
+TEMPO_METADATA_PATH = WORKING_DIR / "data/perf_tempo_estimate"
+
 TOLERANCES_IN_MS = [50, 100, 300, 500, 1000, 2000]
 TOLERANCES_IN_BEATS = [0.1, 0.2, 0.3, 0.5, 1.0, 2.0]
 METRICS_MS = ["mean", "median", "std", "skewness", "kurtosis"] + [
@@ -63,8 +104,6 @@ class SymbolicEvalConfig(BaseSettings):
     attr_exp: list[str] = ["method", "processor", "dataset"]
 
 
-
-
 def save_config(config, save_dir):
     config_path = save_dir / "config.yaml"
     with open(config_path, "w") as f:
@@ -74,7 +113,6 @@ def save_config(config, save_dir):
             if not k.startswith("__") and not k.startswith("attr_")
         }
         yaml.dump(config_dict, f)
-
 
 
 def compute_event_pooled_summary(
@@ -129,9 +167,7 @@ def compute_event_pooled_summary(
 
         # Perf → score prediction (beat metrics)
         valid_gt_perf = np.isfinite(gt_perf)
-        pred_score = transfer_positions(
-            wp_t, gt_perf[valid_gt_perf], 1, domain="score"
-        )
+        pred_score = transfer_positions(wp_t, gt_perf[valid_gt_perf], 1, domain="score")
         valid_b = np.isfinite(pred_score)
         all_gt_score_beats.append(gt_score[valid_gt_perf][valid_b])
         all_pred_score_beats.append(pred_score[valid_b])
@@ -480,111 +516,6 @@ def save_score_following_result(
         )
     plt.savefig(save_dir / f"{run_name}.png")
 
-
-# def plot_and_save_score_following_result(
-#     wp,
-#     ref_features,
-#     input_features,
-#     distance_func,
-#     save_dir,
-#     score_annots,
-#     perf_ann_path: Path,
-#     frame_rate,
-#     name=None,
-# ):
-#     run_name = name or "results"
-#     save_path = save_dir / f"wp_{run_name}.tsv"
-#     save_nparray_to_csv(wp.T, save_path.as_posix())
-
-#     dist = scipy.spatial.distance.cdist(
-#         ref_features,
-#         input_features[: wp[1][-1]],
-#         metric=distance_func,
-#     )  # [d, wy]
-#     plt.figure(figsize=(15, 15))
-#     plt.imshow(dist, aspect="auto", origin="lower", interpolation="nearest")
-#     plt.title(
-#         f"[{save_dir.name}] \n Matchmaker alignment path with ground-truth labels",
-#         fontsize=25,
-#     )
-#     plt.xlabel("Performance Audio frame", fontsize=15)
-#     plt.ylabel("Score Audio frame", fontsize=15)
-
-#     # plot online DTW path
-#     ref_paths, target_paths = wp[0], wp[1]
-#     for n in range(len(ref_paths)):
-#         plt.plot(
-#             target_paths[n], ref_paths[n], ".", color="purple", alpha=0.5, markersize=3
-#         )
-
-#     # plot ground-truth labels
-#     perf_annots = pd.read_csv(
-#         filepath_or_buffer=perf_ann_path, delimiter="\t", header=None
-#     )[0]
-#     for i, (ref, target) in enumerate(zip(score_annots, perf_annots)):
-#         plt.plot(
-#             target * frame_rate, ref * frame_rate, "x", color="r", alpha=1, markersize=3
-#         )
-#     plt.savefig(save_dir / f"{run_name}.png")
-
-
-def build_matchmaker_hmm(score_path):
-    bpm = 100
-
-    snote_array = pt.load_score_midi(score_path).note_array()
-    unique_sonsets = np.unique(snote_array["onset_beat"])
-
-    unique_sonset_idxs = [
-        np.where(snote_array["onset_beat"] == ui)[0] for ui in unique_sonsets
-    ]
-
-    chord_pitches = [snote_array["pitch"][uix] for uix in unique_sonset_idxs]
-
-    pitch_profiles = compute_discrete_pitch_profiles(
-        chord_pitches=chord_pitches,
-        piano_range=True,
-        inserted_states=True,
-    )
-
-    ioi_matrix = compute_ioi_matrix(
-        unique_onsets=unique_sonsets,
-        inserted_states=True,
-    )
-
-    score_positions = ioi_matrix[0]
-    n_states = len(score_positions)
-
-    observation_model = BernoulliGaussianPitchIOIObservationModel(
-        pitch_profiles=pitch_profiles,
-        ioi_matrix=ioi_matrix,
-        ioi_precision=1,
-    )
-
-    transition_matrix = (
-        gumbel_transition_matrix(  # TODO another possibilities? (Gaussian/Nakamura)
-            n_states=n_states,
-            inserted_states=True,
-        )
-    )
-
-    initial_probabilities = gumbel_init_dist(
-        n_states=n_states,
-    )
-
-    tempo_model = KalmanTempoModel(  # TODO another possibilities? (LinearSMS, JADAM)
-        init_score_onset=unique_sonsets.min(),
-        init_beat_period=60 / bpm,
-    )
-
-    matchmaker = PitchIOIHMM(
-        observation_model=observation_model,
-        transition_matrix=transition_matrix,
-        score_onsets=score_positions,
-        initial_probabilities=initial_probabilities,
-        has_insertions=True,
-        tempo_model=tempo_model,
-    )
-    return matchmaker
 
 
 def source_annotation(row, dataset):

@@ -318,9 +318,7 @@ def run_score_following(
             gt_for_check = np.column_stack(
                 [perf_annotations[:min_len], score_annots_for_gt[:min_len]]
             )
-        tracking = check_tracking(
-            wp_for_check, gt_for_check, config.frame_rate, mode="beat"
-        )
+        tracking = check_tracking(wp_for_check, gt_for_check)
         results["tracked"] = tracking["tracked"]
         results["max_deviation"] = tracking["max_deviation"]
         results["n_failed_segments"] = tracking["n_failed"]
@@ -332,10 +330,8 @@ def run_score_following(
             plot_tracking(
                 wp_for_check,
                 gt_for_check,
-                config.frame_rate,
                 title=f"{config.method} #{run_name}",
                 save_path=Path(save_dir) / f"tracking_{run_name}.png",
-                mode="beat",
             )
     except Exception:
         pass

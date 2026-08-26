@@ -1,7 +1,6 @@
 import argparse
 import copy
 import json
-import os
 import sys
 from collections import defaultdict
 from datetime import datetime
@@ -14,6 +13,14 @@ from eval import run_offline_alignment, run_score_following
 from matchmaker.matchmaker import DEFAULT_KWARGS
 from tabulate import tabulate
 from utils import (
+    AUDIO_METADATA_PATH as METADATA_PATH,
+    DATASET_DIR,
+    OUTPUT_DIR,
+    TEMPO_DEPENDENT_METHODS,
+    TEMPO_METADATA_PATH,
+    TOLERANCES_IN_BEATS,
+    TOLERANCES_IN_MS,
+    WORKING_DIR,
     AudioEvalConfig,
     compute_event_pooled_summary,
     save_config,
@@ -24,60 +31,25 @@ import wandb
 
 sys.setrecursionlimit(10000)
 
-DATASETS_ROOT = Path(
-    os.environ.get("MATCHMAKER_DATASETS_ROOT", "~/data")
-).expanduser()
-
-
-def dataset_directory(name: str, legacy_name: Optional[str] = None) -> Path:
-    """Prefer normalized bundle names, with legacy local names as fallback."""
-    normalized = DATASETS_ROOT / name
-    legacy = DATASETS_ROOT / (legacy_name or name)
-    return normalized if normalized.exists() or not legacy.exists() else legacy
-
-
-WORKING_DIR = Path(__file__).parent.parent
-DATASET_DIR = {
-    "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
-    "batik": Path("~/data/batik_plays_mozart").expanduser(),
-    "vienna": Path("~/data/vienna4x22").expanduser(),
-    "kraisler": dataset_directory("kraisler", "KRAISLER"),
-    "chorale": dataset_directory("chorale", "chorale-bricks"),
-    "urmp": dataset_directory("urmp", "URMP"),
-    "urmp-original": dataset_directory("urmp", "URMP"),
-    "synthetic-aud": dataset_directory("synthetic", "synthetic_performances"),
-    "winterreise": dataset_directory("winterreise"),
-    "zeilinger": Path("~/data/Zeilinger_data").expanduser(),
-}
-METADATA_PATH = {
-    "valid": WORKING_DIR / "data/metadata-validation.csv",
-    "example": WORKING_DIR / "data/metadata-example.csv",
-    "asap": WORKING_DIR / "data/reduced/metadata-asap.csv",
-    "batik": WORKING_DIR / "data/reduced/metadata-batik.csv",
-    "vienna": WORKING_DIR / "data/reduced/metadata-vienna.csv",
-    "kraisler": WORKING_DIR / "data/metadata-kraisler.csv",
-    "chorale": WORKING_DIR / "data/metadata-chorale.csv",
-    "urmp": WORKING_DIR / "data/metadata-urmp-trimmed.csv",
-    "urmp-original": WORKING_DIR / "data/metadata-urmp.csv",
-    "synthetic-aud": WORKING_DIR / "data/metadata-synthetic-aud.csv",
-    "winterreise": WORKING_DIR / "data/metadata-winterreise.csv",
-    "zeilinger": WORKING_DIR / "data/metadata-zeilinger-note.csv",
-}
-OUTPUT_DIR = WORKING_DIR / "output"
-TEMPO_DEPENDENT_METHODS = ["pfkorz"]
-TEMPO_METADATA_PATH = WORKING_DIR / "data/perf_tempo_estimate"
+DISPLAY_BEAT_TOLERANCES = (0.3, 0.5, 1.0)
+DISPLAY_MS_TOLERANCES = (300, 1000)
 DISPLAY_COLUMNS = [
     "Index",
     "Piece",
     "beat_mean",
     "beat_median",
-    "beat_0.3b",
-    "beat_0.5b",
-    "beat_1.0b",
+    *[
+        f"beat_{tolerance}b"
+        for tolerance in TOLERANCES_IN_BEATS
+        if tolerance in DISPLAY_BEAT_TOLERANCES
+    ],
     "ms_mean",
     "ms_median",
-    "ms_300ms",
-    "ms_1000ms",
+    *[
+        f"ms_{tolerance}ms"
+        for tolerance in TOLERANCES_IN_MS
+        if tolerance in DISPLAY_MS_TOLERANCES
+    ],
     "tracked",
 ]
 

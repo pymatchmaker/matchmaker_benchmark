@@ -8,24 +8,30 @@ Mirrors test_audio.py structure:
 """
 
 import argparse
+import copy
 import json
-import os
 import sys
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
 import partitura as pt
+import wandb
 
 from eval import run_evaluation
 from matchmaker import Matchmaker
 from matchmaker.matchmaker import DEFAULT_KWARGS
 from matchmaker.utils.eval import resolve_gt
 from utils import (
+    DATASET_DIR,
+    OUTPUT_DIR,
+    SYMBOLIC_METADATA_PATH as METADATA_PATH,
+    TEMPO_DEPENDENT_METHODS,
+    TEMPO_METADATA_PATH,
     TOLERANCES_IN_BEATS,
+    WORKING_DIR,
     SymbolicEvalConfig,
     compute_event_pooled_summary,
     save_config,
@@ -39,40 +45,6 @@ warnings.filterwarnings("ignore", category=UserWarning)
 sys.setrecursionlimit(10000)
 
 TRACKING_THRESHOLD = 0.5  # beats
-TRACKING_MIN_FAILS = 2
-
-WORKING_DIR = Path(__file__).parent.parent
-DATASETS_ROOT = Path(
-    os.environ.get("MATCHMAKER_DATASETS_ROOT", "~/data")
-).expanduser()
-
-
-def dataset_directory(name: str, legacy_name: Optional[str] = None) -> Path:
-    """Prefer normalized bundle names, with legacy local names as fallback."""
-    normalized = DATASETS_ROOT / name
-    legacy = DATASETS_ROOT / (legacy_name or name)
-    return normalized if normalized.exists() or not legacy.exists() else legacy
-
-
-DATASET_DIR = {
-    "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
-    "batik": Path("~/data/batik_plays_mozart").expanduser(),
-    "vienna": Path("~/data/vienna4x22").expanduser(),
-    "synthetic-sym": dataset_directory("synthetic", "synthetic_performances"),
-}
-METADATA_PATH = {
-    "valid": WORKING_DIR / "data/metadata-validation.csv",
-    "asap": WORKING_DIR / "data/reduced/metadata-asap.csv",
-    "batik": WORKING_DIR / "data/reduced/metadata-batik.csv",
-    "vienna": WORKING_DIR / "data/reduced/metadata-vienna.csv",
-    "example": WORKING_DIR / "data/metadata-example.csv",
-    "synthetic-sym": WORKING_DIR / "data/metadata-synthetic-sym.csv",
-}
-OUTPUT_DIR = WORKING_DIR / "output"
-
-TEMPO_DEPENDENT_METHODS = ["pfkorz"]
-
-TEMPO_METADATA_PATH = WORKING_DIR / "data/perf_tempo_estimate"
 
 
 def resolve_asset_path(path_value: str, raw_base_dir: Path) -> Path:
@@ -86,7 +58,11 @@ def resolve_asset_path(path_value: str, raw_base_dir: Path) -> Path:
 
 
 def run_tests_and_eval_by_dataset(
-    dataset_type, method, run_dir=None, save_plots=True
+    dataset_type,
+    method,
+    run_dir=None,
+    save_plots=True,
+    matchmaker_kwargs=None,
 ):
     """Run symbolic alignment for all pieces in a dataset."""
     metadata = pd.read_csv(METADATA_PATH[dataset_type])
@@ -116,7 +92,12 @@ def run_tests_and_eval_by_dataset(
 
         try:
             # Run alignment via Matchmaker (HMM or event-level OLTW)
-            mm_kwargs = DEFAULT_KWARGS["midi"].get(method, {}).copy()
+            base_kwargs = (
+                matchmaker_kwargs
+                if matchmaker_kwargs is not None
+                else DEFAULT_KWARGS["midi"].get(method, {})
+            )
+            mm_kwargs = copy.deepcopy(base_kwargs)
             mm = Matchmaker(
                 score_file=str(score_xml),
                 performance_file=str(perf_midi),
@@ -140,11 +121,8 @@ def run_tests_and_eval_by_dataset(
             tracking = check_tracking(
                 wp_T,
                 gt,
-                frame_rate=1,
                 segment_duration=30,
                 threshold=TRACKING_THRESHOLD,
-                mode="beat",
-                min_fails=TRACKING_MIN_FAILS,
             )
 
             nested = run_evaluation(
@@ -182,12 +160,9 @@ def run_tests_and_eval_by_dataset(
                     plot_tracking(
                         wp_T,
                         gt,
-                        frame_rate=1,
                         title=f"{method} #{i}",
                         save_path=run_dir / f"tracking_{i}.png",
-                        mode="beat",
                         threshold=TRACKING_THRESHOLD,
-                        min_fails=TRACKING_MIN_FAILS,
                     )
 
             status = "TRACKED" if tracking["tracked"] else "FAILED"
@@ -205,6 +180,28 @@ def run_tests_and_eval_by_dataset(
     return results
 
 
+def _resolve_sweep_value(key, value):
+    """Resolve class-valued W&B parameters used by Matchmaker."""
+    if key != "tempo_model" or not isinstance(value, str):
+        return value
+    from matchmaker.utils import tempo_models
+
+    try:
+        return getattr(tempo_models, value)
+    except AttributeError as exc:
+        raise ValueError(f"Unknown tempo model in sweep config: {value}") from exc
+
+
+def build_sweep_kwargs(method: str, wconfig) -> dict:
+    """Merge W&B sweep parameters into the current MIDI method defaults."""
+    method_kwargs = copy.deepcopy(DEFAULT_KWARGS.get("midi", {}).get(method, {}))
+    for key, value in wconfig.items():
+        if key in ("dataset", "input_type", "method"):
+            continue
+        method_kwargs[key] = _resolve_sweep_value(key, value)
+    return method_kwargs
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="MIDI score following benchmark (mirrors test_audio.py)"
@@ -212,7 +209,7 @@ def main():
     parser.add_argument(
         "--dataset",
         type=str,
-        default="asap",
+        default=None,
         choices=list(METADATA_PATH.keys()),
         help="Dataset to evaluate",
     )
@@ -228,22 +225,45 @@ def main():
         help="Skip saving per-piece tracking plots (faster evaluation)",
         default=False,
     )
+    parser.add_argument(
+        "--sweep", action="store_true", help="Run as a W&B sweep agent"
+    )
     args = parser.parse_args()
+    if args.sweep:
+        wandb.init(entity="matchmaker", project=f"symbolic-{args.method}-sweep")
 
     method = args.method
     dataset = args.dataset
-    processor = DEFAULT_KWARGS.get("midi", {}).get(method, {}).get("processor")
+    matchmaker_kwargs = None
+    if args.sweep:
+        method = wandb.config.get("method", method)
+        dataset = wandb.config.get("dataset", dataset)
+        if dataset is None:
+            parser.error("a sweep requires dataset in W&B config or --dataset")
+        matchmaker_kwargs = build_sweep_kwargs(method, wandb.config)
+    elif dataset is None:
+        dataset = "asap"
+    effective_kwargs = (
+        matchmaker_kwargs
+        if matchmaker_kwargs is not None
+        else DEFAULT_KWARGS.get("midi", {}).get(method, {})
+    )
+    processor = effective_kwargs.get("processor")
     config = SymbolicEvalConfig(method=method, dataset=dataset, processor=processor)
 
     ts = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
-    run_dir = OUTPUT_DIR / f"test_{ts}_sym_{method}_{dataset}"
+    if args.sweep:
+        run_dir = OUTPUT_DIR / f"sweep_sym_{method}_{ts}_{wandb.run.id}"
+    else:
+        run_dir = OUTPUT_DIR / f"test_{ts}_sym_{method}_{dataset}"
     run_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Method: {method}, Dataset: {dataset}, Output: {run_dir}")
 
     results = run_tests_and_eval_by_dataset(
         dataset, method, run_dir=run_dir,
-        save_plots=not args.no_plots,
+        save_plots=not args.sweep and not args.no_plots,
+        matchmaker_kwargs=matchmaker_kwargs,
     )
 
     n_total = len(results["Index"])
@@ -261,6 +281,16 @@ def main():
         print(f"Results saved to: {path}")
 
     save_config(config, run_dir)
+    if args.sweep:
+        wandb.log(
+            {
+                "average": summary_all,
+                "tracking_rate": summary_all["tracking_rate"],
+            }
+        )
+        if summary_tracked.get("tracked_count", 0) > 0:
+            wandb.log({"tracked_average": summary_tracked})
+        wandb.finish()
 
 
 if __name__ == "__main__":
