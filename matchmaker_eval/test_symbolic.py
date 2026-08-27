@@ -37,7 +37,6 @@ warnings.filterwarnings("ignore", category=UserWarning)
 sys.setrecursionlimit(10000)
 
 TRACKING_THRESHOLD = 0.5  # beats
-TRACKING_MIN_FAILS = 2
 
 WORKING_DIR = Path(__file__).parent.parent
 DATASET_DIR = {
@@ -114,11 +113,8 @@ def run_tests_and_eval_by_dataset(
             tracking = check_tracking(
                 wp_T,
                 gt,
-                frame_rate=1,
                 segment_duration=30,
                 threshold=TRACKING_THRESHOLD,
-                mode="beat",
-                min_fails=TRACKING_MIN_FAILS,
             )
 
             nested = run_evaluation(
@@ -156,12 +152,9 @@ def run_tests_and_eval_by_dataset(
                     plot_tracking(
                         wp_T,
                         gt,
-                        frame_rate=1,
                         title=f"{method} #{i}",
                         save_path=run_dir / f"tracking_{i}.png",
-                        mode="beat",
                         threshold=TRACKING_THRESHOLD,
-                        min_fails=TRACKING_MIN_FAILS,
                     )
 
             status = "TRACKED" if tracking["tracked"] else "FAILED"
