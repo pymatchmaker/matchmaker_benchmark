@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
+
 sys.setrecursionlimit(2**31 - 1)
 import argparse
 import os
@@ -28,7 +29,10 @@ from partitura.score import Score, Part, ScoreLike, merge_parts
 from partitura.utils.misc import PathLike
 
 from partitura.utils.music import performance_from_part, compute_pianoroll
-from partitura.musicanalysis.performance_codec import get_time_maps_from_alignment, to_matched_score
+from partitura.musicanalysis.performance_codec import (
+    get_time_maps_from_alignment,
+    to_matched_score,
+)
 from partitura.io.importmatch import load_matchfile
 
 from partitura_utils import (
@@ -41,7 +45,12 @@ from matchmaker.utils.symbolic import (
     framed_midi_messages_from_performance,
     midi_messages_from_performance,
 )
-from matchmaker.features.midi import PitchIOIProcessor, PitchProcessor, PianoRollProcessor, PitchClassPianoRollProcessor
+from matchmaker.features.midi import (
+    PitchIOIProcessor,
+    PitchProcessor,
+    PianoRollProcessor,
+    PitchClassPianoRollProcessor,
+)
 
 """from matchmaker.utils.accompanist_tempo_models import   (KalmanTempoSyncModel, 
                                                         ReactiveSyncModel,
@@ -53,21 +62,23 @@ from matchmaker.utils.tempo_models import (
     LinearTempoModel,
     MovingAverageTempoModel,
     ReactiveTempoModel,
-    JointAdaptationAnticipationModel
+    JointAdaptationAnticipationModel,
 )
 
 from matchmaker.utils.eval import (
     TOLERANCES_IN_BEATS,
     TOLERANCES_IN_MILLISECONDS,
     get_evaluation_results,
-    #transfer_from_perf_to_predicted_score,
-    #transfer_from_score_to_predicted_perf,
+    # transfer_from_perf_to_predicted_score,
+    # transfer_from_score_to_predicted_perf,
 )
 
 from mido import Message
+
 InputMIDIFrame = Tuple[List[Tuple[Message, float]], float]
 
 import warnings
+
 warnings.filterwarnings("ignore")
 
 DATASET_DIR = {
@@ -80,55 +91,56 @@ METADATA_PATH = {
     "validation": "../matchmaker_benchmark/data/metadata-validation.csv",
     "asap": "../matchmaker_benchmark/data/reduced/metadata-asap.csv",
     "batik": "../matchmaker_benchmark/data/reduced/metadata-batik.csv",
-    "vienna":"../matchmaker_benchmark/data/reduced/metadata-vienna.csv",
+    "vienna": "../matchmaker_benchmark/data/reduced/metadata-vienna.csv",
 }
 
-POLLING_PERIOD = None#0.01
+POLLING_PERIOD = None  # 0.01
 
 SAVE_RESULTS = True
 SAVE_ALIGNMENTS = True
 
 KWARGS = {
-    "audio":
-        {"arzt":
-            {"window_size": 5,
-             "start_window_size": 0.25,
-             "step_size" : 5,
-             },
-        "dixon":
-            {"window_size": 10,
-             },
+    "audio": {
+        "arzt": {
+            "window_size": 5,
+            "start_window_size": 0.25,
+            "step_size": 5,
         },
-    "midi": 
-        {"arzt": 
-            {"processor": "pianoroll",
-             "piano_range": True,
-             "window_size": 200,
-             "start_window_size": 200,
-             "step_size": 5,
-             },
-        "dixon":
-            {"processor": "pianoroll",
-             "piano_range": True,
-             "window_size": 30,
-             },
-        "hmm": 
-            {"processor": "pitch_chord",
-             "tempo_model": KalmanTempoModel,
-             "piano_range": True,
-             },
-        "pthmm":
-            {"processor": "pitch_chord", # "pitch"
-             "piano_range": True,
-             },
-        "outerhmm":
-            {"processor": "pitch_chord",
-             "piano_range": True,
-             },
+        "dixon": {
+            "window_size": 10,
         },
+    },
+    "midi": {
+        "arzt": {
+            "processor": "pianoroll",
+            "piano_range": True,
+            "window_size": 200,
+            "start_window_size": 200,
+            "step_size": 5,
+        },
+        "dixon": {
+            "processor": "pianoroll",
+            "piano_range": True,
+            "window_size": 30,
+        },
+        "hmm": {
+            "processor": "pitch_chord",
+            "tempo_model": KalmanTempoModel,
+            "piano_range": True,
+        },
+        "pthmm": {
+            "processor": "pitch_chord",  # "pitch"
+            "piano_range": True,
+        },
+        "outerhmm": {
+            "processor": "pitch_chord",
+            "piano_range": True,
+        },
+    },
 }
 
 # ============= helper functions =============
+
 
 def setup_match_file(
     solo_fn: List[PathLike],
@@ -154,7 +166,6 @@ def setup_match_file(
                     first_note_at_zero=True,
                 )
                 solo_ppart = solo_perf[0]
-                
 
             ptime_to_stime_map, stime_to_ptime_map = get_time_maps_from_alignment(
                 ppart_or_note_array=solo_ppart,
@@ -220,10 +231,13 @@ def compute_features_from_symbolic(
 
         outputs = []
         for frame, f_time in frames_array:
-            output = feature_processor(([[frame, f_time]], f_time))    # TODO: CHANGE IN matchmaker.features.midi as well ?
+            output = feature_processor(
+                ([[frame, f_time]], f_time)
+            )  # TODO: CHANGE IN matchmaker.features.midi as well ?
 
             outputs.append(output)
     return outputs, frame_times
+
 
 def compute_pianoroll_features(
     note_info: Union[ScoreLike, PerformanceLike],
@@ -263,7 +277,9 @@ def compute_pianoroll_features(
 
     return ref_frames
 
+
 # ============= main alignment function for a single performance =============
+
 
 def align(
     solo_perf_fn: PathLike,
@@ -273,79 +289,91 @@ def align(
     perf_midi,
     args,
     kwargs,
-    save_alignments=False
-):  
+    save_alignments=False,
+):
     config = kwargs[args.input_type][args.method]
 
     solo_perf, alignment = pt.load_match(
-                    filename=solo_perf_fn,
-                    create_score=False,
-                    first_note_at_zero=True,
-                )
+        filename=solo_perf_fn,
+        create_score=False,
+        first_note_at_zero=True,
+    )
     solo_ppart = solo_perf[0]
     score = pt.load_musicxml(reference_fn, ignore_invisible_objects=True)
 
-    if True: # unfold piece - only necessary if piece is not unfolded yet
-        update_ids = '-' in load_matchfile(solo_perf_fn).snotes[0].Anchor and '-' not in score.note_array()['id'][0]
-        score = pt.score.unfold_part_maximal(score, update_ids=update_ids, ignore_leaps=False)
+    if True:  # unfold piece - only necessary if piece is not unfolded yet
+        update_ids = (
+            "-" in load_matchfile(solo_perf_fn).snotes[0].Anchor
+            and "-" not in score.note_array()["id"][0]
+        )
+        score = pt.score.unfold_part_maximal(
+            score, update_ids=update_ids, ignore_leaps=False
+        )
 
     ptime_to_stime_map, stime_to_ptime_map = get_time_maps_from_alignment(
-                ppart_or_note_array=solo_ppart,
-                spart_or_note_array=score,
-                alignment=alignment,
-            )
-    
+        ppart_or_note_array=solo_ppart,
+        spart_or_note_array=score,
+        alignment=alignment,
+    )
+
     sna = score.note_array()
     pna = solo_ppart.note_array()
-    
-    matched_array = to_matched_score(score, solo_ppart, alignment)[0]['onset']
-    
-    processor_kwargs = dict({'piano_range': config['piano_range']})
+
+    matched_array = to_matched_score(score, solo_ppart, alignment)[0]["onset"]
+
+    processor_kwargs = dict({"piano_range": config["piano_range"]})
 
     feature_type = config["processor"]
     POLLING_PERIOD = None if args.method == "outerhmm" else 0.01
 
     if args.method == "hmm":
         processor_kwargs["return_pitch_list"] = True
-        
+
     elif args.method == "pthmm":
-        config["processor"] = 'pitch'
+        config["processor"] = "pitch"
         processor_kwargs["return_pitch_list"] = False
         feature_type = "pitch_chord"
-    
+
     elif args.method == "outerhmm":
         processor_kwargs["return_pitch_list"] = False
-        
-    if config["processor"] == "pianoroll" :
-        ref_frames = compute_pianoroll_features(note_info=solo_ppart, polling_period=POLLING_PERIOD)
+
+    if config["processor"] == "pianoroll":
+        ref_frames = compute_pianoroll_features(
+            note_info=solo_ppart, polling_period=POLLING_PERIOD
+        )
 
         input_signal = np.array(ref_frames).astype(np.float32)
-        frame_times = np.arange(1, len(input_signal)+1) * POLLING_PERIOD
-        
+        frame_times = np.arange(1, len(input_signal) + 1) * POLLING_PERIOD
+
     else:
-        input_signal, frame_times = compute_features_from_symbolic(ref_info=solo_ppart,processor_name=config["processor"], 
-                                                                processor_kwargs=processor_kwargs,
-                                                                polling_period=POLLING_PERIOD)
+        input_signal, frame_times = compute_features_from_symbolic(
+            ref_info=solo_ppart,
+            processor_name=config["processor"],
+            processor_kwargs=processor_kwargs,
+            polling_period=POLLING_PERIOD,
+        )
 
     mm = Matchmaker(
-    score_file=reference_fn, # the score file (musicxml) is used as reference feature
-    #reference_perf=reference_perf,
-    #reference_alignment=reference_alignment,
-    performance_file=perf_midi,
-    input_type=args.input_type,
-    feature_type=feature_type,
-    method=args.method,
-    kwargs=kwargs
+        score_file=reference_fn,  # the score file (musicxml) is used as reference feature
+        # reference_perf=reference_perf,
+        # reference_alignment=reference_alignment,
+        performance_file=perf_midi,
+        input_type=args.input_type,
+        feature_type=feature_type,
+        method=args.method,
+        kwargs=kwargs,
     )
-    
+
     predicted_sonsets, target_ponsets = [], []
 
     if config["processor"] == "pianoroll":
         current_idx = 0
         for i, frame in enumerate(input_signal):
             current_state = mm.score_follower(frame)
-            score_position = mm.score_follower.state_to_ref_time_map(current_state * POLLING_PERIOD)
-            
+            score_position = mm.score_follower.state_to_ref_time_map(
+                current_state * POLLING_PERIOD
+            )
+
             if score_position is not None:
                 try:
                     current_onset = mm.score_follower.score_positions[current_idx]
@@ -360,7 +388,9 @@ def align(
         for i, frame in enumerate(input_signal):
             if frame is not None:
                 current_state = mm.score_follower(frame)
-                mm_score_position = mm.score_follower.score_positions[current_state] # (= current_position)
+                mm_score_position = mm.score_follower.score_positions[
+                    current_state
+                ]  # (= current_position)
                 predicted_sonsets.append(mm_score_position)
                 target_ponsets.append(frame_times[i])
 
@@ -369,16 +399,20 @@ def align(
 
     set_matched_sonsets = set(matched_array)
     set_predicted_sonsets = set(predicted_sonsets)
-    tracking_ratio = len(set_matched_sonsets.intersection(set_predicted_sonsets))/len(set_matched_sonsets)
+    tracking_ratio = len(set_matched_sonsets.intersection(set_predicted_sonsets)) / len(
+        set_matched_sonsets
+    )
 
-    mapped_predicted_ponsets = stime_to_ptime_map(predicted_sonsets)    
+    mapped_predicted_ponsets = stime_to_ptime_map(predicted_sonsets)
 
     list_of_nans = []
     asynchrony = mapped_predicted_ponsets - target_ponsets
     if np.count_nonzero(np.isnan(asynchrony)) > 0:
         list_of_nans = np.where(np.isnan(asynchrony))
-        print(f'Warning: asynchrony array contains {np.count_nonzero(np.isnan(asynchrony))} NaNs!')
-    
+        print(
+            f"Warning: asynchrony array contains {np.count_nonzero(np.isnan(asynchrony))} NaNs!"
+        )
+
     tolerances_in_seconds = [10, 25, 50, 100, 200, 300, 500, 1000, 2000]
     results_in_seconds = get_evaluation_results(
         mapped_predicted_ponsets,
@@ -401,25 +435,43 @@ def align(
     gt_ponsets = pna["onset_sec"]
     gt_sonsets = sna["onset_beat"]
 
-    predicted_alignments = target_ponsets, mapped_predicted_ponsets, predicted_sonsets, mapped_target_sonsets, gt_ponsets, gt_sonsets
+    predicted_alignments = (
+        target_ponsets,
+        mapped_predicted_ponsets,
+        predicted_sonsets,
+        mapped_target_sonsets,
+        gt_ponsets,
+        gt_sonsets,
+    )
 
     if save_alignments:
         results_path = os.path.join("predicted_alignments", args.method, args.dataset)
         os.makedirs(results_path, exist_ok=True)
 
-        alignment_fn = solo_perf_fn.replace(str(DATASET_DIR[args.dataset]),'')[1:].replace("/", "-").replace(".match", ".csv")
+        alignment_fn = (
+            solo_perf_fn.replace(str(DATASET_DIR[args.dataset]), "")[1:]
+            .replace("/", "-")
+            .replace(".match", ".csv")
+        )
         alignment_fn = os.path.join(results_path, alignment_fn)
 
-        with open(alignment_fn, 'w') as f:
+        with open(alignment_fn, "w") as f:
             writer = csv.writer(f)
-            writer.writerow(['target_ponsets', 'mapped_predicted_ponsets', 'predicted_sonsets', 'mapped_target_sonsets'])
+            writer.writerow(
+                [
+                    "target_ponsets",
+                    "mapped_predicted_ponsets",
+                    "predicted_sonsets",
+                    "mapped_target_sonsets",
+                ]
+            )
             writer.writerows(zip(predicted_alignments))
 
         plt.plot(gt_sonsets, gt_sonsets, label="gt")
         plt.plot(predicted_sonsets, mapped_target_sonsets, label="predicted")
-        plt.xlabel('predicted sonsets')
-        plt.ylabel('mapped target sonsets')
-        plt.title('Sonsets')
+        plt.xlabel("predicted sonsets")
+        plt.ylabel("mapped target sonsets")
+        plt.title("Sonsets")
         plt.legend()
         plt.savefig(alignment_fn.replace(".csv", ".png"))
         plt.clf()
@@ -432,87 +484,93 @@ def align(
         plt.legend()
         plt.savefig(alignment_fn.replace(".csv", "-p.png"))
         plt.clf()"""
-        
+
         config_fn = os.path.join(results_path, "config.yaml")
-        with open(config_fn, 'w') as f:
-            yaml.dump(mm.config, f, default_flow_style=False)  
+        with open(config_fn, "w") as f:
+            yaml.dump(mm.config, f, default_flow_style=False)
 
-    result = dict({'tracking_ratio': f'{tracking_ratio:.3f}',
-                    'AAE (ms) ± σ': f'{results_in_seconds["mean"]:.3f}±{results_in_seconds["std"]:.3f}',
-                    'MAE (ms)': f'{results_in_seconds["median"]:.3f}', 
-                    'skewness (ms)': f'{results_in_seconds["skewness"]:.3f}',
-                    'kurtosis (ms)': f'{results_in_seconds["kurtosis"]:.3f}',
-                    '<10ms': f'{results_in_seconds["10ms"]*100:.1f}',
-                    '<25ms': f'{results_in_seconds["25ms"]*100:.1f}',
-                    '<50ms': f'{results_in_seconds["50ms"]*100:.1f}',
-                    '<100ms': f'{results_in_seconds["100ms"]*100:.1f}',
-                    '<500ms': f'{results_in_seconds["500ms"]*100:.1f}',
-                    '<1000ms': f'{results_in_seconds["1000ms"]*100:.1f}',
-                    '<2000ms': f'{results_in_seconds["2000ms"]*100:.1f}',
-                    'count (ms)': f'{results_in_seconds["count"]}',
-                    'pcr (ms)': f'{results_in_seconds["pcr"]:.3f}',
-                    'AAE (beats) ± σ': f'{beat_results["mean"]:.2f}±{beat_results["std"]:.2f}',
-                    'MAE (beats)': f'{beat_results["median"]:.2f}', 
-                    '<0.05b': f'{beat_results["0.05b"]*100:.1f}',
-                    '<0.1b': f'{beat_results["0.1b"]*100:.1f}',
-                    '<0.5b': f'{beat_results["0.5b"]*100:.1f}',
-                    '<1b': f'{beat_results["1b"]*100:.1f}',
-                    '<2b': f'{beat_results["2b"]*100:.1f}',
-                    'count (beats)': f'{beat_results["count"]}',
-                    'pcr (beats)': f'{beat_results["pcr"]:.3f}',
-                    
-                })
-    
-    result_ext = dict({'tracking_ratio': tracking_ratio,
-                    'AAE': results_in_seconds["mean"], 
-                    'std': results_in_seconds["std"],
-                    'MAE': results_in_seconds["median"], 
-                    'skewness (ms)': results_in_seconds["skewness"],
-                    'kurtosis (ms)': results_in_seconds["kurtosis"],
-                    '%_lt_10ms': results_in_seconds["10ms"]*100,
-                    '%_lt_25ms': results_in_seconds["25ms"]*100,
-                    '%_lt_50ms': results_in_seconds["50ms"]*100,
-                    '%_lt_100ms': results_in_seconds["100ms"]*100,
-                    '%_lt_200ms': results_in_seconds["200ms"]*100,
-                    '%_lt_300ms': results_in_seconds["300ms"]*100,
-                    '%_lt_500ms': results_in_seconds["500ms"]*100,
-                    '%_lt_1000ms': results_in_seconds["1000ms"]*100,
-                    '%_lt_2000ms': results_in_seconds["2000ms"]*100,
-                    'count (ms)': results_in_seconds["count"],
-                    'pcr (ms)': results_in_seconds["pcr"],
-                    'AAE (beats)': beat_results["mean"],
-                    'MAE (beats)': beat_results["median"], 
-                    'std (beats)': beat_results["std"],
-                    'skewness (beats)': beat_results["skewness"],
-                    'kurtosis (beats)': beat_results["kurtosis"],
-                    '%_lt_<0.05b': beat_results["0.05b"]*100,
-                    '%_lt_<0.1b': beat_results["0.1b"]*100,
-                    '%_lt_<0.3b': beat_results["0.3b"]*100,
-                    '%_lt_<0.5b': beat_results["0.5b"]*100,
-                    '%_lt_<1b': beat_results["1b"]*100,
-                    '%_lt_<2b': beat_results["2b"]*100,
-                    'count (beats)': beat_results["count"],
-                    'pcr (beats)': beat_results["pcr"],
-                    })
+    result = dict(
+        {
+            "tracking_ratio": f"{tracking_ratio:.3f}",
+            "AAE (ms) ± σ": f'{results_in_seconds["mean"]:.3f}±{results_in_seconds["std"]:.3f}',
+            "MAE (ms)": f'{results_in_seconds["median"]:.3f}',
+            "skewness (ms)": f'{results_in_seconds["skewness"]:.3f}',
+            "kurtosis (ms)": f'{results_in_seconds["kurtosis"]:.3f}',
+            "<10ms": f'{results_in_seconds["10ms"]*100:.1f}',
+            "<25ms": f'{results_in_seconds["25ms"]*100:.1f}',
+            "<50ms": f'{results_in_seconds["50ms"]*100:.1f}',
+            "<100ms": f'{results_in_seconds["100ms"]*100:.1f}',
+            "<500ms": f'{results_in_seconds["500ms"]*100:.1f}',
+            "<1000ms": f'{results_in_seconds["1000ms"]*100:.1f}',
+            "<2000ms": f'{results_in_seconds["2000ms"]*100:.1f}',
+            "count (ms)": f'{results_in_seconds["count"]}',
+            "pcr (ms)": f'{results_in_seconds["pcr"]:.3f}',
+            "AAE (beats) ± σ": f'{beat_results["mean"]:.2f}±{beat_results["std"]:.2f}',
+            "MAE (beats)": f'{beat_results["median"]:.2f}',
+            "<0.05b": f'{beat_results["0.05b"]*100:.1f}',
+            "<0.1b": f'{beat_results["0.1b"]*100:.1f}',
+            "<0.5b": f'{beat_results["0.5b"]*100:.1f}',
+            "<1b": f'{beat_results["1b"]*100:.1f}',
+            "<2b": f'{beat_results["2b"]*100:.1f}',
+            "count (beats)": f'{beat_results["count"]}',
+            "pcr (beats)": f'{beat_results["pcr"]:.3f}',
+        }
+    )
 
-    
+    result_ext = dict(
+        {
+            "tracking_ratio": tracking_ratio,
+            "AAE": results_in_seconds["mean"],
+            "std": results_in_seconds["std"],
+            "MAE": results_in_seconds["median"],
+            "skewness (ms)": results_in_seconds["skewness"],
+            "kurtosis (ms)": results_in_seconds["kurtosis"],
+            "%_lt_10ms": results_in_seconds["10ms"] * 100,
+            "%_lt_25ms": results_in_seconds["25ms"] * 100,
+            "%_lt_50ms": results_in_seconds["50ms"] * 100,
+            "%_lt_100ms": results_in_seconds["100ms"] * 100,
+            "%_lt_200ms": results_in_seconds["200ms"] * 100,
+            "%_lt_300ms": results_in_seconds["300ms"] * 100,
+            "%_lt_500ms": results_in_seconds["500ms"] * 100,
+            "%_lt_1000ms": results_in_seconds["1000ms"] * 100,
+            "%_lt_2000ms": results_in_seconds["2000ms"] * 100,
+            "count (ms)": results_in_seconds["count"],
+            "pcr (ms)": results_in_seconds["pcr"],
+            "AAE (beats)": beat_results["mean"],
+            "MAE (beats)": beat_results["median"],
+            "std (beats)": beat_results["std"],
+            "skewness (beats)": beat_results["skewness"],
+            "kurtosis (beats)": beat_results["kurtosis"],
+            "%_lt_<0.05b": beat_results["0.05b"] * 100,
+            "%_lt_<0.1b": beat_results["0.1b"] * 100,
+            "%_lt_<0.3b": beat_results["0.3b"] * 100,
+            "%_lt_<0.5b": beat_results["0.5b"] * 100,
+            "%_lt_<1b": beat_results["1b"] * 100,
+            "%_lt_<2b": beat_results["2b"] * 100,
+            "count (beats)": beat_results["count"],
+            "pcr (beats)": beat_results["pcr"],
+        }
+    )
+
     return result, result_ext, list_of_nans, predicted_alignments
+
 
 # ============= run the alignment for each performance in a specified dataset =============
 
+
 def run_tests_and_eval_by_dataset(args, kwargs):
-    path = os.path.join(f'results')
+    path = os.path.join(f"results")
     os.makedirs(path, exist_ok=True)
 
-    keys = '88' if kwargs[args.input_type][args.method]["piano_range"] else '128' 
+    keys = "88" if kwargs[args.input_type][args.method]["piano_range"] else "128"
     if args.method == "hmm":
         name = f'{args.dataset}:{args.method}-{keys}-{args.input_type}-{kwargs[args.input_type][args.method]["tempo_model"].__name__}'
     else:
-        name = f'{args.dataset}:{args.method}-{keys}-{args.input_type}'
-        
-    csv_path = os.path.join(path, name + '.csv')
-    issue_path = os.path.join(path, 'issues-' + name + '.csv')
-    
+        name = f"{args.dataset}:{args.method}-{keys}-{args.input_type}"
+
+    csv_path = os.path.join(path, name + ".csv")
+    issue_path = os.path.join(path, "issues-" + name + ".csv")
+
     dataset_dir = DATASET_DIR[args.dataset]
     metadata = pd.read_csv(METADATA_PATH[args.dataset])
     results = pd.DataFrame()
@@ -520,35 +578,37 @@ def run_tests_and_eval_by_dataset(args, kwargs):
 
     if args.wandb:
         wandb.init(
-        entity="darthalexus",
-        project=f'matchmaker-symbolic',
-        config = kwargs[args.input_type][args.method],
-        name=name,
+            entity="darthalexus",
+            project=f"matchmaker-symbolic",
+            config=kwargs[args.input_type][args.method],
+            name=name,
         )
 
-    print(f'{name} - {SAVE_RESULTS=} - {SAVE_ALIGNMENTS=}')
-    
+    print(f"{name} - {SAVE_RESULTS=} - {SAVE_ALIGNMENTS=}")
+
     for i, row in enumerate(metadata.itertuples(), 1):
-        #if i < 17:
+        # if i < 17:
         #    continue
         if args.dataset == "validation":
             dataset_dir = DATASET_DIR[row.dataset]
 
         if args.perf2perf == True:
-            raise NotImplementedError("TODO: uncomment reference_perf and reference_alignment in matchmaker class initialization (lines 332-333) after successful feature integration")
+            raise NotImplementedError(
+                "TODO: uncomment reference_perf and reference_alignment in matchmaker class initialization (lines 332-333) after successful feature integration"
+            )
             reference_match = str(dataset_dir / row.match)
 
             reference_perf, ref_alignment = pt.load_match(
-                    filename=reference_match,
-                    create_score=False,
-                    first_note_at_zero=True,
-                    )
+                filename=reference_match,
+                create_score=False,
+                first_note_at_zero=True,
+            )
         else:
             reference_perf = None
             ref_alignment = None
 
         reference_fn = str(dataset_dir / row.xml_score)
-        #if args.dataset == 'vienna':
+        # if args.dataset == 'vienna':
         #    score_xml = dataset_dir / Path('musicxml_corrected'+row.xml_score[8:])
 
         match = str(dataset_dir / row.match)
@@ -559,96 +619,114 @@ def run_tests_and_eval_by_dataset(args, kwargs):
             perf = perf_midi
         else:
             perf = perf_audio
-        
-        result = dict({'composer': row.composer, 'title': row.title, 'performance': perf.stem})
-        result_extended = dict({'composer': row.composer, 'title': row.title, 'performance': perf.stem})
+
+        result = dict(
+            {"composer": row.composer, "title": row.title, "performance": perf.stem}
+        )
+        result_extended = dict(
+            {"composer": row.composer, "title": row.title, "performance": perf.stem}
+        )
 
         print(row.title)
 
         ######################################## the magic happens here: ########################################
-        res, res_extended, list_of_nans, _ = align(solo_perf_fn=match, 
-                                  reference_fn=reference_fn, 
-                                  reference_perf=reference_perf,
-                                  reference_alignment=ref_alignment,
-                                  perf_midi=str(perf),
-                                  args=args,
-                                  kwargs=kwargs,
-                                  save_alignments=SAVE_ALIGNMENTS)
+        res, res_extended, list_of_nans, _ = align(
+            solo_perf_fn=match,
+            reference_fn=reference_fn,
+            reference_perf=reference_perf,
+            reference_alignment=ref_alignment,
+            perf_midi=str(perf),
+            args=args,
+            kwargs=kwargs,
+            save_alignments=SAVE_ALIGNMENTS,
+        )
         #########################################################################################################
 
         if issues.empty:
-            issues = pd.DataFrame(columns=['composer', 'title', 'performance', '#Nans', 'Nans'])
+            issues = pd.DataFrame(
+                columns=["composer", "title", "performance", "#Nans", "Nans"]
+            )
         if len(list_of_nans) > 0:
-            issues.loc[len(issues)] = dict({'composer': row.composer, 'title': row.title, 'performance': perf.stem, '#Nans': len(list_of_nans[0]), 'Nans': list_of_nans[0]})
+            issues.loc[len(issues)] = dict(
+                {
+                    "composer": row.composer,
+                    "title": row.title,
+                    "performance": perf.stem,
+                    "#Nans": len(list_of_nans[0]),
+                    "Nans": list_of_nans[0],
+                }
+            )
             if SAVE_RESULTS:
                 issues.to_csv(issue_path, index=False)
 
         result.update(res)
         result_extended.update(res_extended)
-        
+
         if results.empty:
             results = pd.DataFrame(columns=result.keys())
             results_extended = pd.DataFrame(columns=result_extended.keys())
-            
+
         results.loc[len(results)] = result
         results_extended.loc[len(results)] = result_extended
-        
+
         print(results)
         if SAVE_RESULTS:
             results.to_csv(csv_path, index=False)
 
-    final_res = dict({
-                    'tracking ratio': f'{np.mean(results_extended["tracking_ratio"]):.3f}',
-                    'AAE (ms) ± σ': f'{np.mean(results_extended["AAE"]):.3f}±{np.mean(results_extended["std"]):.3f}', 
-                    'MAE (ms)': f'{np.mean(results_extended["MAE"]):.3f}', 
-                    'skewness (ms)': f'{np.mean(results_extended["skewness (ms)"]):.3f}',
-                    'kurtosis (ms)': f'{np.mean(results_extended["kurtosis (ms)"]):.3f}',
-                    '<10ms': f'{np.mean(results_extended["%_lt_10ms"]):.1f}',
-                    '<25ms': f'{np.mean(results_extended["%_lt_25ms"]):.1f}',
-                    '<50ms': f'{np.mean(results_extended["%_lt_50ms"]):.1f}',
-                    '<100ms': f'{np.mean(results_extended["%_lt_100ms"]):.1f}',
-                    '<500ms': f'{np.mean(results_extended["%_lt_500ms"]):.1f}',
-                    '<1000ms': f'{np.mean(results_extended["%_lt_1000ms"]):.1f}',
-                    '<2000ms': f'{np.mean(results_extended["%_lt_2000ms"]):.1f}',
-                    'count (ms)': f'{np.mean(results_extended["count (ms)"]):.3f}',
-                    'pcr (ms)': f'{np.mean(results_extended["pcr (ms)"]):.3f}',
-                    'AAE (beats) ± σ': f'{np.mean(results_extended["AAE (beats)"]):.3f}±{np.mean(results_extended["std (beats)"]):.3f}', 
-                    'MAE (beats)': f'{np.mean(results_extended["MAE (beats)"]):.3f}', 
-                    'skewness (beats)': f'{np.mean(results_extended["skewness (beats)"]):.3f}',
-                    'kurtosis (beats)': f'{np.mean(results_extended["kurtosis (beats)"]):.3f}',
-                    '<0.05b': f'{np.mean(results_extended["%_lt_<0.05b"]):.1f}',
-                    '<0.1b': f'{np.mean(results_extended["%_lt_<0.1b"]):.1f}',
-                    '<0.5b': f'{np.mean(results_extended["%_lt_<0.5b"]):.1f}',
-                    '<1b': f'{np.mean(results_extended["%_lt_<1b"]):.1f}',
-                    '<2b': f'{np.mean(results_extended["%_lt_<2b"]):.1f}',
-                    'count (beats)': f'{np.mean(results_extended["count (beats)"]):.3f}',
-                    'pcr (beats)': f'{np.mean(results_extended["pcr (beats)"]):.3f}',
-                    })
+    final_res = dict(
+        {
+            "tracking ratio": f'{np.mean(results_extended["tracking_ratio"]):.3f}',
+            "AAE (ms) ± σ": f'{np.mean(results_extended["AAE"]):.3f}±{np.mean(results_extended["std"]):.3f}',
+            "MAE (ms)": f'{np.mean(results_extended["MAE"]):.3f}',
+            "skewness (ms)": f'{np.mean(results_extended["skewness (ms)"]):.3f}',
+            "kurtosis (ms)": f'{np.mean(results_extended["kurtosis (ms)"]):.3f}',
+            "<10ms": f'{np.mean(results_extended["%_lt_10ms"]):.1f}',
+            "<25ms": f'{np.mean(results_extended["%_lt_25ms"]):.1f}',
+            "<50ms": f'{np.mean(results_extended["%_lt_50ms"]):.1f}',
+            "<100ms": f'{np.mean(results_extended["%_lt_100ms"]):.1f}',
+            "<500ms": f'{np.mean(results_extended["%_lt_500ms"]):.1f}',
+            "<1000ms": f'{np.mean(results_extended["%_lt_1000ms"]):.1f}',
+            "<2000ms": f'{np.mean(results_extended["%_lt_2000ms"]):.1f}',
+            "count (ms)": f'{np.mean(results_extended["count (ms)"]):.3f}',
+            "pcr (ms)": f'{np.mean(results_extended["pcr (ms)"]):.3f}',
+            "AAE (beats) ± σ": f'{np.mean(results_extended["AAE (beats)"]):.3f}±{np.mean(results_extended["std (beats)"]):.3f}',
+            "MAE (beats)": f'{np.mean(results_extended["MAE (beats)"]):.3f}',
+            "skewness (beats)": f'{np.mean(results_extended["skewness (beats)"]):.3f}',
+            "kurtosis (beats)": f'{np.mean(results_extended["kurtosis (beats)"]):.3f}',
+            "<0.05b": f'{np.mean(results_extended["%_lt_<0.05b"]):.1f}',
+            "<0.1b": f'{np.mean(results_extended["%_lt_<0.1b"]):.1f}',
+            "<0.5b": f'{np.mean(results_extended["%_lt_<0.5b"]):.1f}',
+            "<1b": f'{np.mean(results_extended["%_lt_<1b"]):.1f}',
+            "<2b": f'{np.mean(results_extended["%_lt_<2b"]):.1f}',
+            "count (beats)": f'{np.mean(results_extended["count (beats)"]):.3f}',
+            "pcr (beats)": f'{np.mean(results_extended["pcr (beats)"]):.3f}',
+        }
+    )
 
     final_results = pd.DataFrame(final_res, index=[args.dataset])
 
-    print(f'finished.\n\nFINAL_RESULTS:\n{name} - SAVE_RESULTS={SAVE_RESULTS}\n')
+    print(f"finished.\n\nFINAL_RESULTS:\n{name} - SAVE_RESULTS={SAVE_RESULTS}\n")
     print(final_results)
     if SAVE_RESULTS:
-        final_csv_path = os.path.join(path,'final')
+        final_csv_path = os.path.join(path, "final")
         os.makedirs(final_csv_path, exist_ok=True)
-        final_csv_path = os.path.join(final_csv_path, f'{name}.csv')
+        final_csv_path = os.path.join(final_csv_path, f"{name}.csv")
         final_results.to_csv(final_csv_path, index=False)
 
     if args.wandb:
         individual_table = wandb.Table(results.columns, results)
-        wandb.log({f'individual_results - {name}': individual_table})
+        wandb.log({f"individual_results - {name}": individual_table})
         final_table = wandb.Table(final_results.columns, final_results)
-        wandb.log({f'final_results - {name}': final_table})
+        wandb.log({f"final_results - {name}": final_table})
         wandb.finish()
-    
+
     return results
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description="Run an offline alignment experiment."# For further configs, use config/experiment.yaml"
+        description="Run an offline alignment experiment."  # For further configs, use config/experiment.yaml"
     )
     parser.add_argument(
         "--dataset",
@@ -672,7 +750,10 @@ if __name__ == "__main__":
         help="Input type to use (audio or midi)",
     )
     parser.add_argument(
-        "--perf2perf", action="store_true", help="use performance as reference", default=False
+        "--perf2perf",
+        action="store_true",
+        help="use performance as reference",
+        default=False,
     )
     parser.add_argument(
         "--wandb", action="store_true", help="report results to wandb", default=False

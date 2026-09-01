@@ -39,7 +39,6 @@ from utils import (
 )
 from verify_tracking import check_tracking, plot_tracking
 
-
 # ---------------------------------------------------------------------------
 # Evaluation against ground truth (post-processing of a completed Matchmaker run)
 # ---------------------------------------------------------------------------
@@ -452,11 +451,16 @@ def run_offline_alignment(
     predicted = transfer_offline_positions(wp, perf_annots, config.frame_rate)
     predicted_beats = np.interp(predicted, score_annots, score_beats)
     beat_res = get_evaluation_results(
-        score_beats, predicted_beats, total_counts=len(score_beats),
-        tolerances=TOLERANCES_IN_BEATS, in_seconds=False,
+        score_beats,
+        predicted_beats,
+        total_counts=len(score_beats),
+        tolerances=TOLERANCES_IN_BEATS,
+        in_seconds=False,
     )
     ms_res = get_evaluation_results(
-        score_annots, predicted, total_counts=len(score_annots),
+        score_annots,
+        predicted,
+        total_counts=len(score_annots),
         tolerances=TOLERANCES_IN_MS,
     )
     results = {f"beat_{k}": v for k, v in beat_res.items()}

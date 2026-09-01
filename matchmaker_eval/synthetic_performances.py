@@ -532,8 +532,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser("Generate synthetic performances")
 
-    parser.add_argument("--filename", "-f", default=None, help="Score in MusicXML format",
-                        )
+    parser.add_argument(
+        "--filename",
+        "-f",
+        default=None,
+        help="Score in MusicXML format",
+    )
     parser.add_argument(
         "--type",
         "-t",

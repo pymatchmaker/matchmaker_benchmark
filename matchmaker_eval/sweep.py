@@ -10,7 +10,6 @@ import os
 
 from eval_symbolic import align
 
-
 DATASET_DIR = {
     "validation": Path("/home/alexander-neuhauser/datasets"),
     "asap": Path("/home/alexander-neuhauser/datasets/asap-dataset-matchmaker"),

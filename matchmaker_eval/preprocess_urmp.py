@@ -104,7 +104,9 @@ def main():
         perf_onsets, perf_pitches = load_merged_perf(piece_dir)
         aligned = match_by_pitch(note_pitches, perf_pitches, perf_onsets)
         valid = np.isfinite(aligned)
-        aligned = np.interp(np.arange(len(aligned)), np.flatnonzero(valid), aligned[valid])
+        aligned = np.interp(
+            np.arange(len(aligned)), np.flatnonzero(valid), aligned[valid]
+        )
 
         beats = np.unique(note_beats)
         perf = np.array([aligned[note_beats == b].min() for b in beats])
@@ -115,14 +117,18 @@ def main():
             perf = perf - trim_offset
             audio, sr = sf.read(str(original))
             trimmed = piece_dir / f"AuMix_{row.folder}_trim.wav"
-            sf.write(str(trimmed), audio[int(trim_offset * sr):], sr)
+            sf.write(str(trimmed), audio[int(trim_offset * sr) :], sr)
             audio_name = trimmed.name
             print(f"[{i}] {row.folder}: trimmed {trim_offset:.2f}s")
 
         gt = np.column_stack([perf, beats])
         np.savetxt(
-            GT_DIR / f"{i}.tsv", gt, fmt="%.6f", delimiter="\t",
-            header="perf_sec\tscore_beat", comments="",
+            GT_DIR / f"{i}.tsv",
+            gt,
+            fmt="%.6f",
+            delimiter="\t",
+            header="perf_sec\tscore_beat",
+            comments="",
         )
         audio_col.append(audio_name)
 

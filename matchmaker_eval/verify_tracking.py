@@ -112,9 +112,7 @@ def check_tracking(
     reduced_scores = np.empty(len(unique_times))
     for g in range(len(unique_times)):
         start = first_idx[g]
-        end = (
-            first_idx[g + 1] if g + 1 < len(unique_times) else len(wp_score_sorted)
-        )
+        end = first_idx[g + 1] if g + 1 < len(unique_times) else len(wp_score_sorted)
         reduced_scores[g] = wp_score_sorted[end - 1]  # last (final decision)
 
     indices = np.searchsorted(unique_times, gt_perf, side="right") - 1
@@ -126,9 +124,7 @@ def check_tracking(
 
     # Cover full performance duration so early tracker death is penalized
     finite_gt = gt_perf[np.isfinite(gt_perf)]
-    total_dur = (
-        max(wp_perf[-1], finite_gt[-1]) if len(finite_gt) > 0 else wp_perf[-1]
-    )
+    total_dur = max(wp_perf[-1], finite_gt[-1]) if len(finite_gt) > 0 else wp_perf[-1]
     n_segments = max(1, int(np.ceil(total_dur / segment_duration)))
     segments = []
 
@@ -234,9 +230,7 @@ def plot_tracking(
     reduced_scores = np.empty(len(unique_times))
     for g in range(len(unique_times)):
         start = first_idx[g]
-        end = (
-            first_idx[g + 1] if g + 1 < len(unique_times) else len(wp_sc_sorted)
-        )
+        end = first_idx[g + 1] if g + 1 < len(unique_times) else len(wp_sc_sorted)
         reduced_scores[g] = wp_sc_sorted[end - 1]
     indices = np.searchsorted(unique_times, gt_perf, side="right") - 1
     predicted_score = np.full(len(gt_score), np.nan)

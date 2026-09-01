@@ -52,9 +52,7 @@ METADATA_PATH = {
 OUTPUT_DIR = WORKING_DIR / "output"
 
 
-def run_tests_and_eval_by_dataset(
-    dataset_type, method, run_dir=None, save_plots=True
-):
+def run_tests_and_eval_by_dataset(dataset_type, method, run_dir=None, save_plots=True):
     """Run symbolic alignment for all pieces in a dataset."""
     metadata = pd.read_csv(METADATA_PATH[dataset_type])
     is_valid = dataset_type in ("valid", "example")
@@ -131,8 +129,22 @@ def run_tests_and_eval_by_dataset(
 
             # Save WP/GT — column order: perf_sec, score_beat
             if run_dir is not None:
-                np.savetxt(run_dir / f"wp_{i}.tsv", wp_T, delimiter="\t", fmt="%.6f", header="perf_sec\tscore_beat", comments="")
-                np.savetxt(run_dir / f"gt_{i}.tsv", gt, delimiter="\t", fmt="%.6f", header="perf_sec\tscore_beat", comments="")
+                np.savetxt(
+                    run_dir / f"wp_{i}.tsv",
+                    wp_T,
+                    delimiter="\t",
+                    fmt="%.6f",
+                    header="perf_sec\tscore_beat",
+                    comments="",
+                )
+                np.savetxt(
+                    run_dir / f"gt_{i}.tsv",
+                    gt,
+                    delimiter="\t",
+                    fmt="%.6f",
+                    header="perf_sec\tscore_beat",
+                    comments="",
+                )
                 with open(run_dir / f"{i}.json", "w") as f:
                     json.dump(nested, f, indent=4, default=float)
                 if save_plots:
@@ -198,7 +210,9 @@ def main():
     print(f"Method: {method}, Dataset: {dataset}, Output: {run_dir}")
 
     results = run_tests_and_eval_by_dataset(
-        dataset, method, run_dir=run_dir,
+        dataset,
+        method,
+        run_dir=run_dir,
         save_plots=not args.no_plots,
     )
 

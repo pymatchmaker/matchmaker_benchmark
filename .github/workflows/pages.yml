@@ -1,0 +1,55 @@
+# Publish the leaderboard to GitHub Pages.
+#
+# The site is docs/ plus a copy of results/leaderboard.json, so the page is a
+# static read of exactly the file the evaluation workflow committed.
+name: Publish leaderboard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "results/leaderboard.json"
+      - "docs/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble the site
+        run: |
+          mkdir -p _site
+          cp -r docs/. _site/
+          cp results/leaderboard.json _site/leaderboard.json
+          cp results/leaderboard.csv _site/leaderboard.csv
+          # Per-entry detail: dataset breakdowns, per-piece rows and the
+          # alignment paths the page plots. Loaded on demand, not upfront.
+          mkdir -p _site/details
+          cp -r results/details/. _site/details/ 2>/dev/null || true
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

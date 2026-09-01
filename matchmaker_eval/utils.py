@@ -63,8 +63,6 @@ class SymbolicEvalConfig(BaseSettings):
     attr_exp: list[str] = ["method", "processor", "dataset"]
 
 
-
-
 def save_config(config, save_dir):
     config_path = save_dir / "config.yaml"
     with open(config_path, "w") as f:
@@ -74,7 +72,6 @@ def save_config(config, save_dir):
             if not k.startswith("__") and not k.startswith("attr_")
         }
         yaml.dump(config_dict, f)
-
 
 
 def compute_event_pooled_summary(
@@ -129,9 +126,7 @@ def compute_event_pooled_summary(
 
         # Perf → score prediction (beat metrics)
         valid_gt_perf = np.isfinite(gt_perf)
-        pred_score = transfer_positions(
-            wp_t, gt_perf[valid_gt_perf], 1, domain="score"
-        )
+        pred_score = transfer_positions(wp_t, gt_perf[valid_gt_perf], 1, domain="score")
         valid_b = np.isfinite(pred_score)
         all_gt_score_beats.append(gt_score[valid_gt_perf][valid_b])
         all_pred_score_beats.append(pred_score[valid_b])

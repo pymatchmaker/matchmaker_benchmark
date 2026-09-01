@@ -1,0 +1,2 @@
+piece_id,dataset,composer,title,xml_score,midi_performance,audio_performance,match,difficulty
+local/Fugue_bwv_858/ex_VuV01M,local,Bach,Fugue_bwv_858,resources/ex_score.musicxml,resources/ex_VuV01M.mid,resources/ex_VuV01M.wav,resources/ex_VuV01M.match,3

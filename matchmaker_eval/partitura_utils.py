@@ -12,15 +12,16 @@ from typing import Callable, Dict, List, Tuple, Union
 import mido
 import numpy as np
 import partitura
-#from basismixer.performance_codec import get_performance_codec
-#from basismixer.utils import get_unique_onset_idxs, notewise_to_onsetwise
+
+# from basismixer.performance_codec import get_performance_codec
+# from basismixer.utils import get_unique_onset_idxs, notewise_to_onsetwise
 from partitura import load_performance, load_score
 from partitura.performance import PerformedPart
 from partitura.score import Part
 from partitura.utils.music import performance_from_part
 from scipy.interpolate import interp1d
 
-#from accompanion.config import 
+# from accompanion.config import
 POLLING_PERIOD = 0.01
 
 PPART_FIELDS = [
@@ -177,8 +178,8 @@ def partitura_to_framed_midi_custom(
     score_bpm=100,
     return_reference=False,
 ):
-    #import pdb
-    #pdb.set_trace()
+    # import pdb
+    # pdb.set_trace()
     # Allow for loading all valid representations in partitura
     if isinstance(
         part_or_notearray_or_filename,

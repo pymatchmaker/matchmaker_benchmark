@@ -1,0 +1,18 @@
+name: Pitch matcher (example)
+authors:
+  - matchmaker maintainers
+affiliation: Johannes Kepler University Linz
+contact: https://github.com/pymatchmaker/matchmaker_benchmark/issues
+input_type: midi
+description: >
+  Worked example. Matches each incoming note against the next few score chords
+  and jumps the pointer to the first chord containing that pitch, interpolating
+  at the tempo estimated from the last two matches in between. Naive on
+  purpose — no durations, no recovery from a wrong jump.
+url: https://github.com/pymatchmaker/matchmaker_benchmark/blob/main/docs/submitting.md
+license: Apache-2.0
+
+tuned_on: [tuning]
+external_data: none
+
+eval_fold_untouched: true

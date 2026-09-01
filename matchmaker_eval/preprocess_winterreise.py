@@ -124,24 +124,36 @@ def process_piece(score_xml_path: Path, note_csv_path: Path) -> tuple:
     n_matched = int(valid.sum())
     match_rate = n_matched / n_score if n_score > 0 else 0
 
-    return unique_beats, aligned_secs, {
-        "n_score": n_score, "n_perf": n_perf,
-        "n_matched": n_matched, "match_rate": match_rate,
-        "n_unique_beats": len(unique_beats),
-    }
+    return (
+        unique_beats,
+        aligned_secs,
+        {
+            "n_score": n_score,
+            "n_perf": n_perf,
+            "n_matched": n_matched,
+            "match_rate": match_rate,
+            "n_unique_beats": len(unique_beats),
+        },
+    )
 
 
 def main():
     parser = argparse.ArgumentParser(description="Preprocess Winterreise annotations")
-    parser.add_argument("--data-dir", type=Path,
-                        default=Path("~/data/winterreise").expanduser())
-    parser.add_argument("--output-dir", type=Path,
-                        default=Path(__file__).parent / "winterreise_aligned")
-    parser.add_argument("--metadata", type=Path,
-                        default=Path(__file__).parent / "metadata-winterreise.csv")
+    parser.add_argument(
+        "--data-dir", type=Path, default=Path("~/data/winterreise").expanduser()
+    )
+    parser.add_argument(
+        "--output-dir", type=Path, default=Path(__file__).parent / "winterreise_aligned"
+    )
+    parser.add_argument(
+        "--metadata",
+        type=Path,
+        default=Path(__file__).parent / "metadata-winterreise.csv",
+    )
     args = parser.parse_args()
 
     import warnings
+
     warnings.filterwarnings("ignore")
 
     meta = pd.read_csv(args.metadata)
@@ -160,13 +172,20 @@ def main():
             np.savetxt(str(out_file), secs, fmt="%.6f")
 
             gt_file = args.output_dir / f"{label}_gt.tsv"
-            np.savetxt(str(gt_file), np.column_stack([beats, secs]),
-                       fmt="%.6f", delimiter="\t",
-                       header="score_beat\tperf_sec", comments="")
+            np.savetxt(
+                str(gt_file),
+                np.column_stack([beats, secs]),
+                fmt="%.6f",
+                delimiter="\t",
+                header="score_beat\tperf_sec",
+                comments="",
+            )
 
             status = "OK" if info["match_rate"] > 0.95 else "WARN"
-            print(f"{status} {label:30s} matched={info['n_matched']}/{info['n_score']} "
-                  f"({info['match_rate']:.1%})  unique_beats={info['n_unique_beats']}")
+            print(
+                f"{status} {label:30s} matched={info['n_matched']}/{info['n_score']} "
+                f"({info['match_rate']:.1%})  unique_beats={info['n_unique_beats']}"
+            )
 
             new_row = row.copy()
             new_row["performance_annotations"] = f"{label}_aligned.txt"
@@ -179,6 +198,7 @@ def main():
     new_meta = pd.DataFrame(new_rows)
     # Copy aligned files to winterreise data dir for pipeline access
     import shutil
+
     for _, r in new_meta.iterrows():
         src = args.output_dir / r.performance_annotations
         # Put in a subfolder of winterreise
@@ -186,7 +206,9 @@ def main():
         dest_dir.mkdir(exist_ok=True)
         shutil.copy2(src, dest_dir / r.performance_annotations)
 
-    new_meta["performance_annotations"] = "aligned/" + new_meta["performance_annotations"]
+    new_meta["performance_annotations"] = (
+        "aligned/" + new_meta["performance_annotations"]
+    )
     out_meta = Path(__file__).parent / "metadata-winterreise-aligned.csv"
     new_meta.to_csv(out_meta, index=False)
     print(f"\nSaved {len(new_meta)} rows to {out_meta}")
