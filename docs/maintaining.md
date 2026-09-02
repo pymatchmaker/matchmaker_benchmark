@@ -41,9 +41,10 @@ runners and commits the leaderboard. Nobody has to hold the data locally.
 plan ──► evaluate (8 parallel shards) ──► merge
   │            │                            │
   │       each shard:                  combines the shards,
-which submission,   fetch its slice of the data   rebuilds the leaderboard,
-which input type,   (cached between runs)         commits results/
-how many shards     run it, upload results
+which submission,   check out the data repo,      rebuilds the leaderboard,
+which input type,   verify its slice is present,  commits results/
+how many shards,    run it, upload results
+where the data is
 ```
 
 Sharding is not an optimisation, it is what makes this possible at all: a job on
@@ -55,16 +56,27 @@ them — the merged numbers are identical to an unsharded run, which
 
 ### Data
 
-`data/data_sources.yaml` says where files come from. Each shard fetches only the
-files its own pieces name, into `MATCHMAKER_DATA_DIR`, and `actions/cache` keeps
-them between runs (keyed on the fold contents, so changing a fold invalidates the
-cache instead of silently mixing old and new files).
+`data/data_sources.yaml` says where files come from. The data repository is laid
+out exactly as `MATCHMAKER_DATA_DIR` expects, so **CI checks it out rather than
+downloading files one at a time**: the `plan` job resolves the fold's branch with
+`fetch_data.py --source`, each shard does one shallow `actions/checkout` of it,
+points `MATCHMAKER_DATA_DIR` at that path, and runs `fetch_data.py --verify` to
+fail fast if anything the fold names is absent. No cache is needed — a clone from
+GitHub on a GitHub runner costs less than restoring one — and no token is needed
+while the repository is public.
+
+Set the repository variable `MATCHMAKER_DATA_DIR` to skip the checkout entirely
+on a self-hosted runner that already holds the data.
+
+`fetch_data.py` still fetches file by file, which is what a contributor who wants
+one fold rather than a whole branch uses, and it remains the route for the
+`url_template` escape hatch.
 
 The address is four lines:
 
 ```yaml
-owner: C-Suhit
-repo: test_matchmaker_benchmark_data
+owner: pymatchmaker
+repo: matchmaker-benchmark-data
 branch: main
 layout: "{dataset}/{path}"
 ```
@@ -113,11 +125,11 @@ branches:
 
 Everything downstream follows automatically — `fetch_data.py`,
 `run_submission.py`'s auto-fetch, `make_folds.py --from-repo` and the evaluation
-workflow all resolve the branch from the fold they are working on. The CI cache
-key includes `data_sources.yaml`, so repointing a fold at a different branch
-invalidates the cache instead of serving files fetched from the old one. The
-locally cached metadata is keyed by branch too, so two branches describing the
-same dataset cannot stand in for each other.
+workflow all resolve the branch from the fold they are working on. The workflow
+reads it with `fetch_data.py --source`, so repointing a fold checks out the new
+branch on the next run with no workflow edit. The locally cached metadata is
+keyed by branch too, so two branches describing the same dataset cannot stand in
+for each other.
 
 **Two metadata shapes are supported.** A branch may keep one manifest inside
 each dataset folder, or a single manifest at the repository root:
@@ -203,12 +215,93 @@ python matchmaker_eval/run_references.py --input-type audio
 python matchmaker_eval/run_references.py --input-type both --exclude pf
 ```
 
-Which methods exist comes from `data/builtin_methods.yaml`. Each runs in its own
-process (`--jobs`, default 6) pinned to a single BLAS thread — measured about
-twice as fast as letting BLAS thread freely, before counting the parallelism.
+Which methods *exist* comes from the installed matchmaker's spec
+(`matchmaker/methods.yaml`); which of them this repo can *label* on the
+leaderboard is `data/builtin_methods.yaml`, which holds names, citations and
+descriptions and no configuration. `run_references.py` runs the described ones
+and prints a note naming any matchmaker method that has no entry yet — add one
+there to put it on the leaderboard. Each method runs in its own process
+(`--jobs`, default 6) pinned to a single BLAS thread — measured about twice as
+fast as letting BLAS thread freely, before counting the parallelism.
 
 A method that fails, or that covers fewer than all the fold's pieces, is
 reported and left off the leaderboard.
+
+### Keeping up with matchmaker
+
+`matchmaker_eval/methods.py` is the only place this repository reads
+matchmaker's method spec, and `tests/` (plain `pytest`) checks that the two have
+not drifted: that every described method still exists, that
+`data/builtin_methods.yaml` carries no configuration, and that each runner's
+`--method` choices come from the registry rather than a hardcoded list.
+
+```bash
+pytest tests/
+python matchmaker_eval/verify_equivalence.py --method pthmm --input-type midi
+```
+
+`verify_equivalence.py` builds its clone from the spec itself, so it covers
+every built-in method. A method the spec marks `deterministic: false` (a
+particle filter) is reported inconclusive rather than failed — two runs of it
+differ on their own.
+
+### Staging a run before it is published
+
+Evaluation runs on two branches; publishing runs on one.
+
+| branch | evaluates | publishes to the site |
+| --- | --- | --- |
+| `submissions` | yes | **no** |
+| `main` | yes | yes |
+
+So the safe order for anything you are not sure about is:
+
+1. merge the submission into `submissions`;
+2. `evaluate.yml` runs there and commits `results/` to that branch;
+3. read `results/leaderboard.json`, rerun or withdraw if it looks wrong;
+4. merge `submissions` into `main`, which is what publishes.
+
+`pages.yml` is deliberately `main`-only. Nothing on `submissions` reaches the
+site, so a bad run is a branch to fix rather than a page to correct.
+
+Note that merging `submissions` into `main` usually re-triggers evaluation on
+`main`, because the merge brings the submission and code with it. That is a
+re-verification on the branch that publishes, and it is cheap to let happen; a
+commit that touches only `results/` does not trigger it.
+
+### Withdrawing or replacing a published result
+
+A leaderboard row is not a database record. It is derived from
+`results/submissions/<entry>/metrics.json` every time `leaderboard.py` runs, so
+results can always be corrected.
+
+**To replace one** — a rerun after a bug fix — just evaluate again.
+`run_submission.py` overwrites the same directory and the next rebuild picks up
+the new numbers. Nothing needs deleting.
+
+**To withdraw one**, use `retract.py` rather than deleting by hand: it also
+removes the per-piece detail file, which the site fetches by name and which
+would otherwise stay readable after the row disappeared.
+
+```bash
+python matchmaker_eval/retract.py --list        # what is published, what is not
+
+python matchmaker_eval/retract.py pfkorz-midi \
+    --reason "shared RNG makes runs irreproducible; see matchmaker#71"
+
+python matchmaker_eval/export_details.py
+python matchmaker_eval/leaderboard.py
+```
+
+The withdrawal is recorded in `results/retracted.json` with the reason and the
+numbers that were published, and `leaderboard.json` carries a `retracted` list —
+a result that was on the leaderboard and is not any more is itself a fact about
+the leaderboard, so it is published rather than quietly erased. The run is moved
+to `results/retracted/<entry>/`, so `--reason` is required and `--undo` puts it
+back. `--purge` deletes instead of archiving, and cannot be undone.
+
+`export_details.py` also removes any detail file whose run has gone, so a
+hand-deleted result cannot leave one behind either.
 
 ### By hand
 

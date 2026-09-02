@@ -41,10 +41,12 @@ follower itself.
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import yaml
 from matchmaker.matchmaker import CUSTOM_METHODS
+
+from matchmaker_eval.methods import builtin_methods
 
 INPUT_TYPES = ("audio", "midi")
 REQUIRED_METADATA = ("name", "authors", "input_type", "description")
@@ -164,6 +166,33 @@ def load_submission(directory) -> Tuple[str, str, dict]:
     return method, input_type, metadata
 
 
+def read_descriptions() -> dict:
+    """``data/builtin_methods.yaml``: the prose for matchmaker's own methods.
+
+    Only names, authors and descriptions live here. What a method *is* — its
+    class, processor and defaults — comes from matchmaker's spec, so this file
+    holds no configuration that could contradict a run.
+    """
+    return yaml.safe_load(BUILTIN_METHODS_PATH.read_text()) or {}
+
+
+def undescribed_methods() -> Dict[str, List[str]]:
+    """Built-in methods matchmaker has that this repo has no description for.
+
+    They can still be evaluated with ``--method``; they just cannot be labelled
+    on the leaderboard until someone writes them up. Reported rather than
+    raised, so a new matchmaker method never breaks an evaluation run.
+    """
+    described = read_descriptions()
+    missing = {}
+    for input_type in ("audio", "midi"):
+        known = set(described.get(input_type) or {})
+        absent = [m for m in builtin_methods(input_type) if m not in known]
+        if absent:
+            missing[input_type] = absent
+    return missing
+
+
 def builtin_metadata(method: str, input_type: str) -> dict:
     """Metadata for one of matchmaker's own methods.
 
@@ -172,14 +201,20 @@ def builtin_metadata(method: str, input_type: str) -> dict:
     new follower is trying to beat. This synthesises the same metadata shape
     from ``data/builtin_methods.yaml``.
     """
-    described = yaml.safe_load(BUILTIN_METHODS_PATH.read_text()) or {}
+    available = builtin_methods(input_type)
+    if method not in available:
+        raise SubmissionError(
+            f"'{method}' is not a built-in {input_type} method of the installed "
+            f"matchmaker. Available: {available}. (A submission is run by "
+            "passing its directory, not --method.)"
+        )
+    described = read_descriptions()
     entry = (described.get(input_type) or {}).get(method)
     if entry is None:
-        known = sorted((described.get(input_type) or {}))
         raise SubmissionError(
-            f"'{method}' is not a described {input_type} method. "
-            f"Known: {known}. Add it to {BUILTIN_METHODS_PATH.name} to put it "
-            "on the leaderboard."
+            f"'{method}' is a matchmaker {input_type} method but has no entry in "
+            f"{BUILTIN_METHODS_PATH.name}. Add a name, authors and description "
+            "there to put it on the leaderboard."
         )
     return {
         "name": entry.get("name", method),

@@ -248,6 +248,20 @@ def run_piece(method, piece, input_type, index, run_dir, save_plots):
     return flatten_metrics(nested), nested
 
 
+def fold_file_label(fold) -> str:
+    """The fold CSV's path for the record: repo-relative when it is in the repo.
+
+    ``--fold`` also takes a path to a CSV anywhere on disk, which is how a
+    one-off subset is run; those have no repo-relative form, so they are
+    recorded absolute rather than crashing the run at the last step.
+    """
+    path = fold_path(fold)
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
 def evaluate_submission(
     directory: Optional[Path] = None,
     fold: str = "eval",
@@ -416,7 +430,7 @@ def evaluate_submission(
         "kind": metadata.get("kind", "submission"),
         "metadata": metadata,
         "fold": str(fold),
-        "fold_file": str(fold_path(fold).relative_to(REPO_ROOT)),
+        "fold_file": fold_file_label(fold),
         "fold_sha256": sha256_of(fold_path(fold)),
         "input_type": input_type,
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -456,7 +470,8 @@ def main():
         "--method",
         default=None,
         help="evaluate one of matchmaker's built-in methods instead of a "
-        "submission, as a leaderboard reference point (needs --input-type)",
+        "submission, as a leaderboard reference point (needs --input-type). "
+        "The names are matchmaker's own — see AVAILABLE_METHODS.",
     )
     parser.add_argument(
         "--fold",

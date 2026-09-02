@@ -1,26 +1,48 @@
 # Full evaluation, after merge — on GitHub's own runners.
 #
-# Contributors download nothing. This workflow splits the eval fold across
-# parallel jobs; each job fetches only the pieces in its shard (see
-# data/data_sources.yaml), caches them, runs the submission, and uploads its
-# results. A final job merges the shards, rebuilds the leaderboard and commits
-# it.
+# Contributors download nothing. The data lives in its own public repository,
+# pymatchmaker/matchmaker-benchmark-data, laid out exactly as the benchmark
+# expects — so a checkout of it *is* MATCHMAKER_DATA_DIR and no file is
+# downloaded piece by piece. Which repository and branch a fold reads is
+# data/data_sources.yaml; the plan job reads it there so the address is written
+# down once (`fetch_data.py --source`).
 #
-# This is the only workflow that writes to the repository, and it only runs on
-# `main` — on code a maintainer has already reviewed and merged.
+# This workflow splits the fold across parallel jobs; each job checks out the
+# data, runs its shard of the submission and uploads its results. A final job
+# merges the shards, rebuilds the leaderboard and commits it.
+#
+# The checkout is the fast path, not the only one: if it does not carry
+# everything the fold names, fetch_data.py fills the gap file by file and the
+# shard refuses to start until a second check passes.
+#
+# This is the only workflow that writes to the repository, and it runs only on
+# the branches listed below — on code a maintainer has already reviewed and
+# merged.
+#
+# Two branches, on purpose:
+#
+#   submissions  a staging branch. Evaluation runs and results/ is committed
+#                here, but `pages.yml` does not publish from it — so a run can
+#                be inspected, rerun or withdrawn before anyone sees it.
+#   main         merging `submissions` into it publishes the leaderboard.
+#
+# So the safe order is: merge a submission into `submissions`, let this workflow
+# evaluate it, check results/leaderboard.json, and only then merge to `main`.
+# To withdraw a result after the fact, see matchmaker_eval/retract.py.
 #
 # Sharding is what makes this fit: a job on a GitHub runner is capped at 6
 # hours, and audio evaluation over 146 pieces does not fit in one. Shards are
 # round-robin, so the merged numbers are identical to an unsharded run.
 #
 # It also works unchanged on a self-hosted runner that already holds the data:
-# the fetch step finds the files present and does nothing. Set the repository
-# variable BENCHMARK_RUNNER to that runner's label.
+# set the repository variable MATCHMAKER_DATA_DIR to that copy and the checkout
+# is skipped. Set BENCHMARK_RUNNER to the runner's label.
 name: Evaluate submissions
 
 on:
   push:
-    branches: [main]
+    # `branches:` cannot take a variable, so staging branches are listed here.
+    branches: [main, submissions]
     paths:
       - "submissions/**"
       - "matchmaker_eval/**"
@@ -50,7 +72,6 @@ concurrency:
 
 env:
   FOLD: ${{ github.event.inputs.fold || 'eval' }}
-  MATCHMAKER_DATA_DIR: ${{ vars.MATCHMAKER_DATA_DIR || '~/data' }}
 
 jobs:
   plan:
@@ -60,6 +81,8 @@ jobs:
       input_type: ${{ steps.plan.outputs.input_type }}
       shards: ${{ steps.plan.outputs.shards }}
       num_shards: ${{ steps.plan.outputs.num_shards }}
+      data_repo: ${{ steps.source.outputs.data_repo }}
+      data_branch: ${{ steps.source.outputs.branch }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -96,6 +119,17 @@ jobs:
           echo "shards=$(python -c "import json,sys; print(json.dumps(list(range(int(sys.argv[1])))))" "$n")" >> "$GITHUB_OUTPUT"
           echo "Evaluating $dir ($input_type) on ${FOLD} in $n shards"
 
+      - name: Locate this fold's data
+        id: source
+        # data/data_sources.yaml maps a fold to a branch of the data
+        # repository. Reading it here means the address is not repeated in this
+        # file, so moving or renaming the data repository stays a one-line edit.
+        run: |
+          eval "$(python matchmaker_eval/fetch_data.py --source --fold "$FOLD")"
+          echo "data_repo=${owner}/${repo}" >> "$GITHUB_OUTPUT"
+          echo "branch=${branch}" >> "$GITHUB_OUTPUT"
+          echo "Fold ${FOLD} reads ${owner}/${repo}@${branch}"
+
   evaluate:
     needs: plan
     if: needs.plan.outputs.submission != ''
@@ -128,36 +162,67 @@ jobs:
             pip install -r "${{ needs.plan.outputs.submission }}/requirements.txt"
           fi
 
-      - name: Restore this shard's data
-        uses: actions/cache@v4
-        with:
-          path: ~/data
-          # Keyed on the fold and on the data source config, so changing a
-          # fold — or pointing a fold at a different branch of the data
-          # repository — invalidates the cache rather than serving files
-          # fetched from the previous branch.
-          key: >-
-            benchmark-data-${{ env.FOLD }}-${{ needs.plan.outputs.input_type }}-${{
-            hashFiles('data/folds/*.csv', 'data/data_sources.yaml') }}-${{
-            needs.plan.outputs.num_shards }}-${{ matrix.shard }}
-
-      - name: Report which branch this fold reads
-        env:
-          MATCHMAKER_DATA_TOKEN: ${{ secrets.MATCHMAKER_DATA_TOKEN }}
-        run: |
-          python matchmaker_eval/fetch_data.py --probe \
-            --fold "$FOLD" --input-type "${{ needs.plan.outputs.input_type }}" \
-            || echo "::warning::probe reported problems — see the log above"
-
-      - name: Fetch what is missing
+      - name: Check out the benchmark data
+        # The data repository's layout is the one MATCHMAKER_DATA_DIR expects,
+        # so this checkout is the whole data step: one shallow clone of the
+        # branch this fold reads, and nothing fetched file by file.
+        #
         # MATCHMAKER_DATA_TOKEN is only needed while the data repository is
         # private. Add it as a repository secret with read access to that repo;
         # once the repository is public, delete the secret and this keeps
-        # working. The token is never written to disk or into a result file.
+        # working. Skipped entirely when MATCHMAKER_DATA_DIR is set to a copy
+        # the runner already holds.
+        if: vars.MATCHMAKER_DATA_DIR == ''
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ needs.plan.outputs.data_repo }}
+          ref: ${{ needs.plan.outputs.data_branch }}
+          token: ${{ secrets.MATCHMAKER_DATA_TOKEN || github.token }}
+          path: benchmark-data
+          persist-credentials: false
+
+      - name: Point the benchmark at the data
+        run: |
+          if [ -n "${{ vars.MATCHMAKER_DATA_DIR }}" ]; then
+            echo "MATCHMAKER_DATA_DIR=${{ vars.MATCHMAKER_DATA_DIR }}" >> "$GITHUB_ENV"
+          else
+            echo "MATCHMAKER_DATA_DIR=${{ github.workspace }}/benchmark-data" >> "$GITHUB_ENV"
+          fi
+
+      - name: Check this shard's files are all present
+        # Names anything the fold asks for that the checkout did not provide,
+        # before spending an hour discovering it piece by piece. Allowed to
+        # fail so the fetch below can fill the gap.
+        id: verify
+        continue-on-error: true
+        run: |
+          python matchmaker_eval/fetch_data.py --verify \
+            --fold "$FOLD" \
+            --input-type "${{ needs.plan.outputs.input_type }}" \
+            --shard ${{ matrix.shard }} \
+            --num-shards ${{ needs.plan.outputs.num_shards }}
+
+      - name: Fetch anything the checkout did not provide
+        # The checkout is the fast path, not the only one. A fold whose data is
+        # not all in that branch — or a dataset served from somewhere else via
+        # `url_template` — is downloaded file by file into the same directory.
+        if: steps.verify.outcome == 'failure'
         env:
           MATCHMAKER_DATA_TOKEN: ${{ secrets.MATCHMAKER_DATA_TOKEN }}
         run: |
+          echo "::notice::the checkout was incomplete; fetching the rest"
           python matchmaker_eval/fetch_data.py \
+            --fold "$FOLD" \
+            --input-type "${{ needs.plan.outputs.input_type }}" \
+            --shard ${{ matrix.shard }} \
+            --num-shards ${{ needs.plan.outputs.num_shards }}
+
+      - name: Confirm the data is complete
+        # The hard gate: whichever route got the files here, the shard does not
+        # start until everything the fold names is on disk.
+        if: steps.verify.outcome == 'failure'
+        run: |
+          python matchmaker_eval/fetch_data.py --verify \
             --fold "$FOLD" \
             --input-type "${{ needs.plan.outputs.input_type }}" \
             --shard ${{ matrix.shard }} \

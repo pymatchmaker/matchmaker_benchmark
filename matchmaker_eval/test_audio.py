@@ -1,5 +1,4 @@
 import argparse
-import copy
 import json
 import sys
 from collections import defaultdict
@@ -10,7 +9,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 from eval import run_offline_alignment, run_score_following
-from matchmaker.matchmaker import DEFAULT_KWARGS
+from methods import audio_rates, available_methods, default_kwargs
 from tabulate import tabulate
 from utils import (
     AudioEvalConfig,
@@ -206,8 +205,8 @@ def run_tests_and_eval_by_dataset(
 
 
 def build_sweep_kwargs(method: str, wconfig) -> dict:
-    """Build matchmaker kwargs by merging DEFAULT_KWARGS defaults with sweep config."""
-    method_kwargs = copy.deepcopy(DEFAULT_KWARGS.get("audio", {}).get(method, {}))
+    """The method's defaults from matchmaker's spec, overridden by the sweep."""
+    method_kwargs = default_kwargs("audio", method)
     for key, value in wconfig.items():
         if key not in ("dataset", "method"):
             method_kwargs[key] = value
@@ -228,20 +227,17 @@ def main(args):
         dataset_type = wandb.config.get("dataset", dataset_type)
         matchmaker_kwargs = build_sweep_kwargs(method, wandb.config)
 
-    # Build config from DEFAULT_KWARGS defaults, overridden by sweep config if present
+    # Report the rates the run will actually use: the method's defaults from
+    # matchmaker's spec, overridden by the sweep config when there is one.
     kw = (
         matchmaker_kwargs
         if matchmaker_kwargs is not None
-        else DEFAULT_KWARGS.get("audio", {}).get(method, {})
+        else default_kwargs("audio", method)
     )
-    cfg_kwargs = {k: v for k, v in kw.items() if k in ("sample_rate", "frame_rate")}
-    if "frame_rate" not in cfg_kwargs and "hop_length" in kw:
-        sr = cfg_kwargs.get("sample_rate", 44100)
-        cfg_kwargs["frame_rate"] = sr / kw["hop_length"]
     config = AudioEvalConfig(
         method=method,
         dataset=dataset_type,
-        **cfg_kwargs,
+        **audio_rates(kw),
     )
 
     print(f"Config: {config.model_dump(include=config.attr_exp)}")
@@ -299,9 +295,11 @@ def main(args):
         report_results_to_wandb(summary_tracked, config)
 
 
-if __name__ == "__main__":
+def build_parser() -> argparse.ArgumentParser:
+    """The command line. Method choices come from matchmaker's registry."""
     parser = argparse.ArgumentParser(
-        description="Testing Matchmaker with different methods and datasets. Config is read from matchmaker's KWARGS."
+        description="Testing Matchmaker with different methods and datasets. "
+        "Per-method configuration is read from matchmaker's spec."
     )
     parser.add_argument(
         "--dataset",
@@ -314,7 +312,9 @@ if __name__ == "__main__":
         "--method",
         type=str,
         default="arzt",
-        help="Method to use (hmm, dixon, arzt, or offline)",
+        choices=available_methods("audio") + ["offline"],
+        help="Audio method from matchmaker's registry, or 'offline' for "
+        "offline DTW",
     )
     parser.add_argument(
         "--dry-run",
@@ -341,7 +341,11 @@ if __name__ == "__main__":
         help="skip saving per-piece plots (faster evaluation)",
         default=False,
     )
-    args = parser.parse_args()
+    return parser
+
+
+if __name__ == "__main__":
+    args = build_parser().parse_args()
 
     if args.sweep:
         with wandb.init(

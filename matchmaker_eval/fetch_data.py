@@ -164,6 +164,24 @@ def branch_for(config: dict, fold: Optional[str] = None) -> str:
     return str(config.get("branch", "main"))
 
 
+def source_coordinates(fold: Optional[str] = None) -> Dict[str, str]:
+    """Which repository and branch hold ``fold``'s data.
+
+    The data repository mirrors the layout the benchmark expects, so a plain
+    checkout of it *is* a ``MATCHMAKER_DATA_DIR``. CI uses this to clone the
+    right branch once instead of fetching several hundred files one at a time;
+    reading it from here keeps ``data/data_sources.yaml`` the only place the
+    address is written down.
+    """
+    config = load_config()
+    return {
+        "owner": str(config.get("owner", "")),
+        "repo": str(config.get("repo", "")),
+        "branch": branch_for(config, fold),
+        "enabled": "true" if config.get("enabled", True) else "false",
+    }
+
+
 def candidate_urls(
     config: dict, dataset: str, path: str, fold: Optional[str] = None
 ) -> List[str]:
@@ -431,6 +449,48 @@ def fetch_for_pieces(
     the pieces it is about to evaluate rather than for the whole fold.
     """
     return _fetch(load_config(), pieces, input_type, label, dry_run, fold)
+
+
+def verify(
+    fold: str,
+    input_type: str,
+    shard: Optional[int] = None,
+    num_shards: int = 1,
+) -> int:
+    """Report what a fold (or one shard of it) is missing. Downloads nothing.
+
+    The preflight for a run whose data came from a checkout of the data
+    repository rather than from :func:`fetch`: it names every absent file up
+    front instead of letting the run discover them one piece at a time.
+    Non-zero exit means something is missing.
+    """
+    pieces = load_fold(fold, input_type=input_type)
+    if shard is not None:
+        pieces = shard_of(pieces, shard, num_shards)
+    label = f"{fold}/{input_type}" + (
+        f" shard {shard + 1}/{num_shards}" if shard is not None else ""
+    )
+
+    wanted = wanted_files(None, input_type, pieces=pieces)
+    missing = [w for w in wanted if not w.satisfied]
+    print(
+        f"{label}: {len(pieces)} pieces, {len(wanted)} files, "
+        f"{len(missing)} missing (data root: {DATA_ROOT})"
+    )
+    if not missing:
+        print("All present.")
+        return 0
+    for w in missing[:20]:
+        print(f"  missing {w.dataset}/{w.path}")
+    if len(missing) > 20:
+        print(f"  ... and {len(missing) - 20} more")
+    print(
+        f"\n{len(missing)} file(s) missing. Either MATCHMAKER_DATA_DIR does not "
+        "point at a checkout of the data repository, or that branch does not "
+        "carry this fold. Run fetch_data.py --source --fold "
+        f"{fold} to see which branch is expected."
+    )
+    return 1
 
 
 def fetch(
@@ -727,9 +787,27 @@ def main():
         action="store_true",
         help="check the configured data source against a few files and exit",
     )
+    parser.add_argument(
+        "--verify",
+        action="store_true",
+        help="report what the fold is missing and exit non-zero if anything "
+        "is; downloads nothing. The preflight when the data came from a "
+        "checkout rather than from this script",
+    )
+    parser.add_argument(
+        "--source",
+        action="store_true",
+        help="print this fold's data repository as KEY=VALUE lines and exit "
+        "(owner, repo, branch); for CI, which checks the repository out "
+        "instead of downloading files one at a time",
+    )
     args = parser.parse_args()
 
     try:
+        if args.source:
+            for key, value in source_coordinates(args.fold).items():
+                print(f"{key}={value}")
+            return 0
         if args.metadata:
             branch = branch_for(load_config(), args.fold)
             print(f"fold '{args.fold}' reads branch '{branch}'\n")
@@ -741,6 +819,13 @@ def main():
             return 0
         if args.probe:
             return probe(args.fold, args.input_type)
+        if args.verify:
+            return verify(
+                args.fold,
+                args.input_type,
+                shard=args.shard,
+                num_shards=args.num_shards,
+            )
         fetch(
             args.fold,
             args.input_type,

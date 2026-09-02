@@ -199,6 +199,24 @@ def export(run_dir: Path, include_paths: bool = True) -> dict:
     }
 
 
+def remove_orphans(current: set, dry_run: bool = False) -> list:
+    """Delete detail files with no corresponding run, and report what went.
+
+    ``current`` is the set of file names just written. Anything else in
+    ``results/details/`` belongs to a run that has been withdrawn or renamed.
+    """
+    if not DETAILS_DIR.exists():
+        return []
+    gone = []
+    for path in sorted(DETAILS_DIR.glob("*.json")):
+        if path.name in current:
+            continue
+        gone.append(path.name)
+        if not dry_run:
+            path.unlink()
+    return gone
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument(
@@ -211,10 +229,16 @@ def main():
         action="store_true",
         help="omit the alignment paths, leaving only the tables",
     )
+    parser.add_argument(
+        "--keep-orphans",
+        action="store_true",
+        help="report detail files whose run is gone instead of deleting them",
+    )
     args = parser.parse_args()
 
     DETAILS_DIR.mkdir(parents=True, exist_ok=True)
     written = 0
+    current = set()
     for metrics_path in sorted(SUBMISSION_RESULTS.glob("*/metrics.json")):
         metrics = json.loads(metrics_path.read_text())
         if metrics.get("fold") != args.fold or metrics.get("partial"):
@@ -222,12 +246,20 @@ def main():
         detail = export(metrics_path.parent, include_paths=not args.no_paths)
         out = DETAILS_DIR / f"{detail['submission']}.json"
         out.write_text(json.dumps(detail, separators=(",", ":")) + "\n")
+        current.add(out.name)
         size = out.stat().st_size / 1e6
         print(
             f"{detail['submission']:24} {len(detail['pieces']):>3} pieces, "
             f"{len(detail['datasets'])} dataset(s), {size:.1f} MB"
         )
         written += 1
+
+    # A detail file outlives its run otherwise, and the page fetches details by
+    # name — so a withdrawn result would stay readable after its row is gone.
+    removed = remove_orphans(current, dry_run=args.keep_orphans)
+    for name in removed:
+        verb = "would remove" if args.keep_orphans else "removed"
+        print(f"{verb} orphaned detail {name}")
 
     if not written:
         print(f"No complete {args.fold}-fold runs to export.")

@@ -107,10 +107,30 @@ request (`make_folds.py --check`).
 
 ## Data
 
-Audio and MIDI live in
+Audio and MIDI live in the public
 [matchmaker-benchmark-data](https://github.com/pymatchmaker/matchmaker-benchmark-data)
-and are fetched **file by file over HTTPS**, from the branch that fold lives on.
-Nothing is cloned, and only what a run touches is downloaded.
+repository, laid out exactly as the benchmark expects. There are two ways in,
+and the address for both is four lines in
+[data/data_sources.yaml](data/data_sources.yaml).
+
+**Check it out.** The repository's layout *is* `MATCHMAKER_DATA_DIR`, so a
+checkout of the branch a fold reads needs no further step. This is what CI does
+— one shallow clone, no file-by-file downloads:
+
+```bash
+git clone --depth 1 --branch benchmark \
+    https://github.com/pymatchmaker/matchmaker-benchmark-data.git ~/benchmark-data
+export MATCHMAKER_DATA_DIR=~/benchmark-data
+
+# confirm the fold is complete before running anything
+python matchmaker_eval/fetch_data.py --verify --fold eval --input-type audio
+```
+
+`fetch_data.py --source --fold <fold>` prints which repository and branch that
+fold reads, so you never have to look it up.
+
+**Or fetch file by file.** For a single fold, or when a full branch is more than
+you want, `fetch_data.py` downloads only the files a run touches:
 
 ```bash
 # only the 20 tuning performances, from the `experiment` branch
@@ -122,8 +142,7 @@ python matchmaker_eval/fetch_data.py --probe --fold eval --input-type audio
 
 `run_submission.py` fetches what it needs on its own, so even that is optional.
 Files already under `MATCHMAKER_DATA_DIR` (default `~/data`) are used as-is, so
-a local copy of the corpora still works. The address is four lines in
-[data/data_sources.yaml](data/data_sources.yaml).
+a local copy of the corpora still works.
 
 ## Running things
 
@@ -157,6 +176,24 @@ Submissions and built-in methods go through the *same* `Matchmaker` call and the
 `compute_event_pooled_summary`. `verify_equivalence.py` proves it by running one
 built-in method through both paths and comparing every metric.
 
+### Where method knowledge lives
+
+Which methods exist, which class each one is, which processor it runs with and
+what its defaults are all come from matchmaker's own spec,
+`matchmaker/methods.yaml` (see `HOW_TO_MAKE_CUSTOM_SCORE_FOLLOWERS.md` in the
+matchmaker repository). This repository keeps no second copy of any of it:
+`matchmaker_eval/methods.py` is the only place that asks, and every runner's
+`--method` choices, sweep defaults and reported sample/frame rate come from
+there. A method added to matchmaker therefore shows up in the runners with no
+edit here.
+
+The one method-related file this repo does own is
+`data/builtin_methods.yaml`, and it holds **prose only** — the name, authors and
+description shown on the leaderboard. A method matchmaker has that nobody has
+described yet is reported by `run_references.py` and can still be evaluated with
+`--method`; it just has no leaderboard label. `tests/` pins both halves of that
+contract.
+
 ## Evaluation protocol
 
 - **Primary metric**: beat error (performance → score)
@@ -182,21 +219,27 @@ matchmaker_eval/
   validate_submission.py  — pull-request checks: structure, contract, smoke run
   merge_shards.py         — recombine parallel shards into one metrics record
   leaderboard.py          — metrics.json files -> leaderboard.json / .csv
+  retract.py              — withdraw a published result, with a reason
   export_details.py       — per-dataset/per-piece detail + decimated paths
   folds.py, make_folds.py — fold definitions and their integrity checks
-  fetch_data.py           — download only the files a fold needs
+  fetch_data.py           — locate a fold's data (--source), check it is all
+                            present (--verify), or download just what it needs
   verify_equivalence.py   — proves submissions are scored like built-in methods
+  methods.py              — the one seam onto matchmaker's method spec
   utils.py, verify_tracking.py, sweep.py
 data/
   folds/                  — frozen fold definitions (example, tuning, eval)
   data_sources.yaml       — where performance data is fetched from
-  builtin_methods.yaml    — the reference methods shown on the leaderboard
+  builtin_methods.yaml    — leaderboard prose for the reference methods
+                            (names and citations only; no configuration)
 submissions/
   _template/              — copy-me skeleton
   baseline-constant-tempo/  — the no-information floor
   example-pitch-matcher/    — a worked example that actually listens
+tests/                    — registry/benchmark consistency checks (pytest)
 results/
   leaderboard.json/.csv   — the published ranking
+  retracted.json          — results withdrawn from it, and why
   details/<name>.json     — per-dataset, per-piece and alignment-path detail
   submissions/<name>/     — per-submission metrics.json
 docs/                     — contributor and maintainer documentation, and the

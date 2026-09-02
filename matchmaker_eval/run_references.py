@@ -6,7 +6,10 @@
     python matchmaker_eval/run_references.py --input-type midi --exclude pf
 
 These are the reference rows on the leaderboard — what a submission is trying to
-beat. Which methods exist is read from ``data/builtin_methods.yaml``.
+beat. Which methods exist comes from the installed matchmaker's spec; which of
+them this repo can label is ``data/builtin_methods.yaml``. A method matchmaker
+has gained but nobody has described yet is reported at startup, so the gap is
+visible rather than silent.
 
 Each method runs in its own process so they go in parallel, and each is pinned
 to a single BLAS thread: this workload is many small matrix operations, where
@@ -34,12 +37,27 @@ import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-import yaml
-
-from matchmaker_eval.folds import REPO_ROOT
-from matchmaker_eval.submission import BUILTIN_METHODS_PATH
+from matchmaker_eval.folds import LEADERBOARD_FOLD, REPO_ROOT
+from matchmaker_eval.submission import (
+    BUILTIN_METHODS_PATH,
+    read_descriptions,
+    undescribed_methods,
+)
 
 RESULTS_DIR = REPO_ROOT / "results" / "submissions"
+
+
+def metrics_path_for(method: str, input_type: str, fold: str) -> Path:
+    """Where run_submission.py puts this run's metrics.
+
+    Only an eval-fold run lands in ``results/submissions/``; anything else goes
+    under ``results/runs/<fold>/``. Reading the wrong one would report a
+    published record as though it were the run that just finished.
+    """
+    name = f"{method}-{input_type}"
+    if str(fold) == LEADERBOARD_FOLD:
+        return RESULTS_DIR / name / "metrics.json"
+    return REPO_ROOT / "results" / "runs" / str(fold) / name / "metrics.json"
 
 #: One BLAS thread per process. Measured 2x faster than the default even for a
 #: single method, before counting the gain from running several at once.
@@ -52,8 +70,19 @@ SINGLE_THREADED = {
 
 
 def described_methods(input_type: str) -> list:
-    described = yaml.safe_load(BUILTIN_METHODS_PATH.read_text()) or {}
-    return sorted(described.get(input_type) or {})
+    """The built-in methods this repo has leaderboard prose for."""
+    return sorted(read_descriptions().get(input_type) or {})
+
+
+def report_undescribed() -> None:
+    """Name any matchmaker method that has no leaderboard entry here."""
+    missing = undescribed_methods()
+    for input_type, methods in missing.items():
+        print(
+            f"note: matchmaker has {input_type} method(s) {methods} with no entry "
+            f"in {BUILTIN_METHODS_PATH.name}; they are not run as references. "
+            "Describe them there to put them on the leaderboard."
+        )
 
 
 def run_one(method: str, input_type: str, fold: str, extra: list) -> dict:
@@ -87,7 +116,7 @@ def run_one(method: str, input_type: str, fold: str, extra: list) -> dict:
         "tail": completed.stderr.strip().splitlines()[-3:]
         or completed.stdout.strip().splitlines()[-3:],
     }
-    metrics_path = RESULTS_DIR / f"{method}-{input_type}" / "metrics.json"
+    metrics_path = metrics_path_for(method, input_type, fold)
     if completed.returncode == 0 and metrics_path.exists():
         metrics = json.loads(metrics_path.read_text())
         record.update(
@@ -137,6 +166,7 @@ def main():
     )
     args = parser.parse_args()
 
+    report_undescribed()
     input_types = ("midi", "audio") if args.input_type == "both" else (args.input_type,)
     jobs = []
     for input_type in input_types:

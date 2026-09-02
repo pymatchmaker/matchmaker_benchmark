@@ -5,7 +5,7 @@ from pathlib import Path
 
 from eval import run_evaluation
 from matchmaker import Matchmaker
-from matchmaker.matchmaker import DEFAULT_KWARGS
+from methods import audio_rates, available_methods, default_kwargs
 from utils import (
     TOLERANCES_IN_BEATS,
     AudioEvalConfig,
@@ -21,7 +21,8 @@ OUTPUT_DIR = WORKING_DIR / "output"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def main():
+def build_parser() -> argparse.ArgumentParser:
+    """The command line. Method choices come from matchmaker's registry."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--score",
@@ -44,10 +45,15 @@ def main():
     parser.add_argument(
         "--method",
         dest="method",
-        help="score following method (arzt, dixon, hmm, ...)",
+        choices=available_methods("audio"),
+        help="audio score following method, from matchmaker's registry",
         default="arzt",
     )
-    args = parser.parse_args()
+    return parser
+
+
+def main():
+    args = build_parser().parse_args()
 
     score_path = Path(args.score_path)
     print(f"Score path: {score_path}")
@@ -61,12 +67,8 @@ def main():
     print(f"Ground truth path: {gt_path}")
 
     method = args.method
-    kw = DEFAULT_KWARGS.get("audio", {}).get(method, {})
-    cfg_kwargs = {k: v for k, v in kw.items() if k in ("sample_rate", "frame_rate")}
-    if "frame_rate" not in cfg_kwargs and "hop_length" in kw:
-        sr = cfg_kwargs.get("sample_rate", 44100)
-        cfg_kwargs["frame_rate"] = sr / kw["hop_length"]
-    config = AudioEvalConfig(method=method, dataset="infer", **cfg_kwargs)
+    kw = default_kwargs("audio", method)
+    config = AudioEvalConfig(method=method, dataset="infer", **audio_rates(kw))
     print(f"Config: {config.model_dump(include=config.attr_exp)}")
 
     mm_kwargs = dict(kw)

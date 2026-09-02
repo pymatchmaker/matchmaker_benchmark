@@ -51,7 +51,7 @@ def merge(root: Path, output: Path) -> dict:
 
     # Every shard must describe the same experiment, or the merged numbers
     # would silently mix two different things.
-    for key in ("submission", "fold", "fold_sha256", "input_type"):
+    for key in ("submission", "method", "kind", "fold", "fold_sha256", "input_type"):
         values = {r.get(key) for r in records}
         if len(values) > 1:
             raise MergeError(f"shards disagree on '{key}': {sorted(map(str, values))}")
@@ -105,6 +105,11 @@ def merge(root: Path, output: Path) -> dict:
             k: first.get(k)
             for k in (
                 "submission",
+                # What was run and how it is labelled. Without these a
+                # reference method merged from shards would come out of
+                # leaderboard.py as an ordinary submission with no method name.
+                "method",
+                "kind",
                 "metadata",
                 "fold",
                 "fold_file",

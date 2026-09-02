@@ -33,6 +33,7 @@ import json
 from datetime import datetime, timezone
 
 from matchmaker_eval.folds import LEADERBOARD_FOLD, REPO_ROOT
+from matchmaker_eval.retract import read_retractions
 
 RESULTS_DIR = REPO_ROOT / "results"
 SUBMISSION_RESULTS = RESULTS_DIR / "submissions"
@@ -177,6 +178,18 @@ def collect(results_dir: Path = SUBMISSION_RESULTS, fold: str = LEADERBOARD_FOLD
 
 def build(fold: str = LEADERBOARD_FOLD) -> dict:
     rows, skipped = collect(fold=fold)
+    # Published as part of the leaderboard: a result that was withdrawn is a
+    # fact about the ranking, and hiding it would make the history unreadable.
+    retractions = [
+        {
+            "submission": r["submission"],
+            "reason": r.get("reason", ""),
+            "retracted_at": r.get("retracted_at", ""),
+            "input_type": (r.get("published") or {}).get("input_type", ""),
+            "kind": (r.get("published") or {}).get("kind", ""),
+        }
+        for r in read_retractions()
+    ]
     return {
         "fold": fold,
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -192,6 +205,7 @@ def build(fold: str = LEADERBOARD_FOLD) -> dict:
         },
         "entries": rows,
         "skipped": skipped,
+        "retracted": retractions,
     }
 
 
@@ -242,15 +256,20 @@ def main():
     leaderboard = build(fold=args.fold)
     for message in leaderboard["skipped"]:
         print(f"skipped {message}")
+    for record in leaderboard["retracted"]:
+        print(f"withdrawn {record['submission']}: {record['reason']}")
 
     if args.check:
         if not LEADERBOARD_JSON.exists():
             print("results/leaderboard.json does not exist")
             return 1
         committed = json.loads(LEADERBOARD_JSON.read_text())
-        if committed.get("entries") != leaderboard["entries"]:
-            print("results/leaderboard.json is out of date — rebuild it.")
-            return 1
+        for key in ("entries", "retracted"):
+            if committed.get(key, [] if key == "retracted" else None) != leaderboard[
+                key
+            ]:
+                print(f"results/leaderboard.json is out of date ({key}) — rebuild it.")
+                return 1
         print("leaderboard is up to date")
         return 0
 

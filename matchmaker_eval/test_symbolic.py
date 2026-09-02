@@ -20,8 +20,8 @@ import partitura as pt
 
 from eval import run_evaluation
 from matchmaker import Matchmaker
-from matchmaker.matchmaker import DEFAULT_KWARGS
 from matchmaker.utils.eval import resolve_gt
+from methods import available_methods, default_kwargs, processor_for
 from utils import (
     TOLERANCES_IN_BEATS,
     SymbolicEvalConfig,
@@ -71,14 +71,16 @@ def run_tests_and_eval_by_dataset(dataset_type, method, run_dir=None, save_plots
         print(f"[{i}/{len(metadata)}] {row.title}")
 
         try:
-            # Run alignment via Matchmaker (HMM or event-level OLTW)
-            mm_kwargs = DEFAULT_KWARGS["midi"].get(method, {}).copy()
+            # Run alignment via Matchmaker (HMM or event-level OLTW). The
+            # method's defaults come from matchmaker's spec, so a method added
+            # there is runnable here without a change.
+            mm_kwargs = default_kwargs("midi", method)
             mm = Matchmaker(
                 score_file=str(score_xml),
                 performance_file=str(perf_midi),
                 input_type="midi",
                 method=method,
-                kwargs=mm_kwargs if mm_kwargs else None,
+                kwargs=mm_kwargs or None,
             )
             list(mm.run(verbose=False))
             wp = mm.score_follower.alignment_path  # (2, T): perf, score
@@ -174,7 +176,8 @@ def run_tests_and_eval_by_dataset(dataset_type, method, run_dir=None, save_plots
     return results
 
 
-def main():
+def build_parser() -> argparse.ArgumentParser:
+    """The command line. Method choices come from matchmaker's registry."""
     parser = argparse.ArgumentParser(
         description="MIDI score following benchmark (mirrors test_audio.py)"
     )
@@ -188,7 +191,8 @@ def main():
         "--method",
         type=str,
         default="hmm",
-        help="Method (hmm, pthmm, outerhmm, arzt, dixon)",
+        choices=available_methods("midi"),
+        help="MIDI method, from matchmaker's registry",
     )
     parser.add_argument(
         "--no-plots",
@@ -196,11 +200,15 @@ def main():
         help="Skip saving per-piece tracking plots (faster evaluation)",
         default=False,
     )
-    args = parser.parse_args()
+    return parser
+
+
+def main():
+    args = build_parser().parse_args()
 
     method = args.method
     dataset = args.dataset
-    processor = DEFAULT_KWARGS.get("midi", {}).get(method, {}).get("processor")
+    processor = processor_for("midi", method)
     config = SymbolicEvalConfig(method=method, dataset=dataset, processor=processor)
 
     ts = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")

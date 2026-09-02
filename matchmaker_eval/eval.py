@@ -242,9 +242,9 @@ def run_score_following(
     gt: Optional[Union[str, Path, np.ndarray]] = None,
 ) -> dict:
     """Run score following via Matchmaker (audio or MIDI methods)."""
-    from matchmaker import DEFAULT_KWARGS as _MM_DEFAULTS
+    from methods import default_kwargs
 
-    mm_kwargs = dict(_MM_DEFAULTS.get(input_type, {}).get(config.method, {}))
+    mm_kwargs = default_kwargs(input_type, config.method)
     if input_type == "audio":
         mm_kwargs["sample_rate"] = config.sample_rate
         mm_kwargs["frame_rate"] = config.frame_rate
