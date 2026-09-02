@@ -197,3 +197,6 @@ scripts/
 # published as workflow artifacts instead.
 /results/submissions/*/*
 !/results/submissions/*/metrics.json
+
+# Assembled leaderboard site (matchmaker_eval/build_site.py)
+_site/

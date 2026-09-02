@@ -235,3 +235,94 @@ class TestNoStaleMethodTables:
             text = path.read_text()
             for name in self.FORBIDDEN:
                 assert name not in text, f"{path.name} still defines {name}"
+
+
+class TestOptionalLatencyStats:
+    """``latency_stats`` is not part of the OnlineAlignment contract.
+
+    The built-in audio followers each maintain their own; a submission written
+    to the documented base class has none. Evaluation must not require it, or
+    no audio submission can be scored at all.
+    """
+
+    class _NoLatency:
+        input_type = "audio"
+
+        def get_latency_stats(self):
+            raise AttributeError("'MyFollower' object has no attribute 'latency_stats'")
+
+    class _WithLatency:
+        input_type = "audio"
+
+        def get_latency_stats(self):
+            return {"f_avg_latency": 1.5, "i_avg_latency": 0.1}
+
+    class _Midi:
+        input_type = "midi"
+
+        def get_latency_stats(self):  # pragma: no cover - must not be called
+            raise AssertionError("MIDI runs report no latency")
+
+    def test_a_follower_without_latency_is_still_evaluated(self):
+        from eval import latency_stats
+
+        assert latency_stats(self._NoLatency()) == {}
+
+    def test_a_follower_with_latency_still_reports_it(self):
+        from eval import latency_stats
+
+        assert latency_stats(self._WithLatency()) == {
+            "f_avg_latency": 1.5,
+            "i_avg_latency": 0.1,
+        }
+
+    def test_midi_runs_are_left_alone(self):
+        from eval import latency_stats
+
+        assert latency_stats(self._Midi()) == {}
+
+    def test_a_zero_frame_run_does_not_crash(self):
+        from eval import latency_stats
+
+        class ZeroFrames:
+            input_type = "audio"
+
+            def get_latency_stats(self):
+                raise ZeroDivisionError("division by zero")
+
+        assert latency_stats(ZeroFrames()) == {}
+
+
+class TestBaselineSubmissions:
+    """Both baselines must stay loadable — CI smoke-tests them on every PR."""
+
+    @pytest.mark.parametrize(
+        "directory,input_type",
+        [
+            ("baseline-constant-tempo", "midi"),
+            ("baseline-constant-tempo-audio", "audio"),
+        ],
+    )
+    def test_the_baseline_registers_what_its_metadata_declares(
+        self, directory, input_type
+    ):
+        from pathlib import Path
+
+        import yaml
+
+        from matchmaker_eval.submission import load_solution
+        from matchmaker.matchmaker import unregister_method
+
+        root = Path(__file__).resolve().parent.parent / "submissions" / directory
+        declared = yaml.safe_load((root / "metadata.yaml").read_text())
+        assert declared["input_type"] == input_type
+
+        method, registered_type = load_solution(root / "solution.py")
+        try:
+            assert method == directory, (
+                "the registered name must match the directory name; "
+                "validate_submission.py rejects a mismatch"
+            )
+            assert registered_type == input_type
+        finally:
+            unregister_method(method, registered_type)

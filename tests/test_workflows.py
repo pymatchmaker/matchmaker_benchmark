@@ -259,6 +259,79 @@ class TestEvaluateWorkflow:
                 assert (REPO_ROOT / token).exists(), f"{token} does not exist"
 
 
+class TestMatchmakerPin:
+    """All workflows must install the same matchmaker, or jobs disagree."""
+
+    def _pins(self) -> dict:
+        import re
+
+        found = {}
+        for path in sorted(WORKFLOWS.glob("*.yml")):
+            for match in re.finditer(r"matchmaker\.git@([\w./-]+)", path.read_text()):
+                found.setdefault(path.name, set()).add(match.group(1))
+        return found
+
+    def test_every_workflow_pins_the_same_ref(self):
+        refs = {ref for refs in self._pins().values() for ref in refs}
+        assert len(refs) == 1, (
+            f"workflows install different matchmaker refs: {sorted(refs)}. "
+            "A partial revert leaves the merge job on a different version "
+            "from the shards."
+        )
+
+    def test_a_non_main_pin_is_marked_temporary(self):
+        """So the revert is not forgotten once the branch is merged."""
+        refs = {ref for refs in self._pins().values() for ref in refs}
+        ref = refs.pop()
+        if ref == "main":
+            return
+        for name in self._pins():
+            text = (WORKFLOWS / name).read_text()
+            assert "TEMPORARY" in text, (
+                f"{name} pins matchmaker to '{ref}' with no note saying it is "
+                "temporary"
+            )
+
+
+class TestSiteAssembly:
+    """One script builds the site, so preview and publish cannot diverge."""
+
+    def test_both_workflows_use_the_same_builder(self):
+        pages = (WORKFLOWS / "pages.yml").read_text()
+        evaluate = EVALUATE.read_text()
+        assert "build_site.py" in pages
+        assert "build_site.py" in evaluate
+
+    def test_the_staging_run_uploads_a_viewable_site(self):
+        steps = steps_of(load_workflow(EVALUATE), "merge")
+        uploads = [
+            s
+            for s in steps
+            if str(s.get("uses", "")).startswith("actions/upload-artifact")
+            and (s.get("with") or {}).get("name") == "leaderboard-site"
+        ]
+        assert uploads, (
+            "a run on the staging branch must leave the page downloadable, or "
+            "there is no way to look at it before publishing"
+        )
+
+    def test_it_assembles_what_the_page_reads(self, tmp_path):
+        import build_site
+
+        summary = build_site.build(tmp_path / "site")
+        site = tmp_path / "site"
+        assert (site / "index.html").exists()
+        assert (site / "leaderboard.json").exists()
+        assert summary["details"] >= 0
+
+    def test_it_refuses_to_build_without_a_leaderboard(self, tmp_path, monkeypatch):
+        import build_site
+
+        monkeypatch.setattr(build_site, "RESULTS_DIR", tmp_path / "empty")
+        with pytest.raises(build_site.SiteError, match="leaderboard.json is missing"):
+            build_site.build(tmp_path / "site")
+
+
 class TestStagingBranch:
     """Evaluation may run on a staging branch; publishing must not."""
 

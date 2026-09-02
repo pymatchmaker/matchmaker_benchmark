@@ -44,6 +44,22 @@ from verify_tracking import check_tracking, plot_tracking
 # ---------------------------------------------------------------------------
 
 
+def latency_stats(mm) -> dict:
+    """Per-frame latency, when the follower reports it.
+
+    ``latency_stats`` is not part of the ``OnlineAlignment`` contract — the
+    built-in audio followers each maintain their own, and a submission written
+    to the documented base class has none. It is a nice-to-have measurement, so
+    a follower without it is evaluated on everything else rather than failing.
+    """
+    if mm.input_type != "audio":
+        return {}
+    try:
+        return mm.get_latency_stats()
+    except (AttributeError, ZeroDivisionError, KeyError, TypeError):
+        return {}
+
+
 def run_evaluation(
     mm: Matchmaker,
     gt: Union[str, Path, np.ndarray] = None,
@@ -112,8 +128,7 @@ def run_evaluation(
                     f"{mm.alignment_duration / perf_duration:.4f}"
                 )
 
-    if mm.input_type == "audio":
-        eval_results.update(mm.get_latency_stats())
+    eval_results.update(latency_stats(mm))
 
     if debug and save_dir is not None:
         wp_sec = np.array([perf_sec, score_beat])

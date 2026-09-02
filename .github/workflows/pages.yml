@@ -32,15 +32,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Assemble the site
-        run: |
-          mkdir -p _site
-          cp -r docs/. _site/
-          cp results/leaderboard.json _site/leaderboard.json
-          cp results/leaderboard.csv _site/leaderboard.csv
-          # Per-entry detail: dataset breakdowns, per-piece rows and the
-          # alignment paths the page plots. Loaded on demand, not upfront.
-          mkdir -p _site/details
-          cp -r results/details/. _site/details/ 2>/dev/null || true
+        # Same script the staging preview uses, so what a maintainer looked at
+        # on the `submissions` branch is assembled exactly like what goes live.
+        run: python matchmaker_eval/build_site.py _site
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
