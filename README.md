@@ -237,6 +237,8 @@ submissions/
   baseline-constant-tempo/  — the no-information floor
   example-pitch-matcher/    — a worked example that actually listens
 tests/                    — registry/benchmark consistency checks (pytest)
+resources/                — the one example performance, CC BY-NC-SA 4.0
+                            (see resources/ATTRIBUTION.md — not Apache-2.0)
 results/
   leaderboard.json/.csv   — the published ranking
   retracted.json          — results withdrawn from it, and why
