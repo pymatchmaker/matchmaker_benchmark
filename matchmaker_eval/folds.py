@@ -48,13 +48,35 @@ LEGACY_DIRS = {
     "vienna": "vienna4x22",
 }
 
+#: The subdirectories a fold CSV addresses inside a dataset root. A directory
+#: without any of them is not laid out the way the folds expect, whatever it is
+#: called.
+LAYOUT_DIRS = ("score", "midi", "match", "audio")
+
+
+def has_expected_layout(path: Path) -> bool:
+    """Is this directory shaped the way the fold CSVs address files?
+
+    An upstream dataset unpacks into its *own* structure — ASAP nests by
+    composer, Batik keeps `scores_effective/` — which is not the flat
+    `score/ midi/ match/ audio/` the folds name. Sharing only a directory name
+    with such a copy is not enough to use it.
+    """
+    return path.is_dir() and any((path / name).is_dir() for name in LAYOUT_DIRS)
+
 
 def dataset_root(dataset: str) -> Path:
     """Where this dataset's files live under ``MATCHMAKER_DATA_DIR``.
 
     ``<data root>/<dataset>`` mirrors the data repository and is what
-    ``fetch_data.py`` writes into. An older local copy unpacked under its
-    upstream directory name is used if that is what is on disk instead.
+    ``fetch_data.py`` writes into, so it is preferred and is also the answer
+    when nothing is on disk yet — the download then lands in the right place.
+
+    A copy under the upstream directory name is used instead only when it is
+    actually laid out the way the folds expect. Returning one that merely has
+    the right name sends every path into a differently-shaped tree: the run
+    fails with paths the user never configured, and any fetch fills that tree
+    with a second, repo-shaped copy alongside the original.
     """
     if dataset == "local":
         return REPO_ROOT
@@ -62,7 +84,9 @@ def dataset_root(dataset: str) -> Path:
     if repo_style.is_dir():
         return repo_style
     legacy = DATA_ROOT / LEGACY_DIRS.get(dataset, dataset)
-    return legacy if legacy.is_dir() else repo_style
+    if legacy != repo_style and has_expected_layout(legacy):
+        return legacy
+    return repo_style
 
 
 #: Kept for callers that want the mapping eagerly; prefer ``dataset_root()``.
@@ -258,8 +282,13 @@ def require_files(pieces: List[Piece], input_type: str) -> None:
             f"{len(missing)} required file(s) not found:\n  {shown}{more}\n\n"
             f"Datasets are expected under {DATA_ROOT} (override with "
             "MATCHMAKER_DATA_DIR). They are normally downloaded automatically "
-            "from the data repository in data/data_sources.yaml — check that "
-            "it is reachable with:\n"
+            "from the data repository named in data/data_sources.yaml, so "
+            "reaching this message means the download was switched off "
+            "(--no-fetch), or could not run.\n\n"
+            "Fetch them:\n"
+            f"  python matchmaker_eval/fetch_data.py --fold <fold> "
+            f"--input-type {input_type}\n\n"
+            "Check the source is reachable:\n"
             "  python matchmaker_eval/fetch_data.py --probe "
-            "--fold eval --input-type midi"
+            f"--fold <fold> --input-type {input_type}"
         )
