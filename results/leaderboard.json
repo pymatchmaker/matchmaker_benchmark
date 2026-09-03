@@ -1,6 +1,6 @@
 {
   "fold": "eval",
-  "generated": "2026-09-01T14:42:57+00:00",
+  "generated": "2026-09-03T09:29:52+00:00",
   "ranking": "tracking_rate desc, then beat_median asc",
   "metrics": {
     "tracking_rate": "share of pieces followed to the end within tolerance",
@@ -305,6 +305,55 @@
       "rank": 6
     },
     {
+      "submission": "baseline-constant-tempo-audio",
+      "kind": "submission",
+      "method": "baseline-constant-tempo-audio",
+      "name": "Constant tempo, audio (baseline)",
+      "authors": "matchmaker maintainers",
+      "affiliation": "Johannes Kepler University Linz",
+      "url": "https://github.com/pymatchmaker/matchmaker_benchmark",
+      "description": "Open-loop baseline for audio input. Ignores the performance and reads the score position off the clock, assuming the notated tempo and a start at the beginning of the score. The audio counterpart of baseline-constant-tempo, so both leaderboards share the same no-information floor.",
+      "input_type": "audio",
+      "tracking_rate": 0.0137,
+      "beat_median": 0.9667,
+      "beat_mean": 1.6051,
+      "beat_0.3b": 0.1786,
+      "beat_0.5b": 0.308,
+      "beat_1.0b": 0.5179,
+      "ms_median": 496.8753,
+      "ms_300ms": 0.3571,
+      "beat_median_all": 48.1269,
+      "ms_median_all": 24985.4202,
+      "rtf": 0.0839,
+      "n_pieces": 146,
+      "n_tracked": 2,
+      "n_failed": 0,
+      "evaluated": "2026-09-03T09:25:58+00:00",
+      "fold": "eval",
+      "fold_sha256": "5ef6e8eabe14d43c3002ec468118f1198596319e1e934fa7f0cb74361de98f83",
+      "matchmaker": "0.3.0",
+      "benchmark_commit": "f1200538c8a64f39edd9870632f91b6bc957e861",
+      "datasets": {
+        "asap": {
+          "n_pieces": 32,
+          "n_tracked": 0,
+          "tracking_rate": 0.0
+        },
+        "batik": {
+          "n_pieces": 30,
+          "n_tracked": 0,
+          "tracking_rate": 0.0
+        },
+        "vienna": {
+          "n_pieces": 84,
+          "n_tracked": 2,
+          "tracking_rate": 0.0238
+        }
+      },
+      "details": "details/baseline-constant-tempo-audio.json",
+      "rank": 7
+    },
+    {
       "submission": "baseline-constant-tempo",
       "kind": "submission",
       "method": "baseline-constant-tempo",
@@ -351,13 +400,14 @@
         }
       },
       "details": "details/baseline-constant-tempo.json",
-      "rank": 7
+      "rank": 8
     }
   ],
   "skipped": [
-    "/home/darthalexus/cp/pymatchmaker/matchmaker_benchmark/results/submissions/arzt-audio/metrics.json: partial run (144/146 pieces) \u2014 rerun the full fold",
-    "/home/darthalexus/cp/pymatchmaker/matchmaker_benchmark/results/submissions/dixon-audio/metrics.json: partial run (144/146 pieces) \u2014 rerun the full fold",
-    "/home/darthalexus/cp/pymatchmaker/matchmaker_benchmark/results/submissions/outerhmm-audio/metrics.json: partial run (144/146 pieces) \u2014 rerun the full fold",
-    "/home/darthalexus/cp/pymatchmaker/matchmaker_benchmark/results/submissions/skf-audio/metrics.json: partial run (144/146 pieces) \u2014 rerun the full fold"
-  ]
+    "/home/runner/work/matchmaker_benchmark/matchmaker_benchmark/results/submissions/arzt-audio/metrics.json: partial run (144/146 pieces) \u2014 rerun the full fold",
+    "/home/runner/work/matchmaker_benchmark/matchmaker_benchmark/results/submissions/dixon-audio/metrics.json: partial run (144/146 pieces) \u2014 rerun the full fold",
+    "/home/runner/work/matchmaker_benchmark/matchmaker_benchmark/results/submissions/outerhmm-audio/metrics.json: partial run (144/146 pieces) \u2014 rerun the full fold",
+    "/home/runner/work/matchmaker_benchmark/matchmaker_benchmark/results/submissions/skf-audio/metrics.json: partial run (144/146 pieces) \u2014 rerun the full fold"
+  ],
+  "retracted": []
 }
