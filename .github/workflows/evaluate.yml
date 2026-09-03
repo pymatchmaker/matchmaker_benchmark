@@ -53,6 +53,16 @@ on:
         description: "Submission directory (empty = whatever this push changed)"
         required: false
         default: ""
+      method:
+        description: "Built-in method to evaluate as a reference, e.g. arzt (leave submission empty)"
+        required: false
+        default: ""
+      input_type:
+        description: "Stream for --method: audio or midi"
+        required: false
+        default: midi
+        type: choice
+        options: [midi, audio]
       fold:
         description: "Fold to evaluate on"
         required: false
@@ -78,6 +88,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       submission: ${{ steps.plan.outputs.submission }}
+      target: ${{ steps.plan.outputs.target }}
       input_type: ${{ steps.plan.outputs.input_type }}
       shards: ${{ steps.plan.outputs.shards }}
       num_shards: ${{ steps.plan.outputs.num_shards }}
@@ -96,28 +107,45 @@ jobs:
         id: plan
         run: |
           pip install --quiet pyyaml
-          if [ -n "${{ github.event.inputs.submission }}" ]; then
-            dir="${{ github.event.inputs.submission }}"
+          method="${{ github.event.inputs.method }}"
+
+          if [ -n "$method" ]; then
+            # A built-in method, evaluated as a leaderboard reference row.
+            # References have no submission directory, so the input type is
+            # given rather than read from metadata.yaml.
+            dir=""
+            target="--method ${method} --input-type ${{ github.event.inputs.input_type }}"
+            input_type="${{ github.event.inputs.input_type }}"
+            label="reference ${method}"
           else
-            dir=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" \
-                  | grep -E '^submissions/[^_][^/]*/' \
-                  | cut -d/ -f1,2 | sort -u | head -n1)
-          fi
-          echo "submission=${dir}" >> "$GITHUB_OUTPUT"
-          if [ -z "$dir" ]; then
-            echo "Nothing to evaluate."
-            echo "input_type=" >> "$GITHUB_OUTPUT"
-            echo "shards=[]" >> "$GITHUB_OUTPUT"
-            echo "num_shards=0" >> "$GITHUB_OUTPUT"
-            exit 0
+            if [ -n "${{ github.event.inputs.submission }}" ]; then
+              dir="${{ github.event.inputs.submission }}"
+            else
+              dir=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" \
+                    | grep -E '^submissions/[^_][^/]*/' \
+                    | cut -d/ -f1,2 | sort -u | head -n1)
+            fi
+            if [ -z "$dir" ]; then
+              echo "Nothing to evaluate."
+              echo "submission=" >> "$GITHUB_OUTPUT"
+              echo "target=" >> "$GITHUB_OUTPUT"
+              echo "input_type=" >> "$GITHUB_OUTPUT"
+              echo "shards=[]" >> "$GITHUB_OUTPUT"
+              echo "num_shards=0" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            target="$dir"
+            input_type=$(python -c "import yaml,sys; print(yaml.safe_load(open(sys.argv[1]))['input_type'])" "$dir/metadata.yaml")
+            label="$dir"
           fi
 
-          input_type=$(python -c "import yaml,sys; print(yaml.safe_load(open(sys.argv[1]))['input_type'])" "$dir/metadata.yaml")
           n="${{ github.event.inputs.shards || '8' }}"
+          echo "submission=${dir}" >> "$GITHUB_OUTPUT"
+          echo "target=${target}" >> "$GITHUB_OUTPUT"
           echo "input_type=${input_type}" >> "$GITHUB_OUTPUT"
           echo "num_shards=${n}" >> "$GITHUB_OUTPUT"
           echo "shards=$(python -c "import json,sys; print(json.dumps(list(range(int(sys.argv[1])))))" "$n")" >> "$GITHUB_OUTPUT"
-          echo "Evaluating $dir ($input_type) on ${FOLD} in $n shards"
+          echo "Evaluating ${label} (${input_type}) on ${FOLD} in $n shards"
 
       - name: Locate this fold's data
         id: source
@@ -132,7 +160,7 @@ jobs:
 
   evaluate:
     needs: plan
-    if: needs.plan.outputs.submission != ''
+    if: needs.plan.outputs.target != ''
     runs-on: ${{ vars.BENCHMARK_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 350
     strategy:
@@ -232,9 +260,11 @@ jobs:
             --num-shards ${{ needs.plan.outputs.num_shards }}
 
       - name: Run the shard
+        # `target` is either a submission directory or `--method X --input-type Y`
+        # for a built-in reference, so it is deliberately unquoted.
         run: |
           python matchmaker_eval/run_submission.py \
-            "${{ needs.plan.outputs.submission }}" \
+            ${{ needs.plan.outputs.target }} \
             --fold "$FOLD" \
             --shard ${{ matrix.shard }} \
             --num-shards ${{ needs.plan.outputs.num_shards }} \
@@ -248,7 +278,7 @@ jobs:
 
   merge:
     needs: [plan, evaluate]
-    if: always() && needs.plan.outputs.submission != ''
+    if: always() && needs.plan.outputs.target != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -303,7 +333,7 @@ jobs:
             echo "Leaderboard unchanged."
             exit 0
           fi
-          git commit -m "benchmark: evaluate ${{ needs.plan.outputs.submission }} on the ${{ env.FOLD }} fold
+          git commit -m "benchmark: evaluate ${{ needs.plan.outputs.target }} on the ${{ env.FOLD }} fold
 
           Run ${{ github.run_id }}, ${{ needs.plan.outputs.num_shards }} shards."
           git pull --rebase --autostash

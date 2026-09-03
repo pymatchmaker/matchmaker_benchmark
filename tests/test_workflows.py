@@ -332,6 +332,96 @@ class TestSiteAssembly:
             build_site.build(tmp_path / "site")
 
 
+class TestReferenceDispatch:
+    """A built-in method must be evaluatable on CI, not only locally.
+
+    References had no path through the workflow at all: `plan` derived the
+    target from changed submission directories, so the only way to produce a
+    reference row was to run it by hand. That is why the audio references sat
+    stale and partial.
+    """
+
+    def _inputs(self):
+        workflow = load_workflow(EVALUATE)
+        trigger = workflow.get(True) or workflow.get("on")
+        return trigger["workflow_dispatch"]["inputs"]
+
+    def test_a_method_can_be_dispatched(self):
+        inputs = self._inputs()
+        assert "method" in inputs, "no way to evaluate a built-in as a reference"
+        assert "input_type" in inputs, "--method needs an input type"
+
+    def test_input_type_is_constrained(self):
+        options = self._inputs()["input_type"]["options"]
+        assert sorted(options) == ["audio", "midi"]
+
+    def test_jobs_key_off_target_not_submission(self):
+        """A reference has no submission directory, so the old guard skipped it."""
+        workflow = load_workflow(EVALUATE)
+        for job in ("evaluate", "merge"):
+            condition = workflow["jobs"][job]["if"]
+            assert "outputs.target" in condition, (
+                f"job '{job}' still gates on submission, so a reference run "
+                "would be skipped"
+            )
+
+    def test_plan_publishes_a_target(self):
+        assert "target" in load_workflow(EVALUATE)["jobs"]["plan"]["outputs"]
+
+    def test_the_target_is_passed_unquoted_to_the_runner(self):
+        """It expands to either a directory or `--method X --input-type Y`."""
+        steps = steps_of(load_workflow(EVALUATE), "evaluate")
+        run = next(s["run"] for s in steps if s.get("name") == "Run the shard")
+        assert "${{ needs.plan.outputs.target }}" in run
+        assert '"${{ needs.plan.outputs.target }}"' not in run, (
+            "quoting the target would pass '--method arzt --input-type audio' "
+            "as a single argument"
+        )
+
+    def test_run_submission_accepts_both_target_shapes(self):
+        """The two shapes plan can emit must both be valid CLI."""
+        import subprocess
+
+        for args in (
+            ["submissions/baseline-constant-tempo", "--fold", "example"],
+            ["--method", "arzt", "--input-type", "audio", "--fold", "example"],
+        ):
+            done = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "matchmaker_eval" / "run_submission.py"),
+                    *args,
+                    "--help",
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+            )
+            assert done.returncode == 0, done.stderr
+
+
+class TestBundledDataLicence:
+    """resources/ is CC BY-NC-SA data inside an Apache-2.0 repository."""
+
+    def test_the_example_piece_is_attributed(self):
+        attribution = REPO_ROOT / "resources" / "ATTRIBUTION.md"
+        assert attribution.exists(), (
+            "resources/ ships (n)ASAP and MAESTRO material; it needs attribution"
+        )
+        text = attribution.read_text()
+        for required in ("CC BY-NC-SA", "asap-dataset", "maestro"):
+            assert required.lower() in text.lower()
+
+    def test_the_licence_text_is_included(self):
+        assert (REPO_ROOT / "resources" / "LICENSE-CC-BY-NC-SA-4.0.md").exists()
+
+    def test_the_root_licence_flags_the_exception(self):
+        text = (REPO_ROOT / "LICENSE").read_text()
+        assert "resources/" in text, (
+            "the Apache licence must say it does not cover the bundled data"
+        )
+
+
 class TestStagingBranch:
     """Evaluation may run on a staging branch; publishing must not."""
 
