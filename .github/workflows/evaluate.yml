@@ -262,6 +262,15 @@ jobs:
       - name: Run the shard
         # `target` is either a submission directory or `--method X --input-type Y`
         # for a built-in reference, so it is deliberately unquoted.
+        #
+        # One BLAS thread, matching evaluate-references.yml: a runner's core
+        # count would otherwise move the timing columns between one entry and
+        # the next, and those columns are compared across entries.
+        env:
+          OMP_NUM_THREADS: "1"
+          OPENBLAS_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
+          NUMEXPR_NUM_THREADS: "1"
         run: |
           python matchmaker_eval/run_submission.py \
             ${{ needs.plan.outputs.target }} \

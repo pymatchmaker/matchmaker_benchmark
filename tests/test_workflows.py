@@ -231,6 +231,12 @@ class TestEvaluateWorkflow:
         positions = [names.index(name) for name in order]
         assert positions == sorted(positions), f"steps out of order: {names}"
 
+    def test_the_run_step_pins_blas_threads(self):
+        """Submissions and references must be timed the same way."""
+        steps = steps_of(load_workflow(EVALUATE), "evaluate")
+        run = next(s for s in steps if s.get("name") == "Run the shard")
+        assert (run.get("env") or {}).get("OMP_NUM_THREADS") == "1"
+
     def test_data_dir_is_set_from_the_checkout(self):
         body = "\n".join(
             step.get("run", "")
@@ -398,6 +404,96 @@ class TestReferenceDispatch:
                 text=True,
             )
             assert done.returncode == 0, done.stderr
+
+
+class TestReferencesWorkflow:
+    """References must be measurable on the same infrastructure as submissions."""
+
+    REFERENCES = WORKFLOWS / "evaluate-references.yml"
+
+    def test_the_workflow_exists(self):
+        assert self.REFERENCES.exists(), (
+            "references evaluated on a laptop are not comparable with "
+            "submissions evaluated on a runner"
+        )
+
+    def test_it_shares_the_leaderboard_concurrency_group(self):
+        """Two workflows committing results/ at once would race."""
+        mine = load_workflow(self.REFERENCES)["concurrency"]["group"]
+        theirs = load_workflow(EVALUATE)["concurrency"]["group"]
+        assert mine == theirs
+
+    def test_it_uses_the_same_data_route_as_evaluate(self):
+        workflow = load_workflow(self.REFERENCES)
+        steps = steps_of(workflow, "evaluate")
+        checkout = [
+            s for s in steps
+            if str(s.get("uses", "")).startswith("actions/checkout")
+            and (s.get("with") or {}).get("repository")
+        ]
+        assert len(checkout) == 1
+        assert checkout[0]["with"].get("persist-credentials") is False
+        body = "\n".join(s.get("run", "") for s in steps)
+        assert "--verify" in body
+        assert "MATCHMAKER_DATA_DIR=" in body
+
+    def test_the_run_step_pins_blas_threads(self):
+        """A runner's core count must not move the timing columns."""
+        steps = steps_of(load_workflow(self.REFERENCES), "evaluate")
+        run = next(s for s in steps if s.get("name") == "Run the shard")
+        env = run.get("env") or {}
+        assert env.get("OMP_NUM_THREADS") == "1", (
+            "reference timings are compared with each other; leaving the "
+            "thread count to the runner makes them incomparable"
+        )
+
+    def test_the_matrix_is_built_from_described_methods(self):
+        body = "\n".join(
+            s.get("run", "") for s in steps_of(load_workflow(self.REFERENCES), "plan")
+        )
+        assert "builtin_methods.yaml" in body, (
+            "the set of reference rows is data/builtin_methods.yaml, not a "
+            "list hard-coded in the workflow"
+        )
+
+    def test_the_merge_regroups_before_merging(self):
+        body = "\n".join(
+            s.get("run", "") for s in steps_of(load_workflow(self.REFERENCES), "merge")
+        )
+        assert "merge_references.py" in body
+        assert "leaderboard.py" in body
+        assert "build_site.py" in body
+
+    def test_it_uploads_a_reviewable_site(self):
+        steps = steps_of(load_workflow(self.REFERENCES), "merge")
+        names = [
+            (s.get("with") or {}).get("name")
+            for s in steps
+            if str(s.get("uses", "")).startswith("actions/upload-artifact")
+        ]
+        assert "leaderboard-site" in names
+
+    def test_shard_artifact_names_match_what_the_merger_parses(self):
+        """The upload name and merge_references' regex are one contract."""
+        import re
+        import sys as _sys
+
+        _sys.path.insert(0, str(REPO_ROOT / "matchmaker_eval"))
+        from merge_references import SHARD_DIR
+
+        steps = steps_of(load_workflow(self.REFERENCES), "evaluate")
+        upload = next(
+            s for s in steps
+            if str(s.get("uses", "")).startswith("actions/upload-artifact")
+        )
+        template = upload["with"]["name"]
+        concrete = re.sub(r"\$\{\{[^}]*method[^}]*\}\}", "arzt", template)
+        concrete = re.sub(r"\$\{\{[^}]*input_type[^}]*\}\}", "audio", concrete)
+        concrete = re.sub(r"\$\{\{[^}]*shard[^}]*\}\}", "3", concrete)
+        match = SHARD_DIR.match(concrete)
+        assert match, f"merge_references cannot parse artifact name {concrete!r}"
+        assert match.group("entry") == "arzt-audio"
+        assert match.group("shard") == "3"
 
 
 class TestBundledDataLicence:

@@ -215,6 +215,37 @@ python matchmaker_eval/run_references.py --input-type audio
 python matchmaker_eval/run_references.py --input-type both --exclude pf
 ```
 
+### On a runner, the same way as submissions
+
+`run_references.py` runs on your machine. That is fine for a spot check, but a
+reference row produced on a laptop is not the same measurement as a submission
+row produced on a GitHub runner — different CPU, different thread count, and
+(as the audio references showed) possibly a different corpus on disk. For rows
+that go on the leaderboard, use the workflow:
+
+```
+Actions -> Evaluate references -> Run workflow
+  input_type: both     only: (empty = all described)     shards: 8
+```
+
+It mirrors `evaluate.yml` exactly — same data checkout, same eight-way
+round-robin sharding, same merge, same leaderboard rebuild — and fans out over
+every method described in `data/builtin_methods.yaml`. Both workflows pin
+`OMP_NUM_THREADS=1` so a runner's core count cannot move the timing columns
+between one entry and the next.
+
+11 described methods x 8 shards is 88 jobs, which queue against the account's
+concurrency limit rather than all starting at once. To evaluate a single
+reference instead, `Evaluate submissions` takes a `method` and `input_type`.
+
+Accuracy is unaffected by any of this — an alignment path is a deterministic
+function of score, performance and code, and the merged numbers are identical
+to an unsharded run. It is the wall-clock columns (`rtf`, the latency figures)
+that depend on the machine, which is why they are worth reading as an
+indication rather than a measurement.
+
+### Which methods run
+
 Which methods *exist* comes from the installed matchmaker's spec
 (`matchmaker/methods.yaml`); which of them this repo can *label* on the
 leaderboard is `data/builtin_methods.yaml`, which holds names, citations and

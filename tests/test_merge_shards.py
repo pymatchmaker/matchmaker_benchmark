@@ -104,3 +104,72 @@ class TestMergeRejectsMismatchedShards:
         root = write_shards(tmp_path / "shards", [shard_record(0), shard_record(0)])
         with pytest.raises(MergeError, match="more than one shard"):
             merge(root, tmp_path / "out")
+
+
+class TestMergeReferences:
+    """One references run produces shards for many entries, flat in one dir."""
+
+    def _flat_download(self, tmp_path, entries, shards=2):
+        root = tmp_path / "refshards"
+        root.mkdir()
+        for entry in entries:
+            for s in range(shards):
+                d = root / f"refshard-{entry}-{s}"
+                d.mkdir()
+                rec = shard_record(s)
+                rec["submission"] = entry
+                rec["fold_size"] = shards
+                (d / "metrics.json").write_text(json.dumps(rec))
+        return root
+
+    def test_shards_are_grouped_by_entry(self, tmp_path):
+        from merge_references import group
+
+        root = self._flat_download(tmp_path, ["arzt-audio", "pthmm-midi"])
+        grouped = group(root)
+        assert sorted(grouped) == ["arzt-audio", "pthmm-midi"]
+        assert all(len(v) == 2 for v in grouped.values())
+
+    def test_a_method_name_containing_a_dash_still_groups(self, tmp_path):
+        """`refshard-<entry>-<n>`: only the trailing number is the shard."""
+        from merge_references import group
+
+        root = self._flat_download(tmp_path, ["baseline-constant-tempo-audio"])
+        assert sorted(group(root)) == ["baseline-constant-tempo-audio"]
+
+    def test_each_entry_merges_separately(self, tmp_path):
+        from merge_references import merge_all
+
+        root = self._flat_download(tmp_path, ["arzt-audio", "pthmm-midi"])
+        report = merge_all(root, tmp_path / "out", tmp_path / "staging")
+        assert sorted(report) == ["arzt-audio", "pthmm-midi"]
+        for info in report.values():
+            assert info["n_pieces"] == 2
+            assert info["partial"] is False
+        assert (tmp_path / "out" / "arzt-audio" / "metrics.json").exists()
+        assert (tmp_path / "out" / "pthmm-midi" / "metrics.json").exists()
+
+    def test_an_entry_missing_shards_stays_partial(self, tmp_path):
+        from merge_references import merge_all
+
+        root = self._flat_download(tmp_path, ["arzt-audio"], shards=2)
+        # Drop one shard, as a failed matrix job would.
+        import shutil
+
+        shutil.rmtree(root / "refshard-arzt-audio-1")
+        report = merge_all(root, tmp_path / "out", tmp_path / "staging")
+        assert report["arzt-audio"]["partial"] is True
+
+    def test_an_empty_download_is_an_error(self, tmp_path):
+        from merge_references import MergeError, merge_all
+
+        (tmp_path / "empty").mkdir()
+        with pytest.raises(MergeError, match="no refshard"):
+            merge_all(tmp_path / "empty", tmp_path / "out", tmp_path / "s")
+
+    def test_unrelated_directories_are_ignored(self, tmp_path):
+        from merge_references import group
+
+        root = self._flat_download(tmp_path, ["arzt-audio"])
+        (root / "some-other-artifact").mkdir()
+        assert sorted(group(root)) == ["arzt-audio"]
