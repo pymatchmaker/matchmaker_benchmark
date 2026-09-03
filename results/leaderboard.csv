@@ -1,8 +1,9 @@
 rank,submission,kind,name,authors,input_type,tracking_rate,beat_median,beat_mean,beat_0.3b,beat_0.5b,beat_1.0b,ms_median,ms_300ms,beat_median_all,ms_median_all,rtf,n_pieces,n_tracked,evaluated
 1,pthmm-midi,reference,Pitch HMM,matchmaker,midi,0.9658,0.0,0.2105,0.8266,0.9303,0.9798,0.0041,0.9347,0.0,0.0041,0.0566,146,141,2026-08-27T08:46:07+00:00
-2,arzt-midi,reference,OLTW (Arzt),Brazier and Widmer (2020),midi,0.9589,0.0,0.2476,0.8083,0.9174,0.9753,0.0036,0.9613,0.0,0.0041,0.0007,146,140,2026-08-26T16:15:49+00:00
-3,outerhmm-midi,reference,Outer-product HMM,Nakamura (2014),midi,0.9247,0.0,4.7332,0.7948,0.8995,0.9515,0.0036,0.9509,0.0,0.0036,0.0212,146,135,2026-08-26T16:30:29+00:00
+2,arzt-midi,reference,OLTW (Arzt),Brazier and Widmer (2020),midi,0.9589,0.0,0.2476,0.8083,0.9174,0.9753,0.0036,0.9613,0.0,0.0041,0.0017,146,140,2026-09-03T11:26:39+00:00
+3,outerhmm-midi,reference,Outer-product HMM,Nakamura (2014),midi,0.9247,0.0,4.9365,0.7938,0.8984,0.9505,0.0036,0.9498,0.0,0.0036,0.0726,146,135,2026-09-03T12:17:28+00:00
 4,hmm-midi,reference,Pitch-IOI HMM,Cancino-Chacón et al. (2023),midi,0.911,0.0,0.2116,0.8212,0.9253,0.9778,0.0041,0.9395,0.0,0.0041,0.0528,146,133,2026-08-27T08:45:29+00:00
-5,dixon-midi,reference,OLTW (Dixon),Dixon (2005),midi,0.7329,0.125,0.3094,0.7592,0.8894,0.9555,0.0051,0.9219,0.1667,0.0051,0.0023,146,107,2026-08-26T16:16:41+00:00
+5,dixon-midi,reference,OLTW (Dixon),Dixon (2005),midi,0.8493,0.125,0.2702,0.7815,0.9037,0.9651,0.0041,0.9424,0.125,0.0041,0.0043,146,124,2026-09-03T11:27:52+00:00
 6,example-pitch-matcher,submission,Pitch matcher (example),matchmaker maintainers,midi,0.3425,0.125,0.3679,0.7374,0.8648,0.9359,0.0051,0.8726,0.25,0.0102,0.0001,146,50,2026-08-26T10:35:04+00:00
-7,baseline-constant-tempo,submission,Constant tempo (baseline),matchmaker maintainers,midi,0.0,,,,,,,,46.675,24035.4141,,146,0,2026-08-26T10:40:39+00:00
+7,baseline-constant-tempo-audio,submission,"Constant tempo, audio (baseline)",matchmaker maintainers,audio,0.0137,0.9667,1.6051,0.1786,0.308,0.5179,496.8753,0.3571,48.1269,24985.4202,0.0839,146,2,2026-09-03T09:25:58+00:00
+8,baseline-constant-tempo,submission,Constant tempo (baseline),matchmaker maintainers,midi,0.0,,,,,,,,46.675,24035.4141,,146,0,2026-08-26T10:40:39+00:00

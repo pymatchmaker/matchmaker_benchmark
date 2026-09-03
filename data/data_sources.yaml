@@ -66,7 +66,8 @@ token_env: MATCHMAKER_DATA_TOKEN
 # The data repository ships audio as mp3 while the fold CSVs name the original
 # .wav files. Audio is fetched by trying these containers in order; the first
 # that exists wins, and the local file keeps that extension.
-audio_extensions: [".mp3", ".wav"]
+audio_extensions: [".mp3"]
+#, ".wav"]
 
 # Optional integrity check. If data/checksums/<dataset>.sha256 exists (lines of
 # "<sha256>  <path>"), every fetched file is verified against it.

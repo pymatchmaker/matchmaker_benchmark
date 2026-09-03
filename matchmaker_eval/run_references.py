@@ -133,8 +133,8 @@ def main():
     parser.add_argument(
         "--input-type",
         choices=("midi", "audio", "both"),
-        default="midi",
-        help="which reference methods to run (default: midi)",
+        default="both",
+        help="which reference methods to run (default: both)",
     )
     parser.add_argument("--fold", default="eval", help="fold to evaluate on")
     parser.add_argument(
