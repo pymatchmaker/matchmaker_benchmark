@@ -10,7 +10,8 @@ from partitura.musicanalysis.performance_codec import (
 )
 from typing import List, Tuple
 
-from matchmaker.utils.symbolic import save_wav_fluidsynth
+# partitura owns the fluidsynth renderer; matchmaker dropped its copy.
+from partitura import save_wav_fluidsynth
 
 import matplotlib.pyplot as plt
 

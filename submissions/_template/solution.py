@@ -19,9 +19,9 @@ Test it without touching a dataset:
 
     python matchmaker_eval/validate_submission.py submissions/your-name --smoke
 
-Then tune on the tuning fold (never the eval fold — see docs/eval-protocol.md):
+Then tune on the validation fold (never the eval fold — see docs/eval-protocol.md):
 
-    python matchmaker_eval/run_submission.py submissions/your-name --fold tuning
+    python matchmaker_eval/run_submission.py submissions/your-name --fold valid
 """
 
 from matchmaker import register_method

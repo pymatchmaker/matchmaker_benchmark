@@ -14,7 +14,7 @@
 - [ ] `requirements.txt` pins exact versions (or is empty).
 - [ ] `python matchmaker_eval/validate_submission.py submissions/<name> --smoke`
       passes locally.
-- [ ] I tuned on the **tuning** fold (or my own data) and did not use the eval
+- [ ] I tuned on the **valid** fold (or my own data) and did not use the eval
       fold to develop, tune, select or validate this follower —
       see [docs/eval-protocol.md](../docs/eval-protocol.md).
 - [ ] The code is mine to submit under the repository's licence, or I have said

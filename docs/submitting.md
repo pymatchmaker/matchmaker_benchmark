@@ -112,7 +112,7 @@ anything.
 
 ### Measuring yourself before submitting
 
-**Use the tuning fold, and only the tuning fold.** It is the 20 performances set
+**Use the validation fold, and only the validation fold.** It is the 20 performances set
 aside for development; the eval fold's 146 are what the leaderboard is for, and
 touching them is what the declaration in your `metadata.yaml` is about.
 
@@ -128,22 +128,22 @@ One command does it:
 python matchmaker_eval/test_submission.py submissions/your-name
 ```
 
-It downloads the 20 tuning performances if you do not have them, runs your
+It downloads the 20 validation performances if you do not have them, runs your
 follower over them, and prints how many it tracked, the beat error, and which
-pieces it lost. There is no `--fold` option: this measures the tuning fold and
+pieces it lost. There is no `--fold` option: this measures the validation fold and
 nothing else, which is the point.
 
 `run_submission.py` is the engine underneath, if you need sharding or another
 fold.
 
-If you do want to measure yourself before submitting, the tuning fold is the
+If you do want to measure yourself before submitting, the validation fold is the
 one to use. `fetch_data.py` pulls **only the files that fold needs** — never the
 evaluation material:
 
 ```bash
 export MATCHMAKER_DATA_DIR=~/data     # default
-python matchmaker_eval/fetch_data.py --fold tuning --input-type midi
-python matchmaker_eval/run_submission.py submissions/your-name --fold tuning
+python matchmaker_eval/fetch_data.py --fold valid --input-type midi
+python matchmaker_eval/run_submission.py submissions/your-name --fold valid
 ```
 
 That is roughly 20 performances rather than 146, and `run_submission.py` fetches

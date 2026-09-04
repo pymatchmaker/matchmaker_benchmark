@@ -1,7 +1,7 @@
 """The one command a submitter runs.
 
 run_submission.py is the engine and carries twelve CI-oriented flags; a
-submitter needs one of them. This front door is locked to the tuning fold on
+submitter needs one of them. This front door is locked to the validation fold on
 purpose — the eval fold is what the leaderboard measures, and not providing a
 convenient way to develop against it is the cheapest way to keep the
 declaration in a submission's metadata.yaml true.
@@ -35,11 +35,11 @@ class TestItIsLockedToTuning:
         )
 
     def test_the_fold_is_tuning(self):
-        assert entry.TUNING_FOLD == "tuning"
+        assert entry.VALID_FOLD == "valid"
 
     def test_the_help_says_which_fold_and_why(self):
         text = run("--help").stdout
-        assert "tuning" in text
+        assert "valid" in text
 
 
 class TestArguments:

@@ -28,7 +28,7 @@ DATA = REPO_ROOT / "data"
 #: Configuration the benchmark owns. Deleting any of these breaks evaluation.
 REQUIRED = (
     "folds/eval.csv",
-    "folds/tuning.csv",
+    "folds/valid.csv",
     "folds/example.csv",
     "data_sources.yaml",
     "builtin_methods.yaml",

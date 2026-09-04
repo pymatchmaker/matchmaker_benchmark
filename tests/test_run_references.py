@@ -39,9 +39,9 @@ class TestRunDir:
         )
 
     def test_another_fold_writes_elsewhere(self, results):
-        """A tuning run must not overwrite a published record."""
-        assert R.run_dir_for("arzt", "audio", "tuning") == (
-            results / "results" / "runs" / "tuning" / "arzt-audio"
+        """A validation run must not overwrite a published record."""
+        assert R.run_dir_for("arzt", "audio", "valid") == (
+            results / "results" / "runs" / "valid" / "arzt-audio"
         )
 
     def test_metrics_path_follows_the_run_dir(self, results):

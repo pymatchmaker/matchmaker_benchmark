@@ -10,7 +10,7 @@ Three folds ship with the repository:
 ``example``
     A single piece that lives in ``resources/`` inside this repository. No
     download needed, so CI can smoke-test a submission in a couple of minutes.
-``tuning``
+``valid``
     The development fold. Tune, sweep and overfit here as much as you like.
 ``eval``
     The leaderboard fold. Must not be used for tuning — see
@@ -384,9 +384,9 @@ def explain_missing_dataset(dataset: str, sample: Path) -> str:
         f"checkout of it cannot be read by these runners.\n\n"
         f"To measure a follower, use the fold-driven path, which does read the "
         f"data repository and downloads what it needs:\n"
-        f"  python matchmaker_eval/run_submission.py <submission> --fold tuning\n"
+        f"  python matchmaker_eval/run_submission.py <submission> --fold valid\n"
         f"  python matchmaker_eval/run_submission.py --method <name> "
-        f"--input-type midi --fold tuning"
+        f"--input-type midi --fold valid"
     )
 
 

@@ -208,7 +208,7 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "MIDI score following over a metadata CSV. Maintainer tool: it "
             "needs a local copy of the corpus in its upstream (nested) layout. "
-            "To measure a submission, use run_submission.py --fold tuning, "
+            "To measure a submission, use run_submission.py --fold valid, "
             "which reads the benchmark data repository and downloads what it "
             "needs."
         )

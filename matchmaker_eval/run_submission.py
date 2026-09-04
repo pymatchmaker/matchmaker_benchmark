@@ -375,7 +375,7 @@ def evaluate_submission(
 
     if run_dir is None:
         # Only an eval-fold run belongs in results/submissions/, the directory
-        # the leaderboard reads. A tuning or example run goes elsewhere, so it
+        # the leaderboard reads. A validation or example run goes elsewhere, so it
         # cannot silently replace a published record with a one-piece smoke run.
         run_dir = (
             DEFAULT_RESULTS_DIR / name

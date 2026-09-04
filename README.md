@@ -99,10 +99,10 @@ change to what it measures arrives as a reviewable diff.
 | Fold | Pieces | Data branch | Use |
 | --- | ---: | --- | --- |
 | `example` | 1 | committed in `resources/` | smoke tests; no download |
-| `tuning` | 20 | [`experiment`](https://github.com/pymatchmaker/matchmaker-benchmark-data/tree/experiment) | development and sweeps |
+| `valid` | 20 | [`experiment`](https://github.com/pymatchmaker/matchmaker-benchmark-data/tree/experiment) | development and sweeps |
 | `eval` | 146 | [`benchmark`](https://github.com/pymatchmaker/matchmaker-benchmark-data/tree/benchmark) | the leaderboard, and nothing else |
 
-No performance appears in both `tuning` and `eval`; CI checks it on every pull
+No performance appears in both `valid` and `eval`; CI checks it on every pull
 request (`make_folds.py --check`).
 
 ## Data
@@ -133,8 +133,8 @@ fold reads, so you never have to look it up.
 you want, `fetch_data.py` downloads only the files a run touches:
 
 ```bash
-# only the 20 tuning performances, from the `experiment` branch
-python matchmaker_eval/fetch_data.py --fold tuning --input-type midi
+# only the 20 validation performances, from the `experiment` branch
+python matchmaker_eval/fetch_data.py --fold valid --input-type midi
 
 # check the configuration without downloading a corpus
 python matchmaker_eval/fetch_data.py --probe --fold eval --input-type audio
@@ -148,7 +148,7 @@ a local copy of the corpora still works.
 
 ```bash
 # one submission on a fold
-python matchmaker_eval/run_submission.py submissions/<name> --fold tuning
+python matchmaker_eval/run_submission.py submissions/<name> --fold valid
 
 # the built-in methods, as leaderboard reference rows, then republish
 python matchmaker_eval/run_references.py --input-type midi
@@ -224,7 +224,7 @@ matchmaker_eval/
   validate_submission.py  — pull-request checks: structure, contract, smoke run
   merge_shards.py         — recombine parallel shards into one metrics record
   leaderboard.py          — metrics.json files -> leaderboard.json / .csv
-  test_submission.py      — what a submitter runs: their follower, tuning fold
+  test_submission.py      — what a submitter runs: their follower, validation fold
   retract.py              — withdraw a published result, with a reason
   merge_references.py     — regroup and merge a sharded multi-method run
   export_details.py       — per-dataset/per-piece detail + decimated paths
@@ -235,7 +235,7 @@ matchmaker_eval/
   methods.py              — the one seam onto matchmaker's method spec
   utils.py, verify_tracking.py, sweep.py
 data/
-  folds/                  — frozen fold definitions (example, tuning, eval)
+  folds/                  — frozen fold definitions (example, valid, eval)
   data_sources.yaml       — where performance data is fetched from
   builtin_methods.yaml    — leaderboard prose for the reference methods
                             (names and citations only; no configuration)

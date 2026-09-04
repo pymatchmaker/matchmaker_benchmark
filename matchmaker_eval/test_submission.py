@@ -1,12 +1,12 @@
-"""Measure your own follower on the tuning fold.
+"""Measure your own follower on the validation fold.
 
     python matchmaker_eval/test_submission.py submissions/your-name
 
-This is the one command a submitter needs. It downloads the 20 tuning
+This is the one command a submitter needs. It downloads the 20 validation
 performances if they are not already there, runs your follower over them,
 and prints how it did.
 
-It is deliberately limited to the **tuning** fold. The eval fold's 146
+It is deliberately limited to the **valid** fold. The eval fold's 146
 performances are what the leaderboard is for; using them to develop against is
 what the declaration in your metadata.yaml says you did not do, and the easiest
 way to keep that true is not to have a convenient way to break it. See
@@ -31,7 +31,7 @@ import argparse
 from matchmaker_eval.submission import SubmissionError
 from run_submission import evaluate_submission
 
-TUNING_FOLD = "tuning"
+VALID_FOLD = "valid"
 
 
 def summarise(metrics: dict) -> str:
@@ -44,7 +44,7 @@ def summarise(metrics: dict) -> str:
 
     lines = [
         "",
-        f"{metrics['submission']}  ({metrics['input_type']}, tuning fold)",
+        f"{metrics['submission']}  ({metrics['input_type']}, validation fold)",
         "-" * 58,
         f"  tracked            {n}/{total} pieces"
         f"   ({overall.get('tracking_rate', 0.0):.0%})",
@@ -124,7 +124,7 @@ def main():
         "--output",
         type=Path,
         default=None,
-        help="where to write the run (default: results/runs/tuning/<name>)",
+        help="where to write the run (default: results/runs/valid/<name>)",
     )
     args = parser.parse_args()
 
@@ -134,7 +134,7 @@ def main():
     try:
         metrics = evaluate_submission(
             args.submission,
-            fold=TUNING_FOLD,
+            fold=VALID_FOLD,
             builtin=args.method,
             input_type=args.input_type,
             limit=args.limit,
@@ -147,7 +147,7 @@ def main():
 
     print(summarise(metrics))
     print(
-        "\nThis is the tuning fold. The leaderboard is the eval fold, which is\n"
+        "\nThis is the validation fold. The leaderboard is the eval fold, which is\n"
         "evaluated for you when your pull request is merged."
     )
     return 0

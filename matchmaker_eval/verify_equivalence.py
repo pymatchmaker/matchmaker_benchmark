@@ -180,7 +180,7 @@ def main():
         choices=("audio", "midi"),
         help="which stream the method consumes",
     )
-    parser.add_argument("--fold", default="tuning", help="fold to sample pieces from")
+    parser.add_argument("--fold", default="valid", help="fold to sample pieces from")
     parser.add_argument("--limit", type=int, default=3, help="how many pieces")
     args = parser.parse_args()
     if not is_builtin_for(args.method, args.input_type):

@@ -149,7 +149,7 @@ class TestMetadataRunnerPaths:
 
         message = explain_missing_dataset("asap", P("/nowhere/x.musicxml"))
         assert "MATCHMAKER_DATA_DIR" in message
-        assert "run_submission.py" in message and "--fold tuning" in message, (
+        assert "run_submission.py" in message and "--fold valid" in message, (
             "a user who cannot run these should be pointed at the path that "
             "does read the data repository"
         )
@@ -163,4 +163,4 @@ class TestMetadataRunnerPaths:
                 cwd=REPO_ROOT, capture_output=True, text=True,
             )
             assert done.returncode == 0, done.stderr
-            assert "--fold tuning" in done.stdout
+            assert "--fold valid" in done.stdout

@@ -5,7 +5,7 @@
 
 The folds are derived from the dataset metadata already in ``data/``:
 
-``tuning``   <- ``data/metadata-validation.csv`` (the set the sweeps use)
+``valid``   <- ``data/metadata-validation.csv`` (the set the sweeps use)
 ``eval``     <- ``data/reduced/metadata-{asap,batik,vienna}.csv``
 ``example``  <- the single piece committed under ``resources/``
 
@@ -15,7 +15,7 @@ leaderboard. Regenerate them only deliberately: ``eval`` is frozen, and
 changing it invalidates every published number.
 
 The check step enforces the property the leaderboard depends on — no
-performance appears in both the tuning and the eval fold — and reports the
+performance appears in both the validation and the eval fold — and reports the
 *score*-level overlap, which is unavoidable for datasets such as vienna4x22
 (4 pieces, 22 pianists each). See ``docs/eval-protocol.md``.
 """
@@ -307,13 +307,13 @@ def build(sources) -> list:
     return pieces
 
 
-def check(eval_pieces, tuning_pieces) -> int:
+def check(eval_pieces, valid_pieces) -> int:
     """Report fold hygiene. Returns the number of hard failures."""
     failures = 0
 
     incomplete = [
         p.piece_id
-        for p in eval_pieces + tuning_pieces
+        for p in eval_pieces + valid_pieces
         if not p.xml_score
         or not p.match
         or not (p.midi_performance or p.audio_performance)
@@ -325,14 +325,14 @@ def check(eval_pieces, tuning_pieces) -> int:
         failures += 1
 
     eval_ids = {p.piece_id for p in eval_pieces}
-    shared_performances = sorted(eval_ids & {p.piece_id for p in tuning_pieces})
+    shared_performances = sorted(eval_ids & {p.piece_id for p in valid_pieces})
     if shared_performances:
         print(f"FAIL  {len(shared_performances)} performance(s) are in both folds:")
         for piece_id in shared_performances[:10]:
             print(f"        {piece_id}")
         failures += 1
     else:
-        print("ok    no performance appears in both the tuning and the eval fold")
+        print("ok    no performance appears in both the validation and the eval fold")
 
     duplicates = [
         pid for pid, n in Counter(p.piece_id for p in eval_pieces).items() if n > 1
@@ -342,7 +342,7 @@ def check(eval_pieces, tuning_pieces) -> int:
         failures += 1
 
     eval_titles = {(p.dataset, p.title) for p in eval_pieces}
-    shared_scores = sorted(eval_titles & {(p.dataset, p.title) for p in tuning_pieces})
+    shared_scores = sorted(eval_titles & {(p.dataset, p.title) for p in valid_pieces})
     if shared_scores:
         print(
             f"note  {len(shared_scores)} score(s) appear in both folds, played by "
@@ -366,9 +366,9 @@ def check(eval_pieces, tuning_pieces) -> int:
         f"\neval fold   : {len(eval_pieces)} performances "
         f"{dict(sorted(counts.items()))}"
     )
-    counts = Counter(p.dataset for p in tuning_pieces)
+    counts = Counter(p.dataset for p in valid_pieces)
     print(
-        f"tuning fold : {len(tuning_pieces)} performances "
+        f"validation fold : {len(valid_pieces)} performances "
         f"{dict(sorted(counts.items()))}"
     )
     return failures
@@ -414,7 +414,7 @@ def repo_pieces_for(fold: str) -> dict:
 def build_from_repo() -> int:
     """Regenerate the folds against the data repository's layout.
 
-    The eval and tuning folds keep exactly the pieces they already name — the
+    The eval and validation folds keep exactly the pieces they already name — the
     benchmark's contents do not change — but their paths are replaced with the
     ones the repository publishes. Membership is matched on (dataset, title,
     performance stem), which is what ``piece_id`` is built from and is stable
@@ -422,9 +422,9 @@ def build_from_repo() -> int:
     """
     # The repository metadata carries only paths, no titles, so identity comes
     # from the filenames. Each fold is read from its own branch, so a repository
-    # that keeps tuning and evaluation material apart is handled naturally.
+    # that keeps validation and evaluation material apart is handled naturally.
     repo_pieces, directories = {}, {}
-    for fold in ("eval", "tuning"):
+    for fold in ("eval", "valid"):
         pieces = repo_pieces_for(fold)
         for dataset, items in pieces.items():
             for piece in items:
@@ -441,7 +441,7 @@ def build_from_repo() -> int:
     token = auth_token(config)
 
     failed_folds = []
-    for name in ("eval", "tuning"):
+    for name in ("eval", "valid"):
         current = load_fold(name)
         rebuilt, missing = [], []
         recovered_count = 0
@@ -555,12 +555,12 @@ def main():
 
     if args.check:
         eval_pieces = load_fold("eval")
-        tuning_pieces = load_fold("tuning")
+        valid_pieces = load_fold("valid")
     else:
         eval_pieces = build(EVAL_SOURCES)
-        tuning_pieces = build(TUNING_SOURCES)
+        valid_pieces = build(TUNING_SOURCES)
 
-    failures = check(eval_pieces, tuning_pieces)
+    failures = check(eval_pieces, valid_pieces)
     if failures:
         print(f"\n{failures} check(s) failed.")
         return 1
@@ -568,7 +568,7 @@ def main():
     if not args.check:
         for name, pieces in [
             ("eval", eval_pieces),
-            ("tuning", tuning_pieces),
+            ("valid", valid_pieces),
             ("example", [EXAMPLE_PIECE]),
         ]:
             path = FOLD_DIR / f"{name}.csv"

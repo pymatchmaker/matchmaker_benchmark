@@ -324,7 +324,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Audio score following over a metadata CSV. Maintainer tool: it "
             "needs a local copy of the corpus in its upstream (nested) layout, "
             "and per-method configuration comes from matchmaker's spec. To "
-            "measure a submission, use run_submission.py --fold tuning, which "
+            "measure a submission, use run_submission.py --fold valid, which "
             "reads the benchmark data repository and downloads what it needs."
         )
     )

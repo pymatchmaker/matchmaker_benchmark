@@ -32,7 +32,7 @@ class PitchMatchFollower(OnlineAlignment):
         How many chords ahead to search for a match. This is the parameter
         that matters: too large and the pointer races ahead on coincidental
         pitch matches, too small and it cannot get past an ornament. Tuned on
-        the tuning fold — tuning it on a single piece picks the wrong value.
+        the validation fold — tuning it on a single piece picks the wrong value.
     smoothing : float
         Weight of the previous tempo estimate when a new one arrives.
     """
@@ -63,7 +63,7 @@ class PitchMatchFollower(OnlineAlignment):
         # Take the first chord ahead that shares a pitch with what we just
         # heard. The lookahead has to stay small: music reuses every pitch
         # constantly, so "the next chord containing this note" is only
-        # trustworthy within a note or two. On the tuning fold, a lookahead of
+        # trustworthy within a note or two. On the validation fold, a lookahead of
         # 2 tracks 14 of 20 pieces; 3 tracks 8; 5 tracks none, because the
         # pointer starts jumping on coincidental matches and never recovers.
         end = min(self.current_index + 1 + self.window, len(self.chord_pitches))

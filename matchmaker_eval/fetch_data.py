@@ -3,7 +3,7 @@
     python matchmaker_eval/fetch_data.py --fold eval --input-type midi
     python matchmaker_eval/fetch_data.py --fold eval --input-type audio \
         --shard 0 --num-shards 8
-    python matchmaker_eval/fetch_data.py --fold tuning --input-type audio --dry-run
+    python matchmaker_eval/fetch_data.py --fold valid --input-type audio --dry-run
 
 The point of this module is that nobody has to download the whole corpus. A
 contributor testing a submission needs no data at all (the ``example`` fold is
@@ -148,7 +148,7 @@ def auth_token(config: dict) -> Optional[str]:
 def branch_for(config: dict, fold: Optional[str] = None) -> str:
     """Which branch of the data repository this fold's files live on.
 
-    Folds can be kept on separate branches — tuning material on one, evaluation
+    Folds can be kept on separate branches — validation material on one, evaluation
     material on another — so that a clone or a checkout brings down only what
     that fold needs. ``branches:`` maps fold name to branch; ``branch:`` is the
     fallback for anything unlisted.
@@ -340,7 +340,7 @@ def metadata_path(dataset: str, branch: str = "main") -> Path:
     """Where this dataset's metadata CSV is cached locally.
 
     Keyed by branch: two branches can describe the same dataset differently
-    (one listing the tuning material, another the evaluation material), and
+    (one listing the validation material, another the evaluation material), and
     caching both to one path would let whichever was fetched first silently
     stand in for the other.
     """

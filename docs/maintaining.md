@@ -113,13 +113,13 @@ In CI, add it as the repository secret `MATCHMAKER_DATA_TOKEN`; `evaluate.yml`
 passes it to the fetch step. Once the data repository is public, delete the
 secret and everything keeps working.
 
-**Folds on separate branches.** Keep tuning material and evaluation material on
+**Folds on separate branches.** Keep validation material and evaluation material on
 different branches of the data repository and map them:
 
 ```yaml
 branch: main            # fallback for anything unlisted
 branches:
-  tuning: tuning-data
+  valid: valid-data
   eval: eval-data
 ```
 
@@ -151,8 +151,8 @@ all: it can restructure without the benchmark needing an edit.
 Check what a fold resolves to before running anything long:
 
 ```bash
-python matchmaker_eval/fetch_data.py --probe --fold tuning --input-type midi
-# repository : owner/repo@tuning-data
+python matchmaker_eval/fetch_data.py --probe --fold valid --input-type midi
+# repository : owner/repo@valid-data
 ```
 
 > **Branches organise the data, they do not restrict access.** On a public
@@ -361,7 +361,7 @@ python matchmaker_eval/leaderboard.py
 ```
 
 Only `--fold eval` writes into `results/submissions/`, which is what the
-leaderboard reads. Any other fold writes to `results/runs/<fold>/`, so a tuning
+leaderboard reads. Any other fold writes to `results/runs/<fold>/`, so a validation
 or smoke run can never overwrite a published record.
 
 Or trigger the workflow manually (`workflow_dispatch`) with a submission name,
@@ -376,11 +376,11 @@ verified at submission time — see
 periodic checking looks like in practice:
 
 ```bash
-python matchmaker_eval/run_submission.py submissions/<name> --fold tuning
+python matchmaker_eval/run_submission.py submissions/<name> --fold valid
 ```
 
-Compare the tuning-fold and eval-fold numbers. A follower that does markedly
-better on eval than on tuning is worth a conversation — but the folds differ in
+Compare the validation-fold and eval-fold numbers. A follower that does markedly
+better on eval than on valid is worth a conversation — but the folds differ in
 size and difficulty, so this is a weak signal and never a verdict on its own.
 Combine it with a reading of the code and, where a paper or repository exists,
 with what it says about training data.
@@ -391,7 +391,7 @@ keep the directory, so the history stays readable.
 ## Sweeps and Weights & Biases
 
 Sweeps (`sweep_config/`, `matchmaker_eval/sweep.py`) are how the built-in
-methods are tuned. They run on the **tuning** fold and are kept in this
+methods are tuned. They run on the **valid** fold and are kept in this
 repository so the tuning procedure is public and reproducible.
 
 The wandb workspace is not public. That is deliberate and it costs nothing:
@@ -405,7 +405,7 @@ wandb agent <your-entity>/<your-project>/<sweep_id>
 ```
 
 Sweeps and the leaderboard deliberately do not share a driver: sweeps optimise
-on the tuning fold, `run_submission.py` measures on the eval fold. They do share
+on the validation fold, `run_submission.py` measures on the eval fold. They do share
 the evaluation functions in `eval.py` and `utils.py`, so a metric means the same
 thing in both.
 
@@ -427,7 +427,7 @@ built-in follower under a new name through the public registration API, runs
 both, and compares every metric.
 
 ```bash
-python matchmaker_eval/verify_equivalence.py --method pthmm --fold tuning --limit 4
+python matchmaker_eval/verify_equivalence.py --method pthmm --fold valid --limit 4
 ```
 
 Run it after touching the evaluation code.
