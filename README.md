@@ -77,12 +77,15 @@ Each run creates a directory in `output/` containing:
 
 ### Evaluation protocol
 
-- **Primary metric**: beat error (perf→score direction)
-- **Secondary metric**: ms error (score→perf direction)
-- **Tracking**: 30-second segments, median beat error per segment
-  - Audio threshold: 1.0 beat, min_fails=2
-  - MIDI threshold: 0.5 beat, min_fails=2
-- **Aggregation**: event-pooled across tracked pieces
+- **Primary metric**: Tracking Rate (TR), the proportion of pieces that remain tracked throughout the performance under the following tracking decision rule.
+- **Tracking decision**: onset-wise forward windows of 30 seconds, evaluated from the first annotated performance onset through the first window that reaches the final onset.
+  - Window statistic: median absolute beat error
+  - Audio threshold: 1.0 beat
+  - MIDI threshold: 0.5 beat
+  - A piece fails when any evaluated window exceeds the modality threshold
+- **Precision metric**: beat error in the perf→score direction, pooled over the method-specific tracked subset.
+- **Secondary precision metric**: ms error in the score→perf direction, pooled over the method-specific tracked subset.
+- **Aggregation**: precision metrics are event-pooled across tracked pieces.
 
 ## Project structure
 
@@ -92,7 +95,7 @@ matchmaker_eval/
   test_audio.py        — audio benchmark runner
   test_symbolic.py     — symbolic benchmark runner
   utils.py             — shared utilities (config, summary, metrics)
-  verify_tracking.py   — segment-based tracking verification
+  verify_tracking.py   — performance-level tracking success evaluation
 data/
   metadata-*.csv       — dataset metadata (full)
   reduced/             — reduced metadata (test set)
