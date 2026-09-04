@@ -46,6 +46,31 @@ midi:
     description: >
       Sequential Monte Carlo tracking of score position and tempo, on
       Korzeniowski features.
+  SL_OLTW:
+    name: Symbolic OLTW (parangonar)
+    authors: [Silvan Peter]
+    description: >
+      On-line time warping over symbolic note events, from the parangonar
+      alignment library (https://github.com/sildater/parangonar). Matches one
+      performed note at a time against the score note array.
+  SLT_OLTW:
+    name: Symbolic tempo OLTW (parangonar)
+    authors: [Silvan Peter]
+    description: >
+      The tempo-tracking variant of parangonar's symbolic on-line time warping,
+      which estimates a local tempo alongside the alignment.
+  OTM:
+    name: Online transformer matcher (parangonar)
+    authors: [Silvan Peter]
+    description: >
+      Transformer-based online note matcher from parangonar, combining a
+      learned model with a symbolic alignment stage.
+  OPTM:
+    name: Online pure transformer matcher (parangonar)
+    authors: [Silvan Peter]
+    description: >
+      Transformer-based online note matcher from parangonar, run without the
+      additional symbolic alignment stage.
 
 audio:
   arzt:

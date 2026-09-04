@@ -203,6 +203,45 @@ class TestVerifyEquivalence:
         assert not verify_equivalence.is_builtin_for("skf", "midi")
 
 
+class TestParangonarReferences:
+    """The four parangonar trackers are leaderboard references now."""
+
+    NAMES = ("OPTM", "OTM", "SLT_OLTW", "SL_OLTW")
+
+    @pytest.mark.parametrize("method", NAMES)
+    def test_each_is_described(self, method):
+        metadata = builtin_metadata(method, "midi")
+        assert metadata["name"]
+        assert metadata["description"].strip()
+
+    @pytest.mark.parametrize("method", NAMES)
+    def test_each_builds_its_own_matcher_not_the_registry_key(self, method):
+        """A clone registers under another name and must still be itself.
+
+        `method` is a literal in the spec rather than {from: method}: taking it
+        from the registry key made verify_equivalence's `clone-OPTM` blow up in
+        parangonar with "Unknown parangonar method".
+        """
+        spec = REGISTRY.method("midi", method)
+        arg = spec.args["method"]
+        assert arg.source == "value"
+        assert arg.key == method
+
+    @pytest.mark.parametrize("method", NAMES)
+    def test_each_runs_event_based(self, method):
+        """ParangonarProcessor raises on a frame holding more than one note."""
+        spec = REGISTRY.method("midi", method)
+        assert spec.event_based
+        assert spec.default_kwargs["polling_period"] is None
+        assert spec.default_kwargs["processor"] == "parangonar"
+
+    def test_the_processor_is_declared(self):
+        assert "parangonar" in REGISTRY.processors["midi"]
+
+    def test_they_are_no_longer_undescribed(self):
+        assert "midi" not in undescribed_methods()
+
+
 class TestFoldPaths:
     """``--fold`` also takes a path to a CSV, which need not be in the repo."""
 
