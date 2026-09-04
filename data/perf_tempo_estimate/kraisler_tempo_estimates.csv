@@ -1,0 +1,61 @@
+dataset,title,audio_performance_file,estimated_bpm
+kraisler,Valse sentimentale,performance_wav/01_mix_dry.wav,101
+kraisler,Valse sentimentale,performance_wav/01_mix_hall.wav,101
+kraisler,Valse sentimentale,performance_wav/01_mix_studio.wav,101
+kraisler,Preghiera,performance_wav/02_mix_dry.wav,56
+kraisler,Preghiera,performance_wav/02_mix_hall.wav,56
+kraisler,Preghiera,performance_wav/02_mix_studio.wav,56
+kraisler,Danse Macabre,performance_wav/03_mix_dry.wav,191
+kraisler,Danse Macabre,performance_wav/03_mix_hall.wav,191
+kraisler,Danse Macabre,performance_wav/03_mix_studio.wav,191
+kraisler,Violin Concerto in D major,performance_wav/04_mix_dry.wav,71
+kraisler,Violin Concerto in D major,performance_wav/04_mix_hall.wav,71
+kraisler,Violin Concerto in D major,performance_wav/04_mix_studio.wav,71
+kraisler,Violin Concerto No. 3 in B minor,performance_wav/05_mix_dry.wav,66
+kraisler,Violin Concerto No. 3 in B minor,performance_wav/05_mix_hall.wav,66
+kraisler,Violin Concerto No. 3 in B minor,performance_wav/05_mix_studio.wav,66
+kraisler,3 Romances,performance_wav/06_mix_dry.wav,98
+kraisler,3 Romances,performance_wav/06_mix_hall.wav,98
+kraisler,3 Romances,performance_wav/06_mix_studio.wav,98
+kraisler,Violin Sonata No. 1 in G major,performance_wav/07_mix_dry.wav,83
+kraisler,Violin Sonata No. 1 in G major,performance_wav/07_mix_hall.wav,83
+kraisler,Violin Sonata No. 1 in G major,performance_wav/07_mix_studio.wav,83
+kraisler,Violin Sonata No. 3 in C minor,performance_wav/08_mix_dry.wav,275
+kraisler,Violin Sonata No. 3 in C minor,performance_wav/08_mix_hall.wav,275
+kraisler,Violin Sonata No. 3 in C minor,performance_wav/08_mix_studio.wav,275
+kraisler,Violin Sonata in A major,performance_wav/09_mix_dry.wav,63
+kraisler,Violin Sonata in A major,performance_wav/09_mix_hall.wav,63
+kraisler,Violin Sonata in A major,performance_wav/09_mix_studio.wav,63
+kraisler,Nocturne No. 20 in C♯ minor,performance_wav/10_mix_dry.wav,59
+kraisler,Nocturne No. 20 in C♯ minor,performance_wav/10_mix_hall.wav,59
+kraisler,Nocturne No. 20 in C♯ minor,performance_wav/10_mix_studio.wav,59
+kraisler,Dichterliebe_48_1,performance_wav/11_mix_dry.wav,37
+kraisler,Dichterliebe_48_1,performance_wav/11_mix_hall.wav,37
+kraisler,Dichterliebe_48_1,performance_wav/11_mix_studio.wav,37
+kraisler,Dichterliebe_48_5,performance_wav/12_mix_dry.wav,55
+kraisler,Dichterliebe_48_5,performance_wav/12_mix_hall.wav,55
+kraisler,Dichterliebe_48_5,performance_wav/12_mix_studio.wav,55
+kraisler,Violin Sonata No. 5,performance_wav/13_mix_dry.wav,118
+kraisler,Violin Sonata No. 5,performance_wav/13_mix_hall.wav,118
+kraisler,Violin Sonata No. 5,performance_wav/13_mix_studio.wav,118
+kraisler,Estrellita,performance_wav/14_mix_dry.wav,52
+kraisler,Estrellita,performance_wav/14_mix_hall.wav,52
+kraisler,Estrellita,performance_wav/14_mix_studio.wav,52
+kraisler,Vocalise,performance_wav/15_mix_dry.wav,48
+kraisler,Vocalise,performance_wav/15_mix_hall.wav,48
+kraisler,Vocalise,performance_wav/15_mix_studio.wav,48
+kraisler,Mélodie from Souvenir d’un Lieu Cher,performance_wav/16_mix_dry.wav,76
+kraisler,Mélodie from Souvenir d’un Lieu Cher,performance_wav/16_mix_hall.wav,76
+kraisler,Mélodie from Souvenir d’un Lieu Cher,performance_wav/16_mix_studio.wav,76
+kraisler,Violin Concerto No. 3,performance_wav/17_mix_dry.wav,116
+kraisler,Violin Concerto No. 3,performance_wav/17_mix_hall.wav,116
+kraisler,Violin Concerto No. 3,performance_wav/17_mix_studio.wav,116
+kraisler,Liebesleid,performance_wav/18_mix_dry.wav,135
+kraisler,Liebesleid,performance_wav/18_mix_hall.wav,135
+kraisler,Liebesleid,performance_wav/18_mix_studio.wav,135
+kraisler,Violin Concerto in E minor,performance_wav/19_mix_dry.wav,169
+kraisler,Violin Concerto in E minor,performance_wav/19_mix_hall.wav,169
+kraisler,Violin Concerto in E minor,performance_wav/19_mix_studio.wav,169
+kraisler,Liebesfreud,performance_wav/20_mix_dry.wav,163
+kraisler,Liebesfreud,performance_wav/20_mix_hall.wav,163
+kraisler,Liebesfreud,performance_wav/20_mix_studio.wav,163

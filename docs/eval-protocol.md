@@ -95,9 +95,10 @@ latency are averaged per piece instead.
 ### Tracked vs. lost
 
 A follower that loses the performance produces meaningless errors, so pieces are
-classified first. A piece is cut into 30-second segments; a segment fails if the
-median absolute beat error inside it exceeds the threshold, and the piece counts
-as **lost** if at least 2 segments fail.
+classified first. The performance is walked in onset-wise forward windows of 30
+seconds — from the first annotated onset through the first window that reaches
+the last one. A window fails if the median absolute beat error inside it exceeds
+the threshold, and the piece counts as **lost** if any evaluated window fails.
 
 | Input | Threshold |
 | --- | --- |

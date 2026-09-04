@@ -70,10 +70,9 @@ from matchmaker_eval.submission import (
 sys.setrecursionlimit(10000)
 
 #: Tracking verdict thresholds, per input type. A piece counts as "tracked"
-#: unless at least MIN_FAILS 30-second segments exceed the median beat error
+#: unless some 30-second onset-wise window's median beat error exceeds the
 #: threshold. MIDI is held to a tighter bound than audio.
 TRACKING_THRESHOLD = {"audio": 1.0, "midi": 0.5}
-TRACKING_MIN_FAILS = 2
 SEGMENT_DURATION = 30.0
 
 DEFAULT_RESULTS_DIR = REPO_ROOT / "results" / "submissions"
@@ -220,11 +219,8 @@ def run_piece(method, piece, input_type, index, run_dir, save_plots):
     tracking = check_tracking(
         wp_sec,
         gt,
-        frame_rate=1,
         segment_duration=SEGMENT_DURATION,
         threshold=threshold,
-        mode="beat",
-        min_fails=TRACKING_MIN_FAILS,
     )
     nested["tracked"] = bool(tracking["tracked"])
     nested["max_deviation"] = float(tracking["max_deviation"])
@@ -234,12 +230,10 @@ def run_piece(method, piece, input_type, index, run_dir, save_plots):
         plot_tracking(
             wp_sec,
             gt,
-            frame_rate=1,
             title=f"{piece.piece_id} #{index}",
             save_path=run_dir / f"tracking_{index}.png",
-            mode="beat",
+            segment_duration=SEGMENT_DURATION,
             threshold=threshold,
-            min_fails=TRACKING_MIN_FAILS,
         )
 
     with open(run_dir / f"{index}.json", "w") as f:

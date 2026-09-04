@@ -255,6 +255,7 @@ def run_score_following(
     granularity: str = "note",
     save_plots: bool = True,
     gt: Optional[Union[str, Path, np.ndarray]] = None,
+    tempo: Optional[float] = 120.0,
 ) -> dict:
     """Run score following via Matchmaker (audio or MIDI methods)."""
     from methods import default_kwargs
@@ -273,6 +274,7 @@ def run_score_following(
         method=config.method,
         wait=False,
         unfold_score=True,
+        tempo=tempo,
         kwargs=mm_kwargs,
     )
 
@@ -330,9 +332,7 @@ def run_score_following(
             gt_for_check = np.column_stack(
                 [perf_annotations[:min_len], score_annots_for_gt[:min_len]]
             )
-        tracking = check_tracking(
-            wp_for_check, gt_for_check, config.frame_rate, mode="beat"
-        )
+        tracking = check_tracking(wp_for_check, gt_for_check)
         results["tracked"] = tracking["tracked"]
         results["max_deviation"] = tracking["max_deviation"]
         results["n_failed_segments"] = tracking["n_failed"]
@@ -344,10 +344,8 @@ def run_score_following(
             plot_tracking(
                 wp_for_check,
                 gt_for_check,
-                config.frame_rate,
                 title=f"{config.method} #{run_name}",
                 save_path=Path(save_dir) / f"tracking_{run_name}.png",
-                mode="beat",
             )
     except Exception:
         pass

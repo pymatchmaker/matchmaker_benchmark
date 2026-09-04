@@ -196,12 +196,17 @@ contract.
 
 ## Evaluation protocol
 
-- **Primary metric**: beat error (performance → score)
-- **Secondary metric**: ms error (score → performance)
-- **Tracking**: 30-second segments, median beat error per segment; a piece is
-  lost if 2 or more segments exceed the threshold (audio 1.0 beat, MIDI 0.5)
-- **Aggregation**: event-pooled across tracked pieces
-- **Ranking**: tracking rate first, then median beat error
+- **Primary metric**: tracking rate — the share of pieces followed to the end.
+- **Tracking decision**: onset-wise forward windows of 30 seconds, evaluated
+  from the first annotated performance onset through the first window that
+  reaches the final onset. A window's statistic is the median absolute beat
+  error, and a piece fails when any evaluated window exceeds the modality
+  threshold — 1.0 beat for audio, 0.5 for MIDI.
+- **Precision metric**: beat error (performance → score), pooled over the
+  pieces that method actually tracked.
+- **Secondary precision metric**: ms error (score → performance), same pooling.
+- **Aggregation**: precision metrics are event-pooled across tracked pieces.
+- **Ranking**: tracking rate first, then median beat error.
 
 Full detail, including fold hygiene and the anti-tuning policy, in
 [docs/eval-protocol.md](docs/eval-protocol.md).

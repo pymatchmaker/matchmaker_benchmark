@@ -1,80 +1,95 @@
 """
 Check if a tracker followed the score throughout a piece.
 
-Evaluates in the **score domain** (perf→score): divides performance time
-into fixed 30-second segments. For each GT annotation in a segment, looks
-up the tracker's last-known score position at that performance time and
-computes |predicted_beat - gt_beat|. Reports the median of those absolute
-beat errors as the segment deviation. A piece FAILS if ≥ min_fails
-segments exceed the threshold.
+Evaluates in the score domain, in beat unit. At every annotated onset it
+looks up the last score position emitted at or before that time, then computes
+the median absolute beat error in a forward window starting at each unique
+annotated performance onset. The window slides onset-wise until one first
+reaches the final annotation. A piece fails when any window median exceeds the
+selected beat tolerance.
 
 Input:
   wp.tsv   Warping path (tab-separated)
-           Column 0 = perf position (frame index), Column 1 = score position (beats or state indices)
+           Column 0 = performance time (seconds), Column 1 = score position (beats)
   gt.tsv   Ground truth (tab-separated)
            Column 0 = perf time (seconds), Column 1 = score position (beats)
 
 Usage:
-  python verify_tracking.py --wp output/.../wp_1.tsv --gt data/gt/valid/gt_1.tsv --frame-rate 30
-  python verify_tracking.py --wp output/.../wp_1.tsv --gt data/gt/valid/gt_1.tsv --frame-rate 30 --save out.png
+  python verify_tracking.py --wp output/.../wp_1.tsv --gt output/.../gt_1.tsv
+  python verify_tracking.py --wp output/.../wp_1.tsv --gt output/.../gt_1.tsv --save out.png
 """
 
 import argparse
 from pathlib import Path
-from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-SEGMENT_THRESHOLD = 1.0  # max allowed median |beat error| per segment (beats)
-SEGMENT_DURATION = 30.0  # seconds
-MIN_FAILS = 2  # piece fails if >= this many segments exceed SEGMENT_THRESHOLD
+BEAT_ERROR_THRESHOLD = 1.0  # threshold for window median beat error (beats)
+SEGMENT_DURATION = 30.0  # window duration (seconds)
 
 
-def _wp_to_score(
-    wp: np.ndarray,
-    frame_rate: float,
-    mode: str = "beat",
-    score_positions: Optional[np.ndarray] = None,
-) -> np.ndarray:
-    """Convert wp score axis to GT-compatible units.
+def _onset_wise_window_profile(
+    times: np.ndarray,
+    errors: np.ndarray,
+    window_duration: float,
+    threshold: float,
+) -> list[dict]:
+    """Evaluate forward windows starting at successive annotated onsets."""
+    if window_duration <= 0:
+        raise ValueError("segment_duration/window_duration must be positive")
 
-    Parameters
-    ----------
-    wp : (N, 2) — col 0: perf frames, col 1: score (frames, state indices, or beat positions)
-    frame_rate : float
-    mode : "beat" or "state"
-    score_positions : array mapping state index → score position.
-                  Required when mode="state".
+    evaluable = np.isfinite(times) & ~np.isnan(errors)
+    times = np.asarray(times[evaluable], dtype=float)
+    errors = np.asarray(errors[evaluable], dtype=float)
+    if len(times) == 0:
+        return []
 
-    Returns
-    -------
-    wp_score : (N,) array in GT-compatible units
-    """
-    if mode == "beat":
-        return wp[:, 1].astype(float)
-    elif mode == "state" and score_positions is not None:
-        state_idx = wp[:, 1].astype(int)
-        offset = int(state_idx.min())
-        mapped = np.clip(state_idx - offset, 0, len(score_positions) - 1)
-        return score_positions[mapped].astype(float)
-    else:
-        # Frame mode: score frames → seconds
-        return wp[:, 1] / frame_rate
+    order = np.argsort(times, kind="stable")
+    times = times[order]
+    errors = errors[order]
+
+    windows = []
+    final_onset = float(times[-1])
+    unique_starts = np.flatnonzero(np.r_[True, times[1:] != times[:-1]])
+    for left in unique_starts:
+        start = float(times[left])
+        nominal_stop = start + window_duration
+        right = int(np.searchsorted(times, nominal_stop, side="right"))
+        reaches_final_onset = right == len(times)
+        deviation = float(np.median(errors[left:right]))
+        n_onsets = int(
+            np.count_nonzero(
+                np.r_[True, times[left + 1 : right] != times[left : right - 1]]
+            )
+        )
+        windows.append(
+            {
+                "t0": start,
+                "t1": min(nominal_stop, final_onset),
+                "onset_index_start": int(left),
+                "onset_index_stop": right,
+                "n_points": right - left,
+                "n_onsets": n_onsets,
+                "deviation": deviation,
+                "failed": deviation > threshold,
+                "short_piece_fallback": left == 0 and reaches_final_onset,
+                "reaches_final_onset": reaches_final_onset,
+            }
+        )
+        if reaches_final_onset:
+            break
+    return windows
 
 
 def check_tracking(
     wp: np.ndarray,
     gt: np.ndarray,
-    frame_rate: float,
     segment_duration: float = SEGMENT_DURATION,
-    threshold: float = SEGMENT_THRESHOLD,
-    mode: str = "beat",
-    score_positions: Optional[np.ndarray] = None,
-    min_fails: int = MIN_FAILS,
+    threshold: float = BEAT_ERROR_THRESHOLD,
 ) -> dict:
     """
-    Check tracking quality using fixed-duration segments.
+    Check tracking quality using an onset-wise sliding-window median.
 
     Evaluates in the **score domain** (perf→score): at each GT performance
     onset time, looks up the tracker's last-known score position from the
@@ -84,19 +99,26 @@ def check_tracking(
     ----------
     wp : (N, 2) array — col 0: perf time (seconds), col 1: score position
     gt : (M, 2) array — col 0: perf time (seconds), col 1: score position (beats)
-    frame_rate : float — kept for backward-compat callers
-    segment_duration : float — segment length in seconds (default: 30)
-    threshold : float — max allowed median absolute beat error per segment (default: 1.0)
-    mode : "beat" or "state"
-    score_positions : optional array mapping state index → score position.
-        Required when mode="state".
-    min_fails : int — piece fails if >= this many segments exceed threshold
+    segment_duration : float — window duration W in seconds (default: 30)
+    threshold : float — maximum median absolute beat error theta (default: 1.0)
 
     Returns
     -------
-    dict with: segments, max_deviation, tracked, reason
+    dict with: windows, mean_onsets_per_window, worst_window, max_deviation,
+    tracked, reason
     """
-    wp_score = _wp_to_score(wp, frame_rate, mode, score_positions)
+    if wp.size == 0 or gt.size == 0:
+        return {
+            "windows": [],
+            "n_windows": 0,
+            "mean_onsets_per_window": 0.0,
+            "n_failed": 1,
+            "max_deviation": float("inf"),
+            "worst_window": None,
+            "tracked": False,
+            "reason": "no evaluable alignment or ground-truth onsets",
+        }
+    wp_score = wp[:, 1].astype(float)
     wp_perf = wp[:, 0].astype(float)  # seconds
 
     gt_perf = gt[:, 0]
@@ -120,57 +142,41 @@ def check_tracking(
     valid = indices >= 0
     predicted_score[valid] = reduced_scores[indices[valid]]
 
-    errors_all = np.abs(predicted_score - gt_score)  # in beats
+    errors_all = np.abs(predicted_score - gt_score)  # beats
+    errors_all[~valid] = np.inf  # no causal estimate at an annotation
 
-    # Cover full performance duration so early tracker death is penalized
-    finite_gt = gt_perf[np.isfinite(gt_perf)]
-    total_dur = max(wp_perf[-1], finite_gt[-1]) if len(finite_gt) > 0 else wp_perf[-1]
-    n_segments = max(1, int(np.ceil(total_dur / segment_duration)))
-    segments = []
-
-    for s in range(n_segments):
-        t0 = s * segment_duration
-        t1 = min((s + 1) * segment_duration, total_dur)
-
-        gt_mask = (gt_perf >= t0) & (gt_perf < t1)
-        n_points = int(gt_mask.sum())
-
-        if n_points > 0:
-            seg_errors = errors_all[gt_mask]
-            finite = seg_errors[np.isfinite(seg_errors)]
-            dev = float(np.median(finite)) if len(finite) > 0 else np.nan
-        else:
-            dev = np.nan
-
-        failed = dev > threshold if not np.isnan(dev) else False
-
-        segments.append(
-            {
-                "t0": t0,
-                "t1": t1,
-                "n_points": n_points,
-                "deviation": dev,
-                "failed": failed,
-            }
+    windows = _onset_wise_window_profile(
+        gt_perf, errors_all, segment_duration, threshold
+    )
+    if not windows:
+        max_dev = float("inf")
+        worst_window = None
+        n_failed = 1
+        tracked = False
+        reason = "no causally evaluable annotated onsets"
+    else:
+        worst_window = max(windows, key=lambda window: window["deviation"])
+        max_dev = float(worst_window["deviation"])
+        n_failed = sum(window["failed"] for window in windows)
+        tracked = n_failed == 0
+        reason = (
+            "OK"
+            if tracked
+            else (
+                f"worst {segment_duration:g}s-window median {max_dev:.4f}b "
+                f"> {threshold:g}b"
+            )
         )
 
-    valid_devs = [
-        seg["deviation"] for seg in segments if not np.isnan(seg["deviation"])
-    ]
-    max_dev = max(valid_devs) if valid_devs else 0.0
-    n_failed = sum(1 for seg in segments if seg["failed"])
-    tracked = n_failed < min_fails
-
-    if not tracked:
-        reason = f"{n_failed}/{n_segments} segments failed (>={min_fails})"
-    else:
-        reason = "OK"
-
     return {
-        "segments": segments,
-        "n_segments": n_segments,
+        "windows": windows,
+        "n_windows": len(windows),
+        "mean_onsets_per_window": float(
+            np.mean([window["n_onsets"] for window in windows])
+        ),
         "n_failed": n_failed,
         "max_deviation": round(max_dev, 4),
+        "worst_window": worst_window,
         "tracked": tracked,
         "reason": reason,
     }
@@ -193,31 +199,24 @@ def _auto_title(wp_path: Path) -> str:
 def plot_tracking(
     wp: np.ndarray,
     gt: np.ndarray,
-    frame_rate: float,
     title: str = "",
     save_path: Path = None,
     segment_duration: float = SEGMENT_DURATION,
-    threshold: float = SEGMENT_THRESHOLD,
-    mode: str = "beat",
-    score_positions: Optional[np.ndarray] = None,
-    min_fails: int = MIN_FAILS,
+    threshold: float = BEAT_ERROR_THRESHOLD,
 ):
-    """Plot alignment path vs GT with per-point beat error analysis per segment."""
+    """Plot the alignment path and onset-wise window median-error profile."""
     result = check_tracking(
         wp,
         gt,
-        frame_rate,
         segment_duration=segment_duration,
         threshold=threshold,
-        mode=mode,
-        score_positions=score_positions,
-        min_fails=min_fails,
     )
-    segments = result["segments"]
+    windows = result["windows"]
+    worst_window = result["worst_window"]
     max_dev = result["max_deviation"]
     tracked = result["tracked"]
 
-    wp_score = _wp_to_score(wp, frame_rate, mode, score_positions)
+    wp_score = wp[:, 1].astype(float)
     wp_perf = wp[:, 0].astype(float)  # seconds
     gt_perf = gt[:, 0]
     gt_score = gt[:, 1]
@@ -242,19 +241,23 @@ def plot_tracking(
     gs = fig.add_gridspec(3, 1, height_ratios=[3, 1.2, 1.5], hspace=0.35)
     ax1, ax2, ax3 = [fig.add_subplot(gs[i]) for i in range(3)]
 
-    # Panel 1: alignment path + GT
-    for seg in segments:
+    # Panel 1: alignment path + GT; highlight the worst window only on failure.
+    if not tracked and worst_window is not None:
         ax1.axvspan(
-            seg["t0"],
-            seg["t1"],
-            color="red" if seg["failed"] else "green",
-            alpha=0.15 if seg["failed"] else 0.05,
+            worst_window["t0"],
+            worst_window["t1"],
+            color="red",
+            alpha=0.15,
         )
-        ax1.axvline(seg["t0"], color="gray", alpha=0.3, ls="--", lw=0.5)
-    ax1.axvline(segments[-1]["t1"], color="gray", alpha=0.3, ls="--", lw=0.5)
     ax1.scatter(gt_perf, gt_score, c="red", s=12, alpha=0.5, zorder=2, label="GT")
-    ax1.plot(
-        wp_perf, wp_score, color="navy", lw=1.2, alpha=0.9, zorder=3, label="Tracker"
+    ax1.scatter(
+        wp_perf,
+        wp_score,
+        color="navy",
+        s=3,
+        alpha=0.65,
+        zorder=3,
+        label="Tracker",
     )
     # Error lines: vertical (same perf time, different score positions)
     for gs_val, gp_val, ps_val in zip(gt_score, gt_perf, predicted_score):
@@ -262,11 +265,9 @@ def plot_tracking(
             ax1.plot(
                 [gp_val, gp_val], [gs_val, ps_val], color="red", alpha=0.15, lw=0.5
             )
-    n_failed = result["n_failed"]
     status = "TRACKED" if tracked else f"FAILED ({result['reason']})"
-    mf_label = f", min_fails={min_fails}" if min_fails > 1 else ""
     ax1.set_title(
-        f"{title}  —  {status}  [{segment_duration:.0f}s segments{mf_label}]",
+        f"{title}  —  {status}  [{segment_duration:.0f}s onset-wise median]",
         fontsize=14,
         color="green" if tracked else "red",
         fontweight="bold",
@@ -275,51 +276,66 @@ def plot_tracking(
     ax1.set_xlabel("Performance time (s)")
     ax1.legend(loc="upper left")
 
-    # Panel 2: median absolute error bars (in seconds)
-    for seg in segments:
-        t_mid = (seg["t0"] + seg["t1"]) / 2
-        v = seg["deviation"] if not np.isnan(seg["deviation"]) else 0
-        ax2.bar(
-            t_mid,
-            v,
-            width=segment_duration * 0.8,
-            color="red" if seg["failed"] else "green",
-            alpha=0.7,
-            edgecolor="black",
-            lw=0.5,
-        )
+    # Panel 2: median absolute error for successive onset-wise windows.
+    starts = [window["t0"] for window in windows]
+    deviations = [window["deviation"] for window in windows]
+    ax2.plot(starts, deviations, color="navy", lw=1.0)
     ax2.axhline(
         threshold, color="red", ls="--", lw=1.5, label=f"threshold={threshold:.1f}b"
     )
     ax2.axhline(0, color="black", lw=0.5)
-    ax2.set_ylabel("Median |beat error| per segment")
+    ax2.set_ylabel("Sliding median |beat error|")
     yl = max(threshold * 2, max_dev * 1.3) if max_dev > 0 else threshold * 2
     ax2.set_ylim(0, yl)
     ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.1f}b"))
     ax2.legend(loc="upper right", fontsize=9)
 
-    # Panel 3: numeric table
+    # Panel 3: avoid highlighting a sub-threshold "worst" window on success.
     ax3.axis("off")
-    headers = ["Seg", "Time", "N pts", "Med |err|", "Status"]
-    rows = []
-    for i, seg in enumerate(segments):
-        rows.append(
+    if tracked:
+        headers = [
+            "Windows",
+            "Window duration",
+            "Threshold",
+            "Failed windows",
+            "Status",
+        ]
+        rows = [
             [
-                f"S{i+1}",
-                f"{seg['t0']:.0f}-{seg['t1']:.0f}s",
-                f"{seg['n_points']}",
-                f"{seg['deviation']:.2f}b" if not np.isnan(seg["deviation"]) else "N/A",
-                "FAIL" if seg["failed"] else "OK",
+                str(len(windows)),
+                f"{segment_duration:g}s",
+                f"{threshold:g}b",
+                "0",
+                "TRACKED",
             ]
-        )
+        ]
+    elif worst_window is not None:
+        headers = ["Windows", "Worst interval", "N pts", "Worst median", "Status"]
+        rows = [
+            [
+                str(len(windows)),
+                f"{worst_window['t0']:.2f}-{worst_window['t1']:.2f}s",
+                str(worst_window["n_points"]),
+                f"{worst_window['deviation']:.2f}b",
+                "FAILED",
+            ]
+        ]
+    else:
+        headers = [
+            "Windows",
+            "Window duration",
+            "Threshold",
+            "Failed windows",
+            "Status",
+        ]
+        rows = [["0", f"{segment_duration:g}s", f"{threshold:g}b", "1", "FAILED"]]
     tbl = ax3.table(cellText=rows, colLabels=headers, cellLoc="center", loc="center")
     tbl.auto_set_font_size(False)
     tbl.set_fontsize(9)
     tbl.scale(1.2, 1.5)
-    for i, seg in enumerate(segments):
-        if seg["failed"]:
-            for j in range(len(headers)):
-                tbl[i + 1, j].set_facecolor("#ffcccc")
+    if not tracked:
+        for j in range(len(headers)):
+            tbl[1, j].set_facecolor("#ffcccc")
     for j in range(len(headers)):
         tbl[0, j].set_facecolor("#e0e0e0")
         tbl[0, j].set_text_props(fontweight="bold")
@@ -333,66 +349,64 @@ def plot_tracking(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Check if tracker followed the score (v2: fixed-duration segments)"
+        description="Check tracking with an onset-wise sliding-window median"
     )
     parser.add_argument("--wp", type=Path, required=True, help="Warping path TSV")
     parser.add_argument("--gt", type=Path, required=True, help="Ground truth TSV")
-    parser.add_argument("--frame-rate", type=int, help="Frame rate")
-    parser.add_argument(
-        "--mode",
-        choices=["beat", "state"],
-        default="beat",
-        help="Warping path mode: 'beat' for current audio trackers, 'state' for symbolic trackers",
-    )
-    parser.add_argument(
-        "--state-space",
-        type=Path,
-        default=None,
-        help="State space file (one score position per line). Required for --mode state",
-    )
     parser.add_argument(
         "--save", type=Path, default=None, help="Save plot to file (default: show)"
+    )
+    parser.add_argument(
+        "--window-duration",
+        type=float,
+        default=SEGMENT_DURATION,
+        help="Sliding-window duration W in seconds (default: 30)",
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=BEAT_ERROR_THRESHOLD,
+        help="Median beat-error tolerance theta (default: 1.0)",
     )
     args = parser.parse_args()
 
     wp = np.loadtxt(args.wp, delimiter="\t", skiprows=1)
     gt = np.loadtxt(args.gt, delimiter="\t", skiprows=1)
 
-    score_positions = None
-    if args.score_positions is not None:
-        score_positions = np.loadtxt(args.score_positions)
-
     result = check_tracking(
         wp,
         gt,
-        args.frame_rate,
-        mode=args.mode,
-        score_positions=score_positions,
+        segment_duration=args.window_duration,
+        threshold=args.threshold,
     )
     title = _auto_title(args.wp)
 
     # Print result
-    print(
-        f"{title}  Tracked: {result['tracked']}  |  max_dev: {result['max_deviation']:.2f}b  |  {result['reason']}"
-    )
-    for i, seg in enumerate(result["segments"]):
-        d = seg["deviation"]
-        if not np.isnan(d):
-            flag = " !" if d > SEGMENT_THRESHOLD else ""
-            print(
-                f"  S{i+1:>2} [{seg['t0']:>5.0f}-{seg['t1']:>5.0f}s]: {d:.2f}b ({seg['n_points']} pts){flag}"
-            )
-        else:
-            print(f"  S{i+1:>2} [{seg['t0']:>5.0f}-{seg['t1']:>5.0f}s]: nan (0 pts)")
+    if result["tracked"]:
+        print(
+            f"{title}  Tracked: True  |  "
+            f"{result['n_windows']} onset-wise windows evaluated  |  OK"
+        )
+    else:
+        print(
+            f"{title}  Tracked: False  |  max_dev: "
+            f"{result['max_deviation']:.2f}b  |  {result['reason']}"
+        )
+    worst = result["worst_window"]
+    if not result["tracked"] and worst is not None:
+        print(
+            f"  Worst [{worst['t0']:.3f}-{worst['t1']:.3f}s]: "
+            f"{worst['deviation']:.2f}b ({worst['n_points']} pts); "
+            f"{result['n_windows']} onset-wise windows evaluated"
+        )
 
     plot_tracking(
         wp,
         gt,
-        args.frame_rate,
         title=title,
         save_path=args.save,
-        mode=args.mode,
-        score_positions=score_positions,
+        segment_duration=args.window_duration,
+        threshold=args.threshold,
     )
 
 

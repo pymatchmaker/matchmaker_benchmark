@@ -265,7 +265,7 @@ reported and left off the leaderboard.
 | | |
 | --- | --- |
 | **Configuration the benchmark owns** | `folds/*.csv`, `data_sources.yaml`, `builtin_methods.yaml` |
-| **Leftovers from the metadata-CSV runners** | `metadata-*.csv`, `reduced/`, `winterreise/` (23 MB), `tpdd_difficulty_labels.csv` |
+| **Leftovers from the metadata-CSV runners** | `metadata-*.csv`, `reduced/`, `winterreise/` (23 MB), `tpdd_difficulty_labels.csv`, `perf_tempo_estimate/` |
 
 The fold-driven path — `run_submission.py`, the workflows, the leaderboard —
 reads only the first group. The second is used by `test_audio.py`,
