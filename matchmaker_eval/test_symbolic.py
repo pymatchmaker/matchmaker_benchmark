@@ -21,6 +21,7 @@ import partitura as pt
 from eval import run_evaluation
 from matchmaker import Matchmaker
 from matchmaker.utils.eval import resolve_gt
+from folds import explain_missing_dataset, nested_dataset_root
 from methods import available_methods, default_kwargs, processor_for
 from utils import (
     TOLERANCES_IN_BEATS,
@@ -39,10 +40,14 @@ sys.setrecursionlimit(10000)
 TRACKING_THRESHOLD = 0.5  # beats
 
 WORKING_DIR = Path(__file__).parent.parent
+#: Resolved through MATCHMAKER_DATA_DIR rather than a hardcoded home
+#: directory. These runners read the CSVs under data/, which address each
+#: corpus in its upstream (nested) shape -- not the flat layout of the
+#: benchmark data repository. See folds.explain_missing_dataset.
 DATASET_DIR = {
-    "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
-    "batik": Path("~/data/batik_plays_mozart").expanduser(),
-    "vienna": Path("~/data/vienna4x22").expanduser(),
+    "asap": nested_dataset_root("asap"),
+    "batik": nested_dataset_root("batik"),
+    "vienna": nested_dataset_root("vienna"),
 }
 METADATA_PATH = {
     "valid": WORKING_DIR / "data/metadata-validation.csv",
@@ -78,6 +83,17 @@ def run_tests_and_eval_by_dataset(dataset_type, method, run_dir=None, save_plots
         match_path = dataset_dir / row.match
         score_xml = dataset_dir / row.xml_score
         perf_midi = dataset_dir / row.midi_performance
+
+        if i == 1 and not score_xml.exists():
+            # Say once what is missing and how to get it, rather than repeating
+            # a per-piece traceback 146 times.
+            raise SystemExit(
+                "\n"
+                + explain_missing_dataset(
+                    row.dataset if is_valid else dataset_type, score_xml
+                )
+            )
+
         print(f"[{i}/{len(metadata)}] {row.title}")
 
         if method in TEMPO_DEPENDENT_METHODS and not is_valid:
@@ -189,7 +205,13 @@ def run_tests_and_eval_by_dataset(dataset_type, method, run_dir=None, save_plots
 def build_parser() -> argparse.ArgumentParser:
     """The command line. Method choices come from matchmaker's registry."""
     parser = argparse.ArgumentParser(
-        description="MIDI score following benchmark (mirrors test_audio.py)"
+        description=(
+            "MIDI score following over a metadata CSV. Maintainer tool: it "
+            "needs a local copy of the corpus in its upstream (nested) layout. "
+            "To measure a submission, use run_submission.py --fold tuning, "
+            "which reads the benchmark data repository and downloads what it "
+            "needs."
+        )
     )
     parser.add_argument(
         "--dataset",

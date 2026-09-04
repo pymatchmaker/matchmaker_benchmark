@@ -356,6 +356,40 @@ def clear_bpm_cache() -> None:
     _BPM_CACHE.clear()
 
 
+def nested_dataset_root(dataset: str) -> Path:
+    """Where the *upstream* copy of a dataset lives, for the metadata runners.
+
+    ``test_audio.py`` and ``test_symbolic.py`` are driven by the CSVs under
+    ``data/``, which address the upstream directory shape — ASAP nests by
+    composer, Batik keeps its own folders. The data repository is flat
+    (``score/ midi/ match/ audio/``), so those runners cannot read it: the two
+    describe the same recordings by different paths.
+
+    This resolves the nested copy under ``MATCHMAKER_DATA_DIR`` rather than the
+    hardcoded home directory those runners used to assume.
+    """
+    return DATA_ROOT / LEGACY_DIRS.get(dataset, dataset)
+
+
+def explain_missing_dataset(dataset: str, sample: Path) -> str:
+    """What to do when a metadata runner cannot find its corpus."""
+    return (
+        f"{dataset}: '{sample}' is not there.\n\n"
+        f"test_audio.py and test_symbolic.py read the CSVs under data/, which "
+        f"address the upstream layout of each corpus (nested by composer or "
+        f"work). They expect it under\n"
+        f"  {nested_dataset_root(dataset)}\n"
+        f"(set MATCHMAKER_DATA_DIR to move that root).\n\n"
+        f"The benchmark data repository uses a flat layout instead, so a "
+        f"checkout of it cannot be read by these runners.\n\n"
+        f"To measure a follower, use the fold-driven path, which does read the "
+        f"data repository and downloads what it needs:\n"
+        f"  python matchmaker_eval/run_submission.py <submission> --fold tuning\n"
+        f"  python matchmaker_eval/run_submission.py --method <name> "
+        f"--input-type midi --fold tuning"
+    )
+
+
 def missing_files(pieces: List[Piece], input_type: str) -> List[Path]:
     """Return every required file that is not on disk (deduplicated, ordered)."""
     missing, seen = [], set()

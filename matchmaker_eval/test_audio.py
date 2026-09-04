@@ -9,6 +9,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 from eval import run_offline_alignment, run_score_following
+from folds import explain_missing_dataset, nested_dataset_root
 from methods import audio_rates, available_methods, default_kwargs
 from tabulate import tabulate
 from utils import (
@@ -23,15 +24,19 @@ import wandb
 sys.setrecursionlimit(10000)
 
 WORKING_DIR = Path(__file__).parent.parent
+#: Resolved through MATCHMAKER_DATA_DIR rather than a hardcoded home
+#: directory. These runners read the CSVs under data/, which address each
+#: corpus in its upstream (nested) shape -- not the flat layout of the
+#: benchmark data repository. See folds.explain_missing_dataset.
 DATASET_DIR = {
-    "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
-    "batik": Path("~/data/batik_plays_mozart").expanduser(),
-    "vienna": Path("~/data/vienna4x22").expanduser(),
-    "kraisler": Path("~/data/KRAISLER").expanduser(),
-    "chorale": Path("~/data/chorale-bricks").expanduser(),
-    "urmp": Path("~/data/URMP").expanduser(),
-    "winterreise": Path("~/data/winterreise").expanduser(),
-    "zeilinger": Path("~/data/Zeilinger_data").expanduser(),
+    "asap": nested_dataset_root("asap"),
+    "batik": nested_dataset_root("batik"),
+    "vienna": nested_dataset_root("vienna"),
+    "kraisler": nested_dataset_root("kraisler"),
+    "chorale": nested_dataset_root("chorale"),
+    "urmp": nested_dataset_root("urmp"),
+    "winterreise": nested_dataset_root("winterreise"),
+    "zeilinger": nested_dataset_root("zeilinger"),
 }
 METADATA_PATH = {
     "valid": WORKING_DIR / "data/metadata-validation.csv",
@@ -136,6 +141,11 @@ def run_tests_and_eval_by_dataset(
         else:
             score_xml = base_dir / row.xml_score
         perf_audio = base_dir / row.audio_performance
+
+        if i == 1 and not score_xml.exists():
+            # Say once what is missing and how to get it, rather than repeating
+            # a per-piece traceback for every row.
+            raise SystemExit("\n" + explain_missing_dataset(current_dataset, score_xml))
 
         if config.method in TEMPO_DEPENDENT_METHODS and not is_valid_dataset:
             tempo_estimate = tempo_metadata.loc[tempo_metadata["audio_performance_file"] == row.audio_performance, "estimated_bpm"].values[0]
@@ -310,8 +320,13 @@ def main(args):
 def build_parser() -> argparse.ArgumentParser:
     """The command line. Method choices come from matchmaker's registry."""
     parser = argparse.ArgumentParser(
-        description="Testing Matchmaker with different methods and datasets. "
-        "Per-method configuration is read from matchmaker's spec."
+        description=(
+            "Audio score following over a metadata CSV. Maintainer tool: it "
+            "needs a local copy of the corpus in its upstream (nested) layout, "
+            "and per-method configuration comes from matchmaker's spec. To "
+            "measure a submission, use run_submission.py --fold tuning, which "
+            "reads the benchmark data repository and downloads what it needs."
+        )
     )
     parser.add_argument(
         "--dataset",

@@ -111,3 +111,56 @@ class TestMissingDataMessage:
         assert "--input-type midi" in message, (
             "the suggested command should be runnable as printed"
         )
+
+
+class TestMetadataRunnerPaths:
+    """The CSV runners address the upstream layout, not the data repository.
+
+    They used to hardcode ~/data/<upstream name>, ignoring MATCHMAKER_DATA_DIR
+    entirely — which is how they came to be run against a directory nobody had
+    configured. They now resolve through the data root like everything else,
+    and say what is missing instead of failing per piece.
+    """
+
+    def test_the_root_follows_the_data_dir(self, data_root):
+        from matchmaker_eval.folds import nested_dataset_root
+
+        assert nested_dataset_root("asap") == data_root / "asap-dataset-matchmaker"
+        assert nested_dataset_root("batik") == data_root / "batik_plays_mozart"
+
+    def test_an_unknown_dataset_uses_its_own_name(self, data_root):
+        from matchmaker_eval.folds import nested_dataset_root
+
+        assert nested_dataset_root("urmp") == data_root / "urmp"
+
+    def test_the_runners_no_longer_hardcode_a_home_directory(self):
+        for name in ("test_symbolic.py", "test_audio.py"):
+            text = (REPO_ROOT / "matchmaker_eval" / name).read_text()
+            assert '"~/data' not in text, (
+                f"{name} hardcodes a data directory instead of resolving it "
+                "through MATCHMAKER_DATA_DIR"
+            )
+            assert "nested_dataset_root(" in text
+
+    def test_the_message_names_both_ways_forward(self):
+        from pathlib import Path as P
+
+        from matchmaker_eval.folds import explain_missing_dataset
+
+        message = explain_missing_dataset("asap", P("/nowhere/x.musicxml"))
+        assert "MATCHMAKER_DATA_DIR" in message
+        assert "run_submission.py" in message and "--fold tuning" in message, (
+            "a user who cannot run these should be pointed at the path that "
+            "does read the data repository"
+        )
+
+    def test_the_runners_point_submitters_at_the_fold_path(self):
+        import subprocess
+
+        for name in ("test_symbolic.py", "test_audio.py"):
+            done = subprocess.run(
+                [sys.executable, str(REPO_ROOT / "matchmaker_eval" / name), "--help"],
+                cwd=REPO_ROOT, capture_output=True, text=True,
+            )
+            assert done.returncode == 0, done.stderr
+            assert "--fold tuning" in done.stdout

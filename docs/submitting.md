@@ -110,6 +110,18 @@ after merge the evaluation runs on GitHub's runners, which fetch the data
 themselves. You can write, test and submit a follower without downloading
 anything.
 
+### Measuring yourself before submitting
+
+**Use the tuning fold, and only the tuning fold.** It is the 20 performances set
+aside for development; the eval fold's 146 are what the leaderboard is for, and
+touching them is what the declaration in your `metadata.yaml` is about.
+
+`test_audio.py` and `test_symbolic.py` are not the tools for this. They are
+maintainer scripts driven by the CSVs under `data/`, which address each corpus
+in its upstream directory shape — the benchmark data repository uses a flat
+layout, so those runners cannot read a checkout of it at all. They will tell you
+so if you try.
+
 If you do want to measure yourself before submitting, the tuning fold is the
 one to use. `fetch_data.py` pulls **only the files that fold needs** — never the
 evaluation material:
