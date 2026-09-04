@@ -122,6 +122,20 @@ in its upstream directory shape — the benchmark data repository uses a flat
 layout, so those runners cannot read a checkout of it at all. They will tell you
 so if you try.
 
+One command does it:
+
+```bash
+python matchmaker_eval/test_submission.py submissions/your-name
+```
+
+It downloads the 20 tuning performances if you do not have them, runs your
+follower over them, and prints how many it tracked, the beat error, and which
+pieces it lost. There is no `--fold` option: this measures the tuning fold and
+nothing else, which is the point.
+
+`run_submission.py` is the engine underneath, if you need sharding or another
+fold.
+
 If you do want to measure yourself before submitting, the tuning fold is the
 one to use. `fetch_data.py` pulls **only the files that fold needs** — never the
 evaluation material:

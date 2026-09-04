@@ -224,6 +224,7 @@ matchmaker_eval/
   validate_submission.py  — pull-request checks: structure, contract, smoke run
   merge_shards.py         — recombine parallel shards into one metrics record
   leaderboard.py          — metrics.json files -> leaderboard.json / .csv
+  test_submission.py      — what a submitter runs: their follower, tuning fold
   retract.py              — withdraw a published result, with a reason
   merge_references.py     — regroup and merge a sharded multi-method run
   export_details.py       — per-dataset/per-piece detail + decimated paths
