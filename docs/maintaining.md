@@ -258,6 +258,25 @@ fast as letting BLAS thread freely, before counting the parallelism.
 A method that fails, or that covers fewer than all the fold's pieces, is
 reported and left off the leaderboard.
 
+### What the pipeline needs from `data/`
+
+`data/` holds two unrelated things, and only the first is used by evaluation:
+
+| | |
+| --- | --- |
+| **Configuration the benchmark owns** | `folds/*.csv`, `data_sources.yaml`, `builtin_methods.yaml` |
+| **Leftovers from the metadata-CSV runners** | `metadata-*.csv`, `reduced/`, `winterreise/` (23 MB), `tpdd_difficulty_labels.csv` |
+
+The fold-driven path — `run_submission.py`, the workflows, the leaderboard —
+reads only the first group. The second is used by `test_audio.py`,
+`test_symbolic.py`, `make_folds.py` and the `preprocess_*` scripts, and is what
+should move to the data repository.
+
+This was verified by removing the second group entirely and pointing
+`MATCHMAKER_DATA_DIR` at an empty directory: all ten MIDI references still ran,
+fetching every file from the data repository. `tests/test_data_folder.py` pins
+it, so a new dependency on dataset material from `data/` fails the suite.
+
 ### Keeping up with matchmaker
 
 `matchmaker_eval/methods.py` is the only place this repository reads
