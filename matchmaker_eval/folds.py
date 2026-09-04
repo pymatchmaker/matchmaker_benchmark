@@ -178,6 +178,30 @@ class Piece:
                 return candidate
         return canonical
 
+    def oracle_tempo(self, input_type: str) -> Optional[float]:
+        """The performance's estimated tempo in BPM, or None if not published.
+
+        Only followers that declare they use it are given it — see
+        ``docs/eval-protocol.md``. The value lives in the data repository's
+        metadata CSV, keyed by the same paths the fold names.
+        """
+        table = _tempo_table(self.dataset)
+        if not table:
+            return None
+        relative = (
+            self.midi_performance if input_type == "midi" else self.audio_performance
+        )
+        for key in (f"{self.dataset}/{relative}", relative):
+            if key in table:
+                return table[key]
+        # The metadata may name a different container for the same recording.
+        stem = Path(relative).stem if relative else None
+        if stem:
+            for key, tempo in table.items():
+                if Path(key).stem == stem:
+                    return tempo
+        return None
+
     def audio_candidates(self) -> List[Path]:
         """Every container this piece's audio could be distributed in."""
         if not self.audio_performance:
@@ -259,6 +283,77 @@ def shard_of(pieces: List[Piece], shard: int, num_shards: int) -> List[Piece]:
     if not 0 <= shard < num_shards:
         raise FoldError(f"shard must be in [0, {num_shards}), got {shard}.")
     return pieces[shard::num_shards]
+
+
+#: Column of the data repository's metadata CSV holding the oracle tempo.
+#: Overridable in data/data_sources.yaml as ``oracle_tempo_column``.
+ORACLE_TEMPO_COLUMN = "estimated_bpm"
+
+#: dataset -> {file path as the metadata names it: tempo}, filled on first use.
+_TEMPO_CACHE: dict = {}
+
+
+class OracleTempoUnavailable(FoldError):
+    """Raised when a run asks for the oracle tempo and it is not there.
+
+    Deliberately fatal rather than a warning: a follower given the tempo and a
+    follower denied it are two different measurements, and a row that quietly
+    became the second while still being labelled the first is worse than a
+    failed run.
+    """
+
+
+def _tempo_column() -> str:
+    """The metadata column holding the tempo, from the data source config."""
+    try:
+        import yaml
+
+        config = yaml.safe_load(
+            (REPO_ROOT / "data" / "data_sources.yaml").read_text()
+        ) or {}
+    except Exception:
+        return ORACLE_TEMPO_COLUMN
+    return str(config.get("oracle_tempo_column") or ORACLE_TEMPO_COLUMN)
+
+
+def _tempo_table(dataset: str) -> dict:
+    """``{path: tempo}`` for one dataset, read from its metadata CSV.
+
+    The metadata CSV is the data repository describing itself: it names every
+    file it holds, so the tempo travels with the data rather than being a
+    second table this repository has to keep in step.
+    """
+    if dataset in _TEMPO_CACHE:
+        return _TEMPO_CACHE[dataset]
+
+    column = _tempo_column()
+    table: dict = {}
+    root = dataset_root(dataset)
+    candidates = sorted(root.glob(f"metadata-{dataset}*.csv"))
+    for path in candidates:
+        with open(path, newline="") as handle:
+            reader = csv.DictReader(handle)
+            if reader.fieldnames is None or column not in reader.fieldnames:
+                continue
+            for row in reader:
+                raw = (row.get(column) or "").strip()
+                if not raw:
+                    continue
+                try:
+                    tempo = float(raw)
+                except ValueError:
+                    continue
+                for field in ("midi", "audio", "score", "match"):
+                    key = (row.get(field) or "").strip()
+                    if key:
+                        table[key] = tempo
+    _TEMPO_CACHE[dataset] = table
+    return table
+
+
+def clear_tempo_cache() -> None:
+    """Forget the parsed metadata. For tests, and after a fresh download."""
+    _TEMPO_CACHE.clear()
 
 
 def missing_files(pieces: List[Piece], input_type: str) -> List[Path]:

@@ -46,6 +46,8 @@ midi:
     description: >
       Sequential Monte Carlo tracking of score position and tempo, on
       Korzeniowski features.
+    # Given the performance's tempo. Marked on the leaderboard.
+    oracle_tempo: true
   SL_OLTW:
     name: Symbolic OLTW (parangonar)
     authors: [Silvan Peter]
@@ -101,3 +103,5 @@ audio:
     description: >
       Sequential Monte Carlo tracking of score position and tempo, on
       Korzeniowski features.
+    # Given the performance's tempo. Marked on the leaderboard.
+    oracle_tempo: true

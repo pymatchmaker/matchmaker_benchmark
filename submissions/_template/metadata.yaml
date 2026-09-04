@@ -17,6 +17,10 @@ contact: you@example.org             # or an issue/discussion link
 url: https://github.com/you/your-repo
 license: Apache-2.0
 tuned_on: [tuning]                   # which folds you tuned on
+# Set true only if your follower is given the performance's measured tempo.
+# The default is that a tracker knows nothing about the performance; a run that
+# uses the tempo is marked with an asterisk on the leaderboard.
+# oracle_tempo: false
 external_data: none                  # any data used beyond this benchmark
 notes: >
   Anything a maintainer should know: expected runtime, hardware assumptions,

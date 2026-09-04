@@ -53,6 +53,7 @@ from matchmaker.base import OnlineAlignment
 
 from matchmaker_eval.fetch_data import FetchError, fetch_for_pieces, load_config
 from matchmaker_eval.folds import (
+    OracleTempoUnavailable,
     LEADERBOARD_FOLD,
     REPO_ROOT,
     fold_path,
@@ -62,6 +63,7 @@ from matchmaker_eval.folds import (
     shard_of,
 )
 from matchmaker_eval.submission import (
+    ORACLE_TEMPO_KEY,
     SubmissionError,
     builtin_metadata,
     load_submission,
@@ -175,13 +177,30 @@ def check_follower(follower) -> None:
         )
 
 
-def run_piece(method, piece, input_type, index, run_dir, save_plots):
+def run_piece(
+    method, piece, input_type, index, run_dir, save_plots, oracle_tempo=False
+):
     """Run and score one piece. Returns (flat_metrics, nested_metrics).
 
     ``method`` is the name the submission registered with matchmaker, so this
     is an ordinary ``Matchmaker`` call — the same one ``test_symbolic.py`` and
     ``test_audio.py`` make for a built-in method.
+
+    ``oracle_tempo`` gives the follower the performance's tempo instead of the
+    score's notated one. Off unless the submission declared it, and recorded so
+    the leaderboard can mark the row.
     """
+    tempo = None
+    if oracle_tempo:
+        tempo = piece.oracle_tempo(input_type)
+        if tempo is None:
+            raise OracleTempoUnavailable(
+                f"{piece.piece_id}: no oracle tempo published for this piece, "
+                "but this entry declares it uses one. The value comes from the "
+                "data repository's metadata CSV; check that the column is "
+                "there and the metadata is downloaded."
+            )
+
     mm = Matchmaker(
         score_file=str(piece.score_path),
         performance_file=str(piece.performance_path(input_type)),
@@ -189,6 +208,7 @@ def run_piece(method, piece, input_type, index, run_dir, save_plots):
         method=method,
         wait=False,
         unfold_score=True,
+        tempo=tempo,
     )
     check_follower(mm.score_follower)
     list(mm.run(verbose=False))
@@ -294,6 +314,10 @@ def evaluate_submission(
         input_type = input_type or registered_input_type
         name = directory.name
 
+    # Declared by the entry, not chosen here: a follower is given the tempo
+    # only if it said it uses one, and the run is labelled accordingly.
+    oracle_tempo = bool(metadata.get(ORACLE_TEMPO_KEY, False))
+
     all_pieces = load_fold(fold, input_type=input_type)
     fold_size = len(all_pieces)
     if limit:
@@ -384,7 +408,13 @@ def evaluate_submission(
         try:
             with piece_time_budget(piece_timeout):
                 flat, _ = run_piece(
-                    method, piece, input_type, index, run_dir, save_plots
+                    method,
+                    piece,
+                    input_type,
+                    index,
+                    run_dir,
+                    save_plots,
+                    oracle_tempo=oracle_tempo,
                 )
         except Exception as e:
             # One broken piece must not void a whole run: record it as an
@@ -421,6 +451,10 @@ def evaluate_submission(
     metrics = {
         "submission": name,
         "method": method,
+        # Whether the follower was given the performance's tempo. Carried into
+        # the leaderboard so a row that had it is never compared silently with
+        # rows that did not.
+        "oracle_tempo": oracle_tempo,
         "kind": metadata.get("kind", "submission"),
         "metadata": metadata,
         "fold": str(fold),

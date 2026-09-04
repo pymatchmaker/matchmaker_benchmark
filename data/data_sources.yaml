@@ -75,3 +75,8 @@ verify_checksums: true
 
 # Datasets that are never fetched because they are committed to this repository.
 local_datasets: [local]
+
+# Column of each dataset's metadata CSV holding the performance's estimated
+# tempo in BPM. Only followers that declare `oracle_tempo: true` are given it,
+# and the leaderboard marks those rows — see docs/eval-protocol.md.
+oracle_tempo_column: estimated_bpm

@@ -104,16 +104,36 @@ class TestBuiltinDescriptions:
             assert metadata["input_type"] == input_type
             assert metadata["kind"] == "reference"
 
+    #: Prose, plus declarations about how the entry was evaluated. What must
+    #: never appear here is matchmaker configuration -- how the follower is
+    #: built is the method spec's business, and a second copy would drift.
+    ALLOWED = {
+        "name", "authors", "description", "url", "affiliation",
+        "oracle_tempo",
+    }
+    FORBIDDEN = {
+        "processor", "piano_range", "polling_period", "sample_rate",
+        "frame_rate", "hop_length", "class", "args", "default_kwargs",
+    }
+
     def test_descriptions_carry_no_configuration(self):
-        """Only prose lives here — configuration belongs to matchmaker's spec."""
-        allowed = {"name", "authors", "description", "url", "affiliation"}
         for input_type, entries in read_descriptions().items():
             for method, entry in (entries or {}).items():
-                extra = set(entry) - allowed
+                extra = set(entry) - self.ALLOWED
                 assert not extra, (
                     f"{input_type}/{method} sets {sorted(extra)} in "
-                    f"{BUILTIN_METHODS_PATH.name}; configuration must come from "
-                    "matchmaker's spec, not from this file"
+                    f"{BUILTIN_METHODS_PATH.name}; only prose and evaluation "
+                    "declarations belong here"
+                )
+
+    def test_matchmaker_configuration_never_appears_here(self):
+        """How a follower is built comes from the spec, not from this file."""
+        for input_type, entries in read_descriptions().items():
+            for method, entry in (entries or {}).items():
+                clash = set(entry) & self.FORBIDDEN
+                assert not clash, (
+                    f"{input_type}/{method} sets {sorted(clash)}, which would "
+                    "be a second copy of matchmaker's method spec"
                 )
 
     def test_unknown_method_is_rejected_before_the_yaml_is_consulted(self):

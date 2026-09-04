@@ -52,6 +52,12 @@ INPUT_TYPES = ("audio", "midi")
 REQUIRED_METADATA = ("name", "authors", "input_type", "description")
 DECLARATION_KEY = "eval_fold_untouched"
 
+#: Opt-in: the follower is given the performance's oracle tempo. Off unless a
+#: submission says otherwise, because the default position is that a tracker
+#: knows nothing about the performance it is about to hear. A run that used it
+#: is marked on the leaderboard, so the two are never compared silently.
+ORACLE_TEMPO_KEY = "oracle_tempo"
+
 BUILTIN_METHODS_PATH = (
     Path(__file__).resolve().parent.parent / "data" / "builtin_methods.yaml"
 )
@@ -96,6 +102,14 @@ def read_metadata(directory: Path) -> dict:
     authors = metadata["authors"]
     if isinstance(authors, str) or not isinstance(authors, (list, tuple)):
         raise SubmissionError(f"{path}: 'authors' must be a list.")
+    declared = metadata.get(ORACLE_TEMPO_KEY, False)
+    if not isinstance(declared, bool):
+        raise SubmissionError(
+            f"{path}: '{ORACLE_TEMPO_KEY}' must be true or false, got "
+            f"{declared!r}. It declares whether the follower is given the "
+            "performance's tempo; leave it out unless it is."
+        )
+    metadata[ORACLE_TEMPO_KEY] = declared
     return metadata
 
 
@@ -221,6 +235,7 @@ def builtin_metadata(method: str, input_type: str) -> dict:
         "authors": entry.get("authors", ["matchmaker"]),
         "input_type": input_type,
         "description": entry.get("description", "").strip(),
+        ORACLE_TEMPO_KEY: bool(entry.get(ORACLE_TEMPO_KEY, False)),
         "url": "https://github.com/pymatchmaker/matchmaker",
         # A built-in cannot have been tuned on the eval fold by a submitter;
         # the key is kept so every metrics record has the same shape.

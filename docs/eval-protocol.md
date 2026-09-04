@@ -92,6 +92,32 @@ Accuracy is **event-pooled**: errors from every onset of every tracked piece go
 into one distribution, so long pieces weigh more than short ones. `rtf` and
 latency are averaged per piece instead.
 
+### What a follower is told
+
+By default a follower is told nothing about the performance it is about to
+hear. It gets the score, and the stream. The notated tempo comes from the score
+like any other marking; it is not a measurement of the recording.
+
+A follower may instead be given the performance's **oracle tempo** — its actual
+measured tempo, published in the data repository's metadata. This is a
+materially easier task, so it is the exception and it is always visible:
+
+- the entry declares it — `oracle_tempo: true` in a submission's
+  `metadata.yaml`, or in `data/builtin_methods.yaml` for a reference;
+- the run records it, and the leaderboard marks the row with an asterisk and a
+  footnote.
+
+Declaring it and then not having the data available fails the run rather than
+quietly falling back to the notated tempo: a row labelled as having the tempo
+must actually have had it.
+
+Among the reference methods only the Korzeniowski particle filter (`pfkorz`)
+uses it, because it tracks tempo as part of its state.
+
+A submission using it is not disqualified and is not ranked separately — it
+sits in the same table, marked. Readers can then judge the comparison for
+themselves, which they cannot do if the difference is invisible.
+
 ### Tracked vs. lost
 
 A follower that loses the performance produces meaningless errors, so pieces are
