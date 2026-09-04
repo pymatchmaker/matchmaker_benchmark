@@ -53,7 +53,7 @@ from matchmaker.base import OnlineAlignment
 
 from matchmaker_eval.fetch_data import FetchError, fetch_for_pieces, load_config
 from matchmaker_eval.folds import (
-    OracleTempoUnavailable,
+    EstimatedBpmUnavailable,
     LEADERBOARD_FOLD,
     REPO_ROOT,
     fold_path,
@@ -63,7 +63,7 @@ from matchmaker_eval.folds import (
     shard_of,
 )
 from matchmaker_eval.submission import (
-    ORACLE_TEMPO_KEY,
+    ESTIMATED_BPM_KEY,
     SubmissionError,
     builtin_metadata,
     load_submission,
@@ -178,7 +178,7 @@ def check_follower(follower) -> None:
 
 
 def run_piece(
-    method, piece, input_type, index, run_dir, save_plots, oracle_tempo=False
+    method, piece, input_type, index, run_dir, save_plots, estimated_bpm=False
 ):
     """Run and score one piece. Returns (flat_metrics, nested_metrics).
 
@@ -186,16 +186,16 @@ def run_piece(
     is an ordinary ``Matchmaker`` call — the same one ``test_symbolic.py`` and
     ``test_audio.py`` make for a built-in method.
 
-    ``oracle_tempo`` gives the follower the performance's tempo instead of the
+    ``estimated_bpm`` gives the follower the performance's tempo instead of the
     score's notated one. Off unless the submission declared it, and recorded so
     the leaderboard can mark the row.
     """
     tempo = None
-    if oracle_tempo:
-        tempo = piece.oracle_tempo(input_type)
+    if estimated_bpm:
+        tempo = piece.estimated_bpm(input_type)
         if tempo is None:
-            raise OracleTempoUnavailable(
-                f"{piece.piece_id}: no oracle tempo published for this piece, "
+            raise EstimatedBpmUnavailable(
+                f"{piece.piece_id}: no estimated tempo published for this piece, "
                 "but this entry declares it uses one. The value comes from the "
                 "data repository's metadata CSV; check that the column is "
                 "there and the metadata is downloaded."
@@ -316,7 +316,7 @@ def evaluate_submission(
 
     # Declared by the entry, not chosen here: a follower is given the tempo
     # only if it said it uses one, and the run is labelled accordingly.
-    oracle_tempo = bool(metadata.get(ORACLE_TEMPO_KEY, False))
+    estimated_bpm = bool(metadata.get(ESTIMATED_BPM_KEY, False))
 
     all_pieces = load_fold(fold, input_type=input_type)
     fold_size = len(all_pieces)
@@ -414,7 +414,7 @@ def evaluate_submission(
                     index,
                     run_dir,
                     save_plots,
-                    oracle_tempo=oracle_tempo,
+                    estimated_bpm=estimated_bpm,
                 )
         except Exception as e:
             # One broken piece must not void a whole run: record it as an
@@ -454,7 +454,7 @@ def evaluate_submission(
         # Whether the follower was given the performance's tempo. Carried into
         # the leaderboard so a row that had it is never compared silently with
         # rows that did not.
-        "oracle_tempo": oracle_tempo,
+        "estimated_bpm": estimated_bpm,
         "kind": metadata.get("kind", "submission"),
         "metadata": metadata,
         "fold": str(fold),

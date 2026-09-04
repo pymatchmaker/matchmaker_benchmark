@@ -98,11 +98,12 @@ By default a follower is told nothing about the performance it is about to
 hear. It gets the score, and the stream. The notated tempo comes from the score
 like any other marking; it is not a measurement of the recording.
 
-A follower may instead be given the performance's **oracle tempo** — its actual
-measured tempo, published in the data repository's metadata. This is a
-materially easier task, so it is the exception and it is always visible:
+A follower may instead be given the performance's **estimated tempo**
+(`estimated_bpm`) — a measurement of the recording, published as a column in the
+data repository's metadata. This is a materially easier task, so it is the
+exception and it is always visible:
 
-- the entry declares it — `oracle_tempo: true` in a submission's
+- the entry declares it — `estimated_bpm: true` in a submission's
   `metadata.yaml`, or in `data/builtin_methods.yaml` for a reference;
 - the run records it, and the leaderboard marks the row with an asterisk and a
   footnote.

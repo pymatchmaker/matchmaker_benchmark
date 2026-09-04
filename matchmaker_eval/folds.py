@@ -178,14 +178,14 @@ class Piece:
                 return candidate
         return canonical
 
-    def oracle_tempo(self, input_type: str) -> Optional[float]:
+    def estimated_bpm(self, input_type: str) -> Optional[float]:
         """The performance's estimated tempo in BPM, or None if not published.
 
         Only followers that declare they use it are given it — see
         ``docs/eval-protocol.md``. The value lives in the data repository's
         metadata CSV, keyed by the same paths the fold names.
         """
-        table = _tempo_table(self.dataset)
+        table = _bpm_table(self.dataset)
         if not table:
             return None
         relative = (
@@ -285,16 +285,16 @@ def shard_of(pieces: List[Piece], shard: int, num_shards: int) -> List[Piece]:
     return pieces[shard::num_shards]
 
 
-#: Column of the data repository's metadata CSV holding the oracle tempo.
-#: Overridable in data/data_sources.yaml as ``oracle_tempo_column``.
-ORACLE_TEMPO_COLUMN = "estimated_bpm"
+#: Column of the data repository's metadata CSV holding the estimated tempo.
+#: Overridable in data/data_sources.yaml as ``estimated_bpm_column``.
+ESTIMATED_BPM_COLUMN = "estimated_bpm"
 
 #: dataset -> {file path as the metadata names it: tempo}, filled on first use.
-_TEMPO_CACHE: dict = {}
+_BPM_CACHE: dict = {}
 
 
-class OracleTempoUnavailable(FoldError):
-    """Raised when a run asks for the oracle tempo and it is not there.
+class EstimatedBpmUnavailable(FoldError):
+    """Raised when a run asks for the estimated tempo and it is not there.
 
     Deliberately fatal rather than a warning: a follower given the tempo and a
     follower denied it are two different measurements, and a row that quietly
@@ -303,7 +303,7 @@ class OracleTempoUnavailable(FoldError):
     """
 
 
-def _tempo_column() -> str:
+def _bpm_column() -> str:
     """The metadata column holding the tempo, from the data source config."""
     try:
         import yaml
@@ -312,21 +312,21 @@ def _tempo_column() -> str:
             (REPO_ROOT / "data" / "data_sources.yaml").read_text()
         ) or {}
     except Exception:
-        return ORACLE_TEMPO_COLUMN
-    return str(config.get("oracle_tempo_column") or ORACLE_TEMPO_COLUMN)
+        return ESTIMATED_BPM_COLUMN
+    return str(config.get("estimated_bpm_column") or ESTIMATED_BPM_COLUMN)
 
 
-def _tempo_table(dataset: str) -> dict:
+def _bpm_table(dataset: str) -> dict:
     """``{path: tempo}`` for one dataset, read from its metadata CSV.
 
     The metadata CSV is the data repository describing itself: it names every
     file it holds, so the tempo travels with the data rather than being a
     second table this repository has to keep in step.
     """
-    if dataset in _TEMPO_CACHE:
-        return _TEMPO_CACHE[dataset]
+    if dataset in _BPM_CACHE:
+        return _BPM_CACHE[dataset]
 
-    column = _tempo_column()
+    column = _bpm_column()
     table: dict = {}
     root = dataset_root(dataset)
     candidates = sorted(root.glob(f"metadata-{dataset}*.csv"))
@@ -347,13 +347,13 @@ def _tempo_table(dataset: str) -> dict:
                     key = (row.get(field) or "").strip()
                     if key:
                         table[key] = tempo
-    _TEMPO_CACHE[dataset] = table
+    _BPM_CACHE[dataset] = table
     return table
 
 
-def clear_tempo_cache() -> None:
+def clear_bpm_cache() -> None:
     """Forget the parsed metadata. For tests, and after a fresh download."""
-    _TEMPO_CACHE.clear()
+    _BPM_CACHE.clear()
 
 
 def missing_files(pieces: List[Piece], input_type: str) -> List[Path]:

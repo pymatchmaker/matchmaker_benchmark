@@ -77,6 +77,6 @@ verify_checksums: true
 local_datasets: [local]
 
 # Column of each dataset's metadata CSV holding the performance's estimated
-# tempo in BPM. Only followers that declare `oracle_tempo: true` are given it,
+# tempo in BPM. Only followers that declare `estimated_bpm: true` are given it,
 # and the leaderboard marks those rows — see docs/eval-protocol.md.
-oracle_tempo_column: estimated_bpm
+estimated_bpm_column: estimated_bpm

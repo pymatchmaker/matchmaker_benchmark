@@ -109,7 +109,7 @@ class TestBuiltinDescriptions:
     #: built is the method spec's business, and a second copy would drift.
     ALLOWED = {
         "name", "authors", "description", "url", "affiliation",
-        "oracle_tempo",
+        "estimated_bpm",
     }
     FORBIDDEN = {
         "processor", "piano_range", "polling_period", "sample_rate",

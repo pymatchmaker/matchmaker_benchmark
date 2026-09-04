@@ -62,7 +62,7 @@ CSV_COLUMNS = [
     "rtf",
     "n_pieces",
     "n_tracked",
-    "oracle_tempo",
+    "estimated_bpm",
     "evaluated",
 ]
 
@@ -110,7 +110,7 @@ def row_from_metrics(metrics: dict) -> dict:
         # score's notated one. Shown with an asterisk: it is a different task
         # from following a performance blind, and the two must not be read as
         # one ranking without the difference being visible.
-        "oracle_tempo": bool(metrics.get("oracle_tempo", False)),
+        "estimated_bpm": bool(metrics.get("estimated_bpm", False)),
         "name": metadata.get("name", metrics["submission"]),
         "authors": ", ".join(str(a) for a in authors),
         "affiliation": metadata.get("affiliation", ""),
@@ -208,7 +208,7 @@ def build(fold: str = LEADERBOARD_FOLD) -> dict:
             "beat_median_all": "median |beat error| over every piece, lost "
             "ones included",
             "rtf": "real-time factor: processing time / performance duration",
-            "oracle_tempo": "the follower was given the performance's tempo "
+            "estimated_bpm": "the follower was given the performance's tempo "
             "instead of the score's notated one — marked * in the table",
         },
         "entries": rows,
@@ -241,7 +241,7 @@ def render_table(leaderboard: dict) -> str:
         def fmt(value, width, digits=3):
             return f"{'-':>{width}}" if value is None else f"{value:>{width}.{digits}f}"
 
-        marked = row["submission"][:25] + "*" if row.get("oracle_tempo") else (
+        marked = row["submission"][:25] + "*" if row.get("estimated_bpm") else (
             row["submission"][:26]
         )
         lines.append(
@@ -251,7 +251,7 @@ def render_table(leaderboard: dict) -> str:
             f"{fmt(row.get('beat_median'), 9)} {fmt(row.get('ms_median'), 8, 0)}  "
             f"{fmt(row.get('beat_median_all'), 12)}"
         )
-    if any(row.get("oracle_tempo") for row in entries):
+    if any(row.get("estimated_bpm") for row in entries):
         lines.append("")
         lines.append(
             "* given the performance's tempo, not just the score's notated one"
