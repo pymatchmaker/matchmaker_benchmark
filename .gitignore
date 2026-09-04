@@ -200,3 +200,6 @@ scripts/
 
 # Assembled leaderboard site (matchmaker_eval/build_site.py)
 _site/
+
+# Per-method output from run_references.py
+results/logs/

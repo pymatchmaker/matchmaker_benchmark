@@ -34,10 +34,12 @@ import argparse
 import json
 import os
 import subprocess
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
-from matchmaker_eval.folds import LEADERBOARD_FOLD, REPO_ROOT
+from matchmaker_eval.folds import LEADERBOARD_FOLD, REPO_ROOT, load_fold
 from matchmaker_eval.submission import (
     BUILTIN_METHODS_PATH,
     read_descriptions,
@@ -45,19 +47,90 @@ from matchmaker_eval.submission import (
 )
 
 RESULTS_DIR = REPO_ROOT / "results" / "submissions"
+LOG_DIR = REPO_ROOT / "results" / "logs"
 
 
-def metrics_path_for(method: str, input_type: str, fold: str) -> Path:
-    """Where run_submission.py puts this run's metrics.
+def run_dir_for(method: str, input_type: str, fold: str) -> Path:
+    """Where run_submission.py writes this run.
 
     Only an eval-fold run lands in ``results/submissions/``; anything else goes
-    under ``results/runs/<fold>/``. Reading the wrong one would report a
-    published record as though it were the run that just finished.
+    under ``results/runs/<fold>/``.
     """
     name = f"{method}-{input_type}"
     if str(fold) == LEADERBOARD_FOLD:
-        return RESULTS_DIR / name / "metrics.json"
-    return REPO_ROOT / "results" / "runs" / str(fold) / name / "metrics.json"
+        return RESULTS_DIR / name
+    return REPO_ROOT / "results" / "runs" / str(fold) / name
+
+
+def metrics_path_for(method: str, input_type: str, fold: str) -> Path:
+    """This run's metrics file. Reading the wrong one would report a published
+    record as though it were the run that just finished."""
+    return run_dir_for(method, input_type, fold) / "metrics.json"
+
+
+def pieces_done(method: str, input_type: str, fold: str) -> int:
+    """How many pieces this run has finished, counted from its output."""
+    return len(list(run_dir_for(method, input_type, fold).glob("wp_*.tsv")))
+
+
+class Progress:
+    """Print how far each method has got, every ``interval`` seconds.
+
+    The children are captured so their output does not interleave into an
+    unreadable mess, which means nothing at all is printed until a method
+    finishes -- and an audio fold takes hours. This watches the run directories
+    instead, so there is always something to look at.
+    """
+
+    def __init__(self, jobs, fold, total, interval=30, stream=sys.stdout):
+        self.jobs = list(jobs)
+        self.fold = fold
+        self.total = total
+        self.interval = interval
+        self.stream = stream
+        self.started = time.monotonic()
+        self._stop = threading.Event()
+        self._thread = None
+
+    def snapshot(self) -> list:
+        """``[(label, done, total)]`` for every job, in order."""
+        return [
+            (
+                f"{method}-{input_type}",
+                pieces_done(method, input_type, self.fold),
+                self.total,
+            )
+            for method, input_type in self.jobs
+        ]
+
+    def render(self) -> str:
+        elapsed = time.monotonic() - self.started
+        rows = self.snapshot()
+        done = sum(d for _, d, _ in rows)
+        wanted = sum(t for _, _, t in rows) or 1
+        lines = [
+            f"\n[{elapsed / 60:5.1f} min] {done}/{wanted} pieces "
+            f"({100 * done / wanted:.0f}%)"
+        ]
+        for label, d, t in rows:
+            bar = "#" * int(24 * d / t) if t else ""
+            lines.append(f"  {label:22} {d:>4}/{t:<4} |{bar:<24}|")
+        return "\n".join(lines)
+
+    def _loop(self):
+        while not self._stop.wait(self.interval):
+            print(self.render(), file=self.stream, flush=True)
+
+    def __enter__(self):
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc):
+        self._stop.set()
+        if self._thread:
+            self._thread.join(timeout=1)
+        return False
 
 #: One BLAS thread per process. Measured 2x faster than the default even for a
 #: single method, before counting the gain from running several at once.
@@ -107,6 +180,12 @@ def run_one(method: str, input_type: str, fold: str, extra: list) -> dict:
         text=True,
     )
     elapsed = time.monotonic() - started
+
+    # Captured output is otherwise lost unless the run fails. Writing it out
+    # means a run in progress can be followed with `tail -f`.
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    log = LOG_DIR / f"{method}-{input_type}.log"
+    log.write_text((completed.stdout or "") + (completed.stderr or ""))
 
     record = {
         "method": method,
@@ -164,10 +243,38 @@ def main():
         action="store_true",
         help="do not rebuild the leaderboard afterwards",
     )
+    parser.add_argument(
+        "--progress-interval",
+        type=int,
+        default=30,
+        metavar="SECONDS",
+        help="how often to print how far each method has got (0 to switch off)",
+    )
+    parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="print the progress of a run started elsewhere and exit; starts "
+        "nothing itself",
+    )
     args = parser.parse_args()
 
-    report_undescribed()
     input_types = ("midi", "audio") if args.input_type == "both" else (args.input_type,)
+
+    if args.watch:
+        watched = [
+            (m, it)
+            for it in input_types
+            for m in (args.only or described_methods(it))
+            if m not in args.exclude
+        ]
+        if not watched:
+            print("Nothing to watch.")
+            return 1
+        size = len(load_fold(args.fold, input_type=watched[0][1]))
+        print(Progress(watched, args.fold, size).render())
+        return 0
+
+    report_undescribed()
     jobs = []
     for input_type in input_types:
         methods = args.only or described_methods(input_type)
@@ -182,11 +289,23 @@ def main():
         f"Evaluating {len(jobs)} reference method(s) on the {args.fold} fold, "
         f"{args.jobs} at a time:\n  "
         + "\n  ".join(f"{it}/{m}" for m, it in jobs)
-        + "\n"
+        + f"\n\nPer-method output: {LOG_DIR.relative_to(REPO_ROOT)}/<method>-<type>.log"
     )
 
-    with ThreadPoolExecutor(max_workers=args.jobs) as pool:
-        results = list(pool.map(lambda j: run_one(j[0], j[1], args.fold, extra), jobs))
+    fold_size = len(load_fold(args.fold, input_type=jobs[0][1]))
+    monitor = Progress(
+        jobs, args.fold, fold_size, interval=args.progress_interval
+    )
+    if args.progress_interval <= 0:
+        with ThreadPoolExecutor(max_workers=args.jobs) as pool:
+            results = list(
+                pool.map(lambda j: run_one(j[0], j[1], args.fold, extra), jobs)
+            )
+    else:
+        with monitor, ThreadPoolExecutor(max_workers=args.jobs) as pool:
+            results = list(
+                pool.map(lambda j: run_one(j[0], j[1], args.fold, extra), jobs)
+            )
 
     print(f"\n{'method':22} {'tracked':>12} {'time':>8}   status")
     print("-" * 62)
