@@ -561,6 +561,28 @@ class TestValidateWorkflow:
         body = "\n".join(step.get("run", "") for step in steps_of(workflow, "validate"))
         assert "fetch_data.py" not in body
 
+    def test_the_one_per_pull_request_rule_is_only_for_submission_prs(self):
+        """The pull request that introduces the submission mechanism brings
+        its baselines and worked example with it, so the limit cannot be
+        unconditional."""
+        workflow = load_workflow(VALIDATE)
+        reject = [
+            step
+            for step in steps_of(workflow, "validate")
+            if step.get("name", "").startswith("Reject changes to more than one")
+        ]
+        assert reject, "the one-per-pull-request rule is gone"
+        assert "maintainer" in reject[0].get("if", ""), (
+            "the limit must not apply to a pull request that also changes the "
+            "benchmark itself"
+        )
+
+    def test_every_submission_is_validated_not_just_the_first(self):
+        """Lifting the limit is only safe if all of them are still checked."""
+        workflow = load_workflow(VALIDATE)
+        body = "\n".join(step.get("run", "") for step in steps_of(workflow, "validate"))
+        assert "validate_submission.py ${{ steps.changed.outputs.dirs }}" in body
+
     def test_the_example_fold_is_committed(self):
         """--smoke must run with nothing downloaded."""
         sys.path.insert(0, str(REPO_ROOT))

@@ -69,10 +69,29 @@ jobs:
           echo "dirs=${dirs}" >> "$GITHUB_OUTPUT"
           echo "Submissions touched: ${dirs:-none}"
 
+      - name: Decide whether this is a submission pull request
+        id: kind
+        # A contributor's submission pull request touches submissions/ and
+        # nothing else. One that also changes the benchmark itself is a
+        # maintainer's, and the one-per-pull-request rule below is not about
+        # those -- the pull request that introduces the submission mechanism
+        # necessarily brings its baselines and worked example with it.
+        run: |
+          other=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" \
+                  | grep -vE '^submissions/' | head -n1)
+          if [ -n "$other" ]; then
+            echo "maintainer=true" >> "$GITHUB_OUTPUT"
+            echo "Changes ${other} as well, so this is not a submission pull request."
+          else
+            echo "maintainer=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Reject changes to more than one submission
         # One submission per pull request keeps review and attribution simple,
-        # and keeps a rejected submission from blocking an accepted one.
-        if: steps.changed.outputs.dirs != ''
+        # and keeps a rejected submission from blocking an accepted one. Every
+        # submission is still validated below either way; this only limits how
+        # many a contributor may bring at once.
+        if: steps.changed.outputs.dirs != '' && steps.kind.outputs.maintainer != 'true'
         run: |
           count=$(echo "${{ steps.changed.outputs.dirs }}" | wc -w)
           if [ "$count" -gt 1 ]; then
