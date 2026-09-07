@@ -540,7 +540,7 @@ def generate_multiple_fumbles(
     last_ponset = pnote_array["onset_sec"].max()
 
     # equally distribute 5 points in time between first_ponset and last_ponset to be the fumble points.
-    n_fumbles = 5
+    n_fumbles = 36
     fumble_points = np.linspace(
         first_ponset + (last_ponset - first_ponset) / (n_fumbles + 1),
         last_ponset - (last_ponset - first_ponset) / (n_fumbles + 1),
@@ -831,33 +831,32 @@ def generate_repetition(
         out=os.path.join(out_dir_audio, f"{out_name}.wav"),
     )
 
-    # TODO: Update Match files to handle many-to-one alignments
-    # pt.save_match(
-    #     alignment=output_alignment,
-    #     performance_data=gen_perf,
-    #     score_data=spart,
-    #     out=os.path.join(out_dir_match, f"{out_name}.match"),
-    #     assume_unfolded=True,
-    # )
+    pt.save_match(
+        alignment=output_alignment,
+        performance_data=gen_perf,
+        score_data=spart,
+        out=os.path.join(out_dir_match, f"{out_name}.match"),
+        assume_unfolded=True,
+    )
     
     pt.save_performance_midi(
         performance_data=gen_perf,
         out=os.path.join(out_dir_midi, f"{out_name}.mid"),
     )
 
-    np.savez_compressed(
-        os.path.join(out_dir_match, f"{out_name}.npz"),
-        alignment=output_alignment,
-        performance_note_array=gen_perf.note_array(),
-        score_note_array=spart.note_array(),
-    )
+    # np.savez_compressed(
+    #     os.path.join(out_dir_match, f"{out_name}.npz"),
+    #     alignment=output_alignment,
+    #     performance_note_array=gen_perf.note_array(),
+    #     score_note_array=spart.note_array(),
+    # )
 
-    pt.save_parangonada_csv(
-        alignment=output_alignment,
-        performance_data=gen_perf,
-        score_data=spart,
-        outdir=out_dir_match
-    )
+    # pt.save_parangonada_csv(
+    #     alignment=output_alignment,
+    #     performance_data=gen_perf,
+    #     score_data=spart,
+    #     outdir=out_dir_match
+    # )
 
 def generate_fumbles(
     out_dir_audio,
@@ -893,33 +892,32 @@ def generate_fumbles(
         out=os.path.join(out_dir_audio, f"{out_name}.wav"),
     )
 
-    # TODO: Update Match files to handle many-to-one alignments
-    # pt.save_match(
-    #     alignment=output_alignment,
-    #     performance_data=gen_perf,
-    #     score_data=spart,
-    #     out=os.path.join(out_dir_match, f"{out_name}.match"),
-    #     assume_unfolded=True,
-    # )
+    pt.save_match(
+        alignment=output_alignment,
+        performance_data=gen_perf,
+        score_data=spart,
+        out=os.path.join(out_dir_match, f"{out_name}.match"),
+        assume_unfolded=True,
+    )
     
     pt.save_performance_midi(
         performance_data=gen_perf,
         out=os.path.join(out_dir_midi, f"{out_name}.mid"),
     )
 
-    np.savez_compressed(
-        os.path.join(out_dir_match, f"{out_name}.npz"),
-        alignment=output_alignment,
-        performance_note_array=gen_perf.note_array(),
-        score_note_array=spart.note_array(),
-    )
+    # np.savez_compressed(
+    #     os.path.join(out_dir_match, f"{out_name}.npz"),
+    #     alignment=output_alignment,
+    #     performance_note_array=gen_perf.note_array(),
+    #     score_note_array=spart.note_array(),
+    # )
 
-    pt.save_parangonada_csv(
-        alignment=output_alignment,
-        performance_data=gen_perf,
-        score_data=spart,
-        outdir=out_dir_match
-    )
+    # pt.save_parangonada_csv(
+    #     alignment=output_alignment,
+    #     performance_data=gen_perf,
+    #     score_data=spart,
+    #     outdir=out_dir_match
+    # )
 
 def generate_unchanged(
     out_dir_audio,
@@ -994,6 +992,8 @@ if __name__ == "__main__":
         raise ValueError("No score given!")
 
     out_dir = "../synthetic_performances"
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
 
     out_dir_audio = os.path.join(out_dir, "audio")
 
