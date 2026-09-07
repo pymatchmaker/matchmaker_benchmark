@@ -529,8 +529,12 @@ class TestStagingBranch:
     def test_evaluation_runs_on_the_staging_branch(self):
         assert "submissions" in self._branches(EVALUATE)
 
-    def test_evaluation_still_runs_on_main(self):
-        assert "main" in self._branches(EVALUATE)
+    def test_evaluation_does_not_run_on_main(self):
+        """Evaluation commits results, and results on `main` publish (see
+        pages.yml) -- so evaluating there would put a run on the public page
+        before anyone had looked at it, which is what the staging branch is
+        for."""
+        assert "main" not in self._branches(EVALUATE)
 
     def test_the_site_publishes_only_from_main(self):
         """A staging run must be inspectable before anyone sees it."""

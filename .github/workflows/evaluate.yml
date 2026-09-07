@@ -41,8 +41,11 @@ name: Evaluate submissions
 
 on:
   push:
-    # `branches:` cannot take a variable, so staging branches are listed here.
-    branches: [main, submissions]
+    # `submissions` only, deliberately. Evaluation commits results, and results
+    # on `main` publish (see pages.yml) -- so evaluating there would put a run
+    # on the public page without anyone having looked at it. `branches:` cannot
+    # take a variable, so the staging branch is named here.
+    branches: [submissions]
     paths:
       - "submissions/**"
       - "matchmaker_eval/**"

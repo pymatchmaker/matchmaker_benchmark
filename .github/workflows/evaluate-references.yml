@@ -17,7 +17,7 @@
 #   Actions -> Evaluate references -> Run workflow
 #     input_type: both      shards: 8
 #
-# 11 described methods x 8 shards is 88 jobs. They queue against the account's
+# 15 described entries x 8 shards is 120 jobs. They queue against the account's
 # concurrency limit rather than all starting at once, so expect this to take a
 # while; that is the price of every row being measured the same way.
 name: Evaluate references
