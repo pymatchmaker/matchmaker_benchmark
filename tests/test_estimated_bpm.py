@@ -172,3 +172,59 @@ class TestMissingTempoIsFatal:
         with pytest.raises(EstimatedBpmUnavailable, match="no estimated tempo"):
             run_piece("pthmm", piece, "midi", 1, Path("/tmp"), False,
                       estimated_bpm=True)
+
+
+class TestManifestShapes:
+    """Branches use either per-dataset manifests or one at the repository root."""
+
+    def test_a_root_manifest_is_read(self, tmp_path, monkeypatch):
+        import matchmaker_eval.folds as F
+
+        F.clear_bpm_cache()
+        monkeypatch.setattr(F, "DATA_ROOT", tmp_path)
+        (tmp_path / "valid--metadata-valid.csv").write_text(
+            "dataset,audio,midi,score,match,estimated_bpm\n"
+            "batik,batik/audio/a.mp3,batik/midi/a.mid,batik/score/a.musicxml,"
+            "batik/match/a.match,69\n"
+        )
+        assert F._bpm_table("batik")["batik/midi/a.mid"] == 69.0
+        F.clear_bpm_cache()
+
+    def test_a_root_manifest_is_filtered_by_dataset(self, tmp_path, monkeypatch):
+        """One file covers every dataset, so rows must not leak across them."""
+        import matchmaker_eval.folds as F
+
+        F.clear_bpm_cache()
+        monkeypatch.setattr(F, "DATA_ROOT", tmp_path)
+        (tmp_path / "valid--metadata-valid.csv").write_text(
+            "dataset,midi,estimated_bpm\n"
+            "batik,batik/midi/a.mid,69\n"
+            "asap,asap/midi/b.mid,120\n"
+        )
+        assert F._bpm_table("batik") == {"batik/midi/a.mid": 69.0}
+        F.clear_bpm_cache()
+        assert F._bpm_table("asap") == {"asap/midi/b.mid": 120.0}
+        F.clear_bpm_cache()
+
+    def test_an_alternative_column_name_is_accepted(self, tmp_path, monkeypatch):
+        """vienna's eval-branch manifest calls it `tempo`."""
+        import matchmaker_eval.folds as F
+
+        F.clear_bpm_cache()
+        monkeypatch.setattr(F, "DATA_ROOT", tmp_path)
+        root = tmp_path / "vienna"
+        root.mkdir()
+        (root / "metadata-vienna.csv").write_text(
+            "audio,score,midi,match,tempo\n"
+            "vienna/audio/a.mp3,vienna/score/a.musicxml,vienna/midi/a.mid,"
+            "vienna/match/a.match,88\n"
+        )
+        assert F._bpm_table("vienna")["vienna/midi/a.mid"] == 88.0
+        F.clear_bpm_cache()
+
+    def test_the_configured_names_are_a_list(self):
+        from matchmaker_eval.folds import _bpm_column
+
+        names = _bpm_column()
+        assert isinstance(names, list)
+        assert names[0] == "estimated_bpm"

@@ -303,8 +303,12 @@ class EstimatedBpmUnavailable(FoldError):
     """
 
 
-def _bpm_column() -> str:
-    """The metadata column holding the tempo, from the data source config."""
+def _bpm_column() -> List[str]:
+    """Column names to accept for the tempo, from the data source config.
+
+    A list, because a branch may not have settled on one name yet; the first
+    that a manifest actually has is used.
+    """
     try:
         import yaml
 
@@ -312,8 +316,11 @@ def _bpm_column() -> str:
             (REPO_ROOT / "data" / "data_sources.yaml").read_text()
         ) or {}
     except Exception:
-        return ESTIMATED_BPM_COLUMN
-    return str(config.get("estimated_bpm_column") or ESTIMATED_BPM_COLUMN)
+        return [ESTIMATED_BPM_COLUMN]
+    configured = config.get("estimated_bpm_column") or ESTIMATED_BPM_COLUMN
+    if isinstance(configured, str):
+        return [configured]
+    return [str(name) for name in configured] or [ESTIMATED_BPM_COLUMN]
 
 
 def _bpm_table(dataset: str) -> dict:
@@ -326,16 +333,29 @@ def _bpm_table(dataset: str) -> dict:
     if dataset in _BPM_CACHE:
         return _BPM_CACHE[dataset]
 
-    column = _bpm_column()
+    columns = _bpm_column()
     table: dict = {}
-    root = dataset_root(dataset)
-    candidates = sorted(root.glob(f"metadata-{dataset}*.csv"))
-    for path in candidates:
-        with open(path, newline="") as handle:
+    # Two manifest shapes are in use: one CSV inside each dataset folder, and a
+    # single one at the repository root with a `dataset` column. Branches use
+    # whichever suits them, so read both.
+    candidates = list(dataset_root(dataset).glob(f"metadata-{dataset}*.csv"))
+    candidates += list(DATA_ROOT.glob("*metadata-*.csv"))
+    for path in sorted(set(candidates)):
+        try:
+            handle = open(path, newline="")
+        except OSError:
+            continue
+        with handle:
             reader = csv.DictReader(handle)
-            if reader.fieldnames is None or column not in reader.fieldnames:
+            if reader.fieldnames is None:
                 continue
+            column = next((c for c in columns if c in reader.fieldnames), None)
+            if column is None:
+                continue
+            scoped = "dataset" in reader.fieldnames
             for row in reader:
+                if scoped and (row.get("dataset") or "").strip() != dataset:
+                    continue
                 raw = (row.get(column) or "").strip()
                 if not raw:
                     continue
