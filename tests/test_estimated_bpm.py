@@ -206,12 +206,15 @@ class TestManifestShapes:
         assert F._bpm_table("asap") == {"asap/midi/b.mid": 120.0}
         F.clear_bpm_cache()
 
-    def test_an_alternative_column_name_is_accepted(self, tmp_path, monkeypatch):
-        """vienna's eval-branch manifest calls it `tempo`."""
+    def test_an_alternative_column_name_can_be_configured(
+        self, tmp_path, monkeypatch
+    ):
+        """The config takes a list, for a branch caught mid-rename."""
         import matchmaker_eval.folds as F
 
         F.clear_bpm_cache()
         monkeypatch.setattr(F, "DATA_ROOT", tmp_path)
+        monkeypatch.setattr(F, "_bpm_column", lambda: ["estimated_bpm", "tempo"])
         root = tmp_path / "vienna"
         root.mkdir()
         (root / "metadata-vienna.csv").write_text(

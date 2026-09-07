@@ -80,10 +80,6 @@ local_datasets: [local]
 # declare `estimated_bpm: true` are given it, and the leaderboard marks those
 # rows — see docs/eval-protocol.md.
 #
-# A list is accepted, and the first name a manifest actually has is used. That
-# is a transition aid, not a licence to keep two names: vienna's manifest on the
-# eval branch still calls the column `tempo` where asap and batik call it
-# `estimated_bpm`.
-estimated_bpm_column:
-  - estimated_bpm
-  - tempo
+# A list is accepted, and the first name a manifest actually has is used, for
+# when a branch is mid-rename.
+estimated_bpm_column: estimated_bpm
