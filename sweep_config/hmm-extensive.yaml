@@ -1,14 +1,22 @@
-program: matchmaker_eval/sweep.py
+program: matchmaker_eval/test_symbolic.py
+command:
+  - ${env}
+  - python
+  - ${program}
+  - --sweep
 name: hmm
 method: grid
 
 metric:
-  name: average.<10ms
+  # The leaderboard's primary metric, and what the audio sweeps use.
+  # The old `average.<10ms` came from sweep.py's own summary shape,
+  # which no longer exists.
+  name: tracking_rate
   goal: maximize
 
 parameters:
   dataset:
-    value: "validation"
+    value: "valid"
 
   method:
     value: "hmm"

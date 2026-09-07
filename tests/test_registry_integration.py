@@ -6,9 +6,14 @@ repositories drift apart, which is the failure mode the old hardcoded tables
 made silent.
 """
 
+import subprocess
+import sys
 import warnings
+from pathlib import Path
 
 import pytest
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 warnings.filterwarnings("ignore", module="partitura")
 
@@ -385,3 +390,86 @@ class TestBaselineSubmissions:
             assert registered_type == input_type
         finally:
             unregister_method(method, registered_type)
+
+
+class TestSweepSupport:
+    """Both runners sweep the same way; sweep.py's separate path is gone."""
+
+    def test_both_runners_have_a_sweep_mode(self):
+        for name in ("test_audio.py", "test_symbolic.py"):
+            done = subprocess.run(
+                [sys.executable, str(REPO_ROOT / "matchmaker_eval" / name), "--help"],
+                cwd=REPO_ROOT, capture_output=True, text=True,
+            )
+            assert done.returncode == 0, done.stderr
+            assert "--sweep" in done.stdout, f"{name} cannot run as a sweep agent"
+
+    def test_the_old_standalone_sweep_is_gone(self):
+        assert not (REPO_ROOT / "matchmaker_eval" / "sweep.py").exists()
+
+    def test_every_sweep_config_names_a_program_that_exists(self):
+        import yaml as _yaml
+
+        configs = sorted((REPO_ROOT / "sweep_config").glob("*.yaml"))
+        assert configs
+        for path in configs:
+            config = _yaml.safe_load(path.read_text())
+            program = config.get("program")
+            assert program, f"{path.name} names no program"
+            assert (REPO_ROOT / program).exists(), (
+                f"{path.name} points at {program}, which does not exist"
+            )
+
+    def test_every_sweep_config_optimises_a_metric_that_is_logged(self):
+        """`average.<10ms` came from the deleted script's own summary shape."""
+        import yaml as _yaml
+
+        logged = {"tracking_rate"}
+        for path in sorted((REPO_ROOT / "sweep_config").glob("*.yaml")):
+            config = _yaml.safe_load(path.read_text())
+            name = (config.get("metric") or {}).get("name")
+            assert name, f"{path.name} names no metric"
+            root = name.split(".")[0]
+            assert root in logged or name in logged, (
+                f"{path.name} optimises '{name}', which nothing logs"
+            )
+
+    def test_a_class_valued_setting_arrives_as_a_class(self):
+        """A sweep can only carry strings; followers want the class."""
+        from matchmaker_eval.methods import resolve_class_values
+
+        resolved = resolve_class_values({"tempo_model": "KalmanTempoModel"})
+        assert not isinstance(resolved["tempo_model"], str)
+        assert resolved["tempo_model"].__name__ == "KalmanTempoModel"
+
+    def test_an_unknown_class_name_says_what_is_available(self):
+        from matchmaker_eval.methods import resolve_class_values
+
+        with pytest.raises(ValueError, match="unknown tempo_model"):
+            resolve_class_values({"tempo_model": "NoSuchModel"})
+
+    def test_sweep_only_keys_do_not_reach_the_follower(self):
+        from matchmaker_eval.sweeps import sweep_kwargs
+
+        kwargs = sweep_kwargs(
+            "midi",
+            "hmm",
+            {"dataset": "valid", "method": "hmm", "input_type": "midi",
+             "piano_range": False},
+        )
+        for key in ("dataset", "method", "input_type"):
+            assert key not in kwargs
+        assert kwargs["piano_range"] is False
+
+    def test_both_runners_sweep_through_the_same_module(self):
+        """The shared part exists once; only the entry point is per-runner."""
+        for name in ("test_audio.py", "test_symbolic.py"):
+            source = (REPO_ROOT / "matchmaker_eval" / name).read_text()
+            assert "from sweeps import" in source, f"{name} rolls its own sweep"
+            assert "def build_sweep_kwargs" not in source
+
+    def test_the_sweep_project_matches_the_configs(self):
+        from matchmaker_eval.sweeps import sweep_project
+
+        assert sweep_project("midi", "hmm") == "midi-hmm-sweep"
+        assert sweep_project("audio", "arzt") == "audio-arzt-sweep"

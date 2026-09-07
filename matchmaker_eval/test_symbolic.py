@@ -23,6 +23,7 @@ from matchmaker import Matchmaker
 from matchmaker.utils.eval import resolve_gt
 from folds import explain_missing_dataset, nested_dataset_root
 from methods import available_methods, default_kwargs, processor_for
+from sweeps import log_summary, sweep_kwargs, sweep_project
 from utils import (
     TOLERANCES_IN_BEATS,
     SymbolicEvalConfig,
@@ -31,6 +32,8 @@ from utils import (
     save_results_to_csv,
 )
 from verify_tracking import check_tracking, plot_tracking
+
+import wandb
 
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -63,7 +66,9 @@ TEMPO_DEPENDENT_METHODS = ["pfkorz"]
 TEMPO_METADATA_PATH = WORKING_DIR / "data/perf_tempo_estimate"
 
 
-def run_tests_and_eval_by_dataset(dataset_type, method, run_dir=None, save_plots=True):
+def run_tests_and_eval_by_dataset(
+    dataset_type, method, run_dir=None, save_plots=True, matchmaker_kwargs=None
+):
     """Run symbolic alignment for all pieces in a dataset."""
     metadata = pd.read_csv(METADATA_PATH[dataset_type])
     is_valid = dataset_type in ("valid", "example")
@@ -105,7 +110,11 @@ def run_tests_and_eval_by_dataset(dataset_type, method, run_dir=None, save_plots
             # Run alignment via Matchmaker (HMM or event-level OLTW). The
             # method's defaults come from matchmaker's spec, so a method added
             # there is runnable here without a change.
-            mm_kwargs = default_kwargs("midi", method)
+            mm_kwargs = (
+                dict(matchmaker_kwargs)
+                if matchmaker_kwargs is not None
+                else default_kwargs("midi", method)
+            )
             mm = Matchmaker(
                 score_file=str(score_xml),
                 performance_file=str(perf_midi),
@@ -232,19 +241,39 @@ def build_parser() -> argparse.ArgumentParser:
         help="Skip saving per-piece tracking plots (faster evaluation)",
         default=False,
     )
+    parser.add_argument(
+        "--sweep",
+        action="store_true",
+        default=False,
+        help="run as a wandb sweep agent, taking the method's settings from "
+        "the sweep config (see sweep_config/)",
+    )
     return parser
 
 
-def main():
-    args = build_parser().parse_args()
+def main(args=None):
+    args = args or build_parser().parse_args()
 
     method = args.method
     dataset = args.dataset
-    processor = processor_for("midi", method)
+    matchmaker_kwargs = None
+    if getattr(args, "sweep", False):
+        method = wandb.config.get("method", method)
+        dataset = wandb.config.get("dataset", dataset)
+        matchmaker_kwargs = sweep_kwargs("midi", method, wandb.config)
+
+    # Record the processor the run will actually use: the method's default
+    # from matchmaker's spec, unless the sweep config overrode it.
+    processor = (matchmaker_kwargs or {}).get(
+        "processor", processor_for("midi", method)
+    )
     config = SymbolicEvalConfig(method=method, dataset=dataset, processor=processor)
 
     ts = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
-    run_dir = OUTPUT_DIR / f"test_{ts}_sym_{method}_{dataset}"
+    if getattr(args, "sweep", False):
+        run_dir = OUTPUT_DIR / f"sweep_{ts}_sym_{method}_{wandb.run.id}"
+    else:
+        run_dir = OUTPUT_DIR / f"test_{ts}_sym_{method}_{dataset}"
     run_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Method: {method}, Dataset: {dataset}, Output: {run_dir}")
@@ -253,7 +282,8 @@ def main():
         dataset,
         method,
         run_dir=run_dir,
-        save_plots=not args.no_plots,
+        save_plots=not getattr(args, "sweep", False) and not args.no_plots,
+        matchmaker_kwargs=matchmaker_kwargs,
     )
 
     n_total = len(results["Index"])
@@ -272,6 +302,17 @@ def main():
 
     save_config(config, run_dir)
 
+    if getattr(args, "sweep", False):
+        log_summary(summary_all, summary_tracked)
+
 
 if __name__ == "__main__":
-    main()
+    args = build_parser().parse_args()
+    if args.sweep:
+        with wandb.init(
+            entity="matchmaker",
+            project=sweep_project("midi", args.method),
+        ):
+            main(args)
+    else:
+        main(args)

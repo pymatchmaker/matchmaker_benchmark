@@ -24,6 +24,7 @@ __all__ = [
     "default_kwargs",
     "is_builtin",
     "processor_for",
+    "resolve_class_values",
     "spec_for",
 ]
 
@@ -71,6 +72,42 @@ def processor_for(input_type: str, method: str) -> Optional[str]:
         return REGISTRY.default_processor_of(input_type, method)
     declared = DEFAULT_KWARGS.get(input_type, {}).get(method, {}).get("processor")
     return declared or REGISTRY.default_processor.get(input_type)
+
+
+#: Keys whose value is a class rather than a number. A sweep config can only
+#: carry strings, so a bare class name arriving in kwargs is resolved here.
+CLASS_VALUED = {
+    "tempo_model": "matchmaker.utils.tempo_models",
+}
+
+
+def resolve_class_values(kwargs: dict) -> dict:
+    """Turn bare class names in ``kwargs`` into the classes they name.
+
+    A wandb sweep can vary ``tempo_model`` only as a string; matchmaker's
+    followers want the class. The spec expresses the same thing with its
+    ``!obj`` tag, so this is the sweep-side equivalent rather than a second
+    table of models to keep in step.
+    """
+    import importlib
+
+    out = dict(kwargs)
+    for key, module_name in CLASS_VALUED.items():
+        value = out.get(key)
+        if not isinstance(value, str):
+            continue
+        module = importlib.import_module(module_name)
+        try:
+            out[key] = getattr(module, value)
+        except AttributeError:
+            available = [
+                n for n in dir(module) if n.endswith("TempoModel") or "Model" in n
+            ]
+            raise ValueError(
+                f"unknown {key} '{value}'. Available in {module_name}: "
+                f"{sorted(available)}"
+            ) from None
+    return out
 
 
 def audio_rates(kwargs: dict) -> dict:

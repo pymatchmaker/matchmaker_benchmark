@@ -11,6 +11,7 @@ import pandas as pd
 from eval import run_offline_alignment, run_score_following
 from folds import explain_missing_dataset, nested_dataset_root
 from methods import audio_rates, available_methods, default_kwargs
+from sweeps import log_summary, sweep_kwargs, sweep_project
 from tabulate import tabulate
 from utils import (
     AudioEvalConfig,
@@ -226,15 +227,6 @@ def run_tests_and_eval_by_dataset(
     return results
 
 
-def build_sweep_kwargs(method: str, wconfig) -> dict:
-    """The method's defaults from matchmaker's spec, overridden by the sweep."""
-    method_kwargs = default_kwargs("audio", method)
-    for key, value in wconfig.items():
-        if key not in ("dataset", "method"):
-            method_kwargs[key] = value
-    return method_kwargs
-
-
 def main(args):
     dataset_type = args.dataset
     method = args.method
@@ -247,7 +239,7 @@ def main(args):
     if args.sweep:
         method = wandb.config.get("method", method)
         dataset_type = wandb.config.get("dataset", dataset_type)
-        matchmaker_kwargs = build_sweep_kwargs(method, wandb.config)
+        matchmaker_kwargs = sweep_kwargs("audio", method, wandb.config)
 
     # Report the rates the run will actually use: the method's defaults from
     # matchmaker's spec, overridden by the sweep config when there is one.
@@ -304,15 +296,7 @@ def main(args):
             print(f"Results saved to: {path}")
 
     if not dry_run and args.sweep:
-        # Sweep mode: log to current wandb run
-        wandb.log(
-            {
-                "average": summary_all,
-                "tracking_rate": summary_all.get("tracking_rate", 0),
-            }
-        )
-        if summary_tracked.get("tracked_count", 0) > 0:
-            wandb.log({"tracked_average": summary_tracked})
+        log_summary(summary_all, summary_tracked)
     elif not dry_run and use_wandb:
         report_results_to_wandb(summary_tracked, config)
 
@@ -377,7 +361,7 @@ if __name__ == "__main__":
     if args.sweep:
         with wandb.init(
             entity="matchmaker",
-            project=f"audio-{args.method}-sweep",
+            project=sweep_project("audio", args.method),
         ):
             main(args)
     else:
