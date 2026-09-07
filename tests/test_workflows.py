@@ -566,3 +566,58 @@ class TestValidateWorkflow:
         pieces = load_fold("example", input_type="midi")
         assert pieces
         assert not missing_files(pieces, "midi")
+
+
+class TestRunProvenance:
+    """A published row should say which matchmaker produced it.
+
+    The version string is "0.3.0" on every branch, so while the workflows
+    install from a feature branch it cannot distinguish one run from another.
+    """
+
+    def test_the_environment_records_the_benchmark_commit(self):
+        import sys as _sys
+
+        _sys.path.insert(0, str(REPO_ROOT / "matchmaker_eval"))
+        from run_submission import environment_info
+
+        info = environment_info()
+        assert info["benchmark_commit"] != "unknown"
+        assert info["matchmaker"]
+
+    def test_a_git_install_records_its_commit_and_ref(self, tmp_path, monkeypatch):
+        import sys as _sys
+
+        _sys.path.insert(0, str(REPO_ROOT / "matchmaker_eval"))
+        import run_submission as R
+
+        class FakeDist:
+            def read_text(self, name):
+                assert name == "direct_url.json"
+                return (
+                    '{"url": "https://github.com/pymatchmaker/matchmaker.git",'
+                    ' "vcs_info": {"vcs": "git", "commit_id": "abc123",'
+                    ' "requested_revision": "feature/clean_method_registration"}}'
+                )
+
+        monkeypatch.setattr(
+            "importlib.metadata.distribution", lambda name: FakeDist()
+        )
+        found = R._matchmaker_source()
+        assert found["matchmaker_commit"] == "abc123"
+        assert found["matchmaker_ref"] == "feature/clean_method_registration"
+
+    def test_a_release_install_adds_nothing(self, monkeypatch):
+        import sys as _sys
+
+        _sys.path.insert(0, str(REPO_ROOT / "matchmaker_eval"))
+        import run_submission as R
+
+        class NoDirectUrl:
+            def read_text(self, name):
+                return None
+
+        monkeypatch.setattr(
+            "importlib.metadata.distribution", lambda name: NoDirectUrl()
+        )
+        assert R._matchmaker_source() == {}

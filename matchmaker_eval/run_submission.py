@@ -113,6 +113,31 @@ def sha256_of(path: Path) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def _matchmaker_source() -> dict:
+    """The git ref and commit matchmaker was installed from, if it was.
+
+    ``pip install git+...@<ref>`` leaves a direct_url.json beside the package
+    naming the ref asked for and the commit it resolved to. A release install
+    has none, and then there is nothing to add.
+    """
+    try:
+        import json
+        from importlib.metadata import distribution
+
+        raw = distribution("pymatchmaker").read_text("direct_url.json")
+        if not raw:
+            return {}
+        vcs = (json.loads(raw).get("vcs_info") or {})
+        found = {}
+        if vcs.get("commit_id"):
+            found["matchmaker_commit"] = vcs["commit_id"]
+        if vcs.get("requested_revision"):
+            found["matchmaker_ref"] = vcs["requested_revision"]
+        return found
+    except Exception:
+        return {}
+
+
 def environment_info() -> dict:
     """Record what produced these numbers, so a row can be reproduced."""
     import platform
@@ -128,6 +153,10 @@ def environment_info() -> dict:
         info["matchmaker"] = version("pymatchmaker")
     except Exception:
         info["matchmaker"] = "unknown"
+    # The version string is the same on every branch, so on its own it cannot
+    # say which matchmaker produced a row. When it was pip-installed from git,
+    # pip records the resolved commit; keep that too.
+    info.update(_matchmaker_source())
     try:
         info["benchmark_commit"] = subprocess.check_output(
             ["git", "rev-parse", "HEAD"],
