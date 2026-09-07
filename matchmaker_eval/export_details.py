@@ -262,8 +262,12 @@ def main():
         print(f"{verb} orphaned detail {name}")
 
     if not written:
+        # Not a failure: a fresh repository has no runs yet, and a dispatch on
+        # a fold other than the default has nothing to export by definition.
+        # Returning non-zero here would fail the workflow step after the
+        # evaluation it follows had already succeeded.
         print(f"No complete {args.fold}-fold runs to export.")
-        return 1
+        return 0
     print(f"\nwrote {written} file(s) to {DETAILS_DIR.relative_to(REPO_ROOT)}")
     return 0
 
