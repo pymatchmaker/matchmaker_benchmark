@@ -485,12 +485,19 @@ class TestSweepSupport:
                 assert path.exists(), f"{column} -> {path} is not committed"
 
     def test_a_sweep_can_be_smoke_tested_without_data(self):
+        """At least one config sweeps the piece committed under resources/,
+        so the plumbing can be checked before a real sweep on `valid`."""
         import yaml as _yaml
 
-        config = _yaml.safe_load(
-            (REPO_ROOT / "sweep_config" / "example-smoke.yaml").read_text()
-        )
-        assert config["parameters"]["dataset"]["value"] == "example"
+        on_example = [
+            path.name
+            for path in sorted((REPO_ROOT / "sweep_config").glob("*.yaml"))
+            if _yaml.safe_load(path.read_text())["parameters"]
+            .get("dataset", {})
+            .get("value")
+            == "example"
+        ]
+        assert on_example, "no sweep config runs on the example piece"
 
     def test_the_sweep_entity_can_be_overridden(self, monkeypatch):
         """`wandb agent` sets WANDB_ENTITY; ours is only the fallback."""
