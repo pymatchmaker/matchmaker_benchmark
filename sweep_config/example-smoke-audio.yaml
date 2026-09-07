@@ -1,0 +1,36 @@
+# A sweep that runs anywhere: two runs over the single piece committed to
+# this repository under resources/, so no corpus download is needed. Use it
+# to check the sweep plumbing works before starting a real one on `valid`.
+#
+#   wandb sweep sweep_config/example-smoke.yaml
+#   wandb agent <the id it prints>
+program: matchmaker_eval/test_audio.py
+command:
+  - ${env}
+  - python
+  - ${program}
+  - --sweep
+entity: matchmaker
+project: sweep-smoke-test
+name: example-smoke-audio
+method: grid
+
+metric:
+  name: tracking_rate
+  goal: maximize
+
+parameters:
+  dataset:
+    value: "example"
+
+  method:
+    value: "hmm"
+
+  input_type:
+    value: "midi"
+
+  processor:
+    value: "pitch"
+
+  init_beat_period:
+    values: [0.5, 0.6]
