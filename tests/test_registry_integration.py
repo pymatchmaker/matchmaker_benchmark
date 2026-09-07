@@ -468,6 +468,39 @@ class TestSweepSupport:
             assert "from sweeps import" in source, f"{name} rolls its own sweep"
             assert "def build_sweep_kwargs" not in source
 
+    def test_the_example_dataset_needs_no_corpus(self):
+        """The runners' smoke dataset is the piece committed under resources/."""
+        import csv
+
+        with open(REPO_ROOT / "data" / "metadata-example.csv") as handle:
+            rows = list(csv.DictReader(handle))
+        assert rows
+        for row in rows:
+            assert row["dataset"] == "local", (
+                "the example dataset must resolve inside the repository"
+            )
+            for column in ("xml_score", "midi_performance", "match",
+                           "audio_performance"):
+                path = REPO_ROOT / "resources" / row[column]
+                assert path.exists(), f"{column} -> {path} is not committed"
+
+    def test_a_sweep_can_be_smoke_tested_without_data(self):
+        import yaml as _yaml
+
+        config = _yaml.safe_load(
+            (REPO_ROOT / "sweep_config" / "example-smoke.yaml").read_text()
+        )
+        assert config["parameters"]["dataset"]["value"] == "example"
+
+    def test_the_sweep_entity_can_be_overridden(self, monkeypatch):
+        """`wandb agent` sets WANDB_ENTITY; ours is only the fallback."""
+        from matchmaker_eval.sweeps import sweep_entity
+
+        monkeypatch.delenv("WANDB_ENTITY", raising=False)
+        assert sweep_entity() == "matchmaker"
+        monkeypatch.setenv("WANDB_ENTITY", "someone-else")
+        assert sweep_entity() == "someone-else"
+
     def test_the_sweep_project_matches_the_configs(self):
         from matchmaker_eval.sweeps import sweep_project
 

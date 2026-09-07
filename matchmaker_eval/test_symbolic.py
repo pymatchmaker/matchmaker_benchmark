@@ -23,7 +23,7 @@ from matchmaker import Matchmaker
 from matchmaker.utils.eval import resolve_gt
 from folds import explain_missing_dataset, nested_dataset_root
 from methods import available_methods, default_kwargs, processor_for
-from sweeps import log_summary, sweep_kwargs, sweep_project
+from sweeps import log_summary, sweep_entity, sweep_kwargs, sweep_project
 from utils import (
     TOLERANCES_IN_BEATS,
     SymbolicEvalConfig,
@@ -47,7 +47,10 @@ WORKING_DIR = Path(__file__).parent.parent
 #: directory. These runners read the CSVs under data/, which address each
 #: corpus in its upstream (nested) shape -- not the flat layout of the
 #: benchmark data repository. See folds.explain_missing_dataset.
+#: The `example` dataset is the one piece committed to this repository under
+#: resources/, so the runners have a smoke test that needs no corpus at all.
 DATASET_DIR = {
+    "local": WORKING_DIR / "resources",
     "asap": nested_dataset_root("asap"),
     "batik": nested_dataset_root("batik"),
     "vienna": nested_dataset_root("vienna"),
@@ -310,7 +313,7 @@ if __name__ == "__main__":
     args = build_parser().parse_args()
     if args.sweep:
         with wandb.init(
-            entity="matchmaker",
+            entity=sweep_entity(),
             project=sweep_project("midi", args.method),
         ):
             main(args)

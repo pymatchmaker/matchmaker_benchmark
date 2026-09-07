@@ -11,7 +11,7 @@ import pandas as pd
 from eval import run_offline_alignment, run_score_following
 from folds import explain_missing_dataset, nested_dataset_root
 from methods import audio_rates, available_methods, default_kwargs
-from sweeps import log_summary, sweep_kwargs, sweep_project
+from sweeps import log_summary, sweep_entity, sweep_kwargs, sweep_project
 from tabulate import tabulate
 from utils import (
     AudioEvalConfig,
@@ -29,7 +29,10 @@ WORKING_DIR = Path(__file__).parent.parent
 #: directory. These runners read the CSVs under data/, which address each
 #: corpus in its upstream (nested) shape -- not the flat layout of the
 #: benchmark data repository. See folds.explain_missing_dataset.
+#: The `example` dataset is the one piece committed to this repository under
+#: resources/, so the runners have a smoke test that needs no corpus at all.
 DATASET_DIR = {
+    "local": WORKING_DIR / "resources",
     "asap": nested_dataset_root("asap"),
     "batik": nested_dataset_root("batik"),
     "vienna": nested_dataset_root("vienna"),
@@ -360,7 +363,7 @@ if __name__ == "__main__":
 
     if args.sweep:
         with wandb.init(
-            entity="matchmaker",
+            entity=sweep_entity(),
             project=sweep_project("audio", args.method),
         ):
             main(args)

@@ -10,7 +10,10 @@ import partitura as pt
 from partitura.score import merge_parts
 
 WORKING_DIR = Path(__file__).parent.parent
+#: The `example` dataset is the one piece committed to this repository under
+#: resources/, so the runners have a smoke test that needs no corpus at all.
 DATASET_DIR = {
+    "local": WORKING_DIR / "resources",
     "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
     "batik": Path("~/data/batik_plays_mozart").expanduser(),
     "vienna": Path("~/data/vienna4x22").expanduser(),

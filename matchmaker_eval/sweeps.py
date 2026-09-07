@@ -13,6 +13,8 @@ naming the project, logging the objective -- has no reason to exist twice, so
 it lives here.
 """
 
+import os
+
 import wandb
 
 from methods import default_kwargs, resolve_class_values
@@ -32,6 +34,16 @@ def sweep_kwargs(input_type: str, method: str, wconfig) -> dict:
         if key not in RUNNER_KEYS:
             method_kwargs[key] = value
     return resolve_class_values(method_kwargs)
+
+
+def sweep_entity() -> str:
+    """The wandb entity to log to.
+
+    ``wandb agent`` sets ``WANDB_ENTITY`` from the sweep it is running, so
+    honouring it lets someone outside our team run these sweeps in their own
+    workspace. Ours remains the default for a run started by hand.
+    """
+    return os.environ.get("WANDB_ENTITY") or "matchmaker"
 
 
 def sweep_project(input_type: str, method: str) -> str:
