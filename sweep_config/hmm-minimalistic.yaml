@@ -4,6 +4,8 @@ command:
   - python
   - ${program}
   - --sweep
+entity: matchmaker
+project: midi-hmm-sweep
 name: hmm
 method: grid
 

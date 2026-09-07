@@ -4,6 +4,8 @@ command:
   - python
   - ${program}
   - --sweep
+entity: matchmaker
+project: audio-arzt-sweep
 name: audio-arzt
 method: bayes
 

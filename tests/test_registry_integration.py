@@ -501,8 +501,26 @@ class TestSweepSupport:
         monkeypatch.setenv("WANDB_ENTITY", "someone-else")
         assert sweep_entity() == "someone-else"
 
-    def test_the_sweep_project_matches_the_configs(self):
+    def test_the_sweep_project_matches_the_configs(self, monkeypatch):
         from matchmaker_eval.sweeps import sweep_project
 
+        monkeypatch.delenv("WANDB_PROJECT", raising=False)
         assert sweep_project("midi", "hmm") == "midi-hmm-sweep"
         assert sweep_project("audio", "arzt") == "audio-arzt-sweep"
+
+    def test_the_agents_project_wins(self, monkeypatch):
+        """A sweep whose runs land in another project is not tracking them."""
+        from matchmaker_eval.sweeps import sweep_project
+
+        monkeypatch.setenv("WANDB_PROJECT", "sweep-smoke-test")
+        assert sweep_project("midi", "hmm") == "sweep-smoke-test"
+
+    def test_every_sweep_config_declares_where_it_runs(self):
+        """Left implicit, wandb invents a project name from the program path,
+        and the sweep and its runs end up in two different places."""
+        import yaml as _yaml
+
+        for path in sorted((REPO_ROOT / "sweep_config").glob("*.yaml")):
+            config = _yaml.safe_load(path.read_text())
+            assert config.get("entity"), f"{path.name} declares no entity"
+            assert config.get("project"), f"{path.name} declares no project"

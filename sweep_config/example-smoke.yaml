@@ -10,6 +10,8 @@ command:
   - python
   - ${program}
   - --sweep
+entity: matchmaker
+project: sweep-smoke-test
 name: example-smoke
 method: grid
 

@@ -4,6 +4,8 @@ command:
   - python
   - ${program}
   - --sweep
+entity: matchmaker
+project: audio-dixon-sweep
 name: audio-dixon
 method: bayes
 

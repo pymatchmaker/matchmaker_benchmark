@@ -47,8 +47,14 @@ def sweep_entity() -> str:
 
 
 def sweep_project(input_type: str, method: str) -> str:
-    """One wandb project per method and input type, as the sweeps expect."""
-    return f"{input_type}-{method}-sweep"
+    """The wandb project to log to.
+
+    ``wandb agent`` sets ``WANDB_PROJECT`` from the sweep it is running. It has
+    to win: a sweep whose runs are created in some other project is not
+    tracking them. The name below is only the fallback for a run started by
+    hand, and is what the configs in sweep_config/ declare.
+    """
+    return os.environ.get("WANDB_PROJECT") or f"{input_type}-{method}-sweep"
 
 
 def log_summary(summary_all: dict, summary_tracked: dict) -> None:
