@@ -51,7 +51,15 @@ def merge(root: Path, output: Path) -> dict:
 
     # Every shard must describe the same experiment, or the merged numbers
     # would silently mix two different things.
-    for key in ("submission", "method", "kind", "fold", "fold_sha256", "input_type"):
+    for key in (
+        "submission",
+        "method",
+        "kind",
+        "fold",
+        "fold_sha256",
+        "input_type",
+        "estimated_bpm",
+    ):
         values = {r.get(key) for r in records}
         if len(values) > 1:
             raise MergeError(f"shards disagree on '{key}': {sorted(map(str, values))}")
@@ -110,6 +118,10 @@ def merge(root: Path, output: Path) -> dict:
                 # leaderboard.py as an ordinary submission with no method name.
                 "method",
                 "kind",
+                # Whether the entry was given the performance's tempo. Dropping
+                # it here published a sharded pfkorz run as though it had run
+                # on the notated tempo, unmarked and next to entries that did.
+                "estimated_bpm",
                 "metadata",
                 "fold",
                 "fold_file",
@@ -125,6 +137,9 @@ def merge(root: Path, output: Path) -> dict:
         "shard": None,
         "merged_from": [str(p.parent.name) for p in shard_paths],
         "n_tracked": sum(1 for p in pieces if p.get("tracked")),
+        # Recounted from the merged pieces rather than summed across shards, so
+        # it stays right whatever subset of shards was merged.
+        "n_estimated_bpm": sum(1 for p in pieces if p.get("used_estimated_bpm")),
         "n_failed": len(failures),
         "failures": failures,
         "summary_all": compute_event_pooled_summary(

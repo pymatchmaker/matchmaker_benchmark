@@ -6,9 +6,11 @@ fold" means in practice.
 ## Folds
 
 The benchmark is defined by three CSV files in `data/folds/`. Each row is one
-(score, performance, ground truth) triple. The lists are committed, so any
-change to what the benchmark measures arrives as a reviewable diff instead of a
-silent shift in the leaderboard.
+(score, performance, ground truth) triple, together with the two measurements
+published about that performance — `difficulty` and `estimated_bpm`. The lists
+are committed, so any change to what the benchmark measures arrives as a
+reviewable diff instead of a silent shift in the leaderboard, and a run reads
+nothing the fold did not name.
 
 | Fold | Rows | Contents | Use it for |
 | --- | --- | --- | --- |
@@ -35,8 +37,10 @@ contributor never has to run this**: the pull-request check uses the committed
 runners.
 
 `matchmaker_eval/make_folds.py` regenerates the folds from `data/metadata-*.csv`
-and checks them; `--check` verifies the committed files without rewriting them
-(CI runs this on every pull request).
+and checks them; `--from-repo` instead rebuilds them from the data repository's
+own manifests, which is where the paths and the `estimated_bpm` values come
+from. `--check` verifies the committed files without rewriting them (CI runs
+this on every pull request).
 
 ### The audio is not recorded the same way across datasets
 
@@ -99,18 +103,34 @@ hear. It gets the score, and the stream. The notated tempo comes from the score
 like any other marking; it is not a measurement of the recording.
 
 A follower may instead be given the performance's **estimated tempo**
-(`estimated_bpm`) — a measurement of the recording, published as a column in the
-data repository's metadata. This is a materially easier task, so it is the
-exception and it is always visible:
+(`estimated_bpm`) — a measurement of the recording, frozen as a column of the
+fold CSV beside the paths it belongs to, so `fold_sha256` covers it: two runs
+reporting the same fold hash were handed the same tempi. This is a materially
+easier task, so it is the exception and it is always visible:
 
 - the entry declares it — `estimated_bpm: true` in a submission's
   `metadata.yaml`, or in `data/builtin_methods.yaml` for a reference;
 - the run records it, and the leaderboard marks the row with an asterisk and a
   footnote.
 
-Declaring it and then not having the data available fails the run rather than
-quietly falling back to the notated tempo: a row labelled as having the tempo
-must actually have had it.
+A piece whose fold row carries no tempo still runs: matchmaker falls back to
+the score's notated marking, then to 120 BPM, which is what every entry that
+never asked for a tempo already uses. The run says so — per piece as it goes,
+and once in the summary — and records how many pieces actually had one in
+`metrics.json` as `n_estimated_bpm`, so a partly-supplied run is visible rather
+than assumed. That only arises on a fold CSV written before the column existed,
+or by hand; regenerate it with `make_folds.py --from-repo`.
+
+The fallback keeps the run alive; it does not make the result equivalent. On
+the example piece, `pfkorz` goes from a tracked `beat_median` of 0.067 with the
+measured tempo to a lost piece at 39.0 without it, because the notated marking
+is nowhere near the played tempo. Read a run with a non-zero shortfall as a
+mixture of two conditions, not as a clean measurement.
+
+The value is one per performance, not one per container: it is score beats
+divided by how long the playing took, and the mp3 and the MIDI of a performance
+are two renderings of the same playing. A follower's audio and MIDI runs are
+therefore given the same number.
 
 Among the reference methods only the Korzeniowski particle filter (`pfkorz`)
 uses it, because it tracks tempo as part of its state.

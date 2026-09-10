@@ -173,3 +173,40 @@ class TestMergeReferences:
         root = self._flat_download(tmp_path, ["arzt-audio"])
         (root / "some-other-artifact").mkdir()
         assert sorted(group(root)) == ["arzt-audio"]
+
+
+class TestTheTempoLabelSurvivesMerging:
+    """A sharded run must not lose the fact that it was given the tempo."""
+
+    def _merge(self, tmp_path, **overrides):
+        records = [shard_record(1, **overrides), shard_record(2, **overrides)]
+        root = write_shards(tmp_path / "shards", records)
+        return merge(root, tmp_path / "merged")
+
+    def test_the_flag_is_carried(self, tmp_path):
+        """Dropping it published a pfkorz run unmarked, beside entries
+        that never had the tempo."""
+        merged = self._merge(tmp_path, estimated_bpm=True)
+        assert merged["estimated_bpm"] is True
+
+    def test_an_ordinary_run_stays_false(self, tmp_path):
+        assert self._merge(tmp_path, estimated_bpm=False)["estimated_bpm"] is False
+
+    def test_shards_disagreeing_on_it_is_refused(self, tmp_path):
+        """Two different measurements must not be averaged into one row."""
+        records = [
+            shard_record(1, estimated_bpm=True),
+            shard_record(2, estimated_bpm=False),
+        ]
+        root = write_shards(tmp_path / "shards", records)
+        with pytest.raises(MergeError, match="estimated_bpm"):
+            merge(root, tmp_path / "merged")
+
+    def test_the_count_is_recomputed_from_the_pieces(self, tmp_path):
+        one = shard_record(1, estimated_bpm=True)
+        one["pieces"][0]["used_estimated_bpm"] = True
+        two = shard_record(2, estimated_bpm=True)
+        two["pieces"][0]["used_estimated_bpm"] = False
+        root = write_shards(tmp_path / "shards", [one, two])
+        merged = merge(root, tmp_path / "merged")
+        assert merged["n_estimated_bpm"] == 1

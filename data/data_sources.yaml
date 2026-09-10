@@ -76,9 +76,11 @@ verify_checksums: true
 # Datasets that are never fetched because they are committed to this repository.
 local_datasets: [local]
 
-# Column holding the performance's estimated tempo in BPM. Only followers that
-# declare `estimated_bpm: true` are given it, and the leaderboard marks those
-# rows — see docs/eval-protocol.md.
+# Column of the data repository's manifests holding the performance's estimated
+# tempo in BPM. Read only by make_folds.py, which copies the value into the fold
+# CSVs; a run then takes the tempo from the fold and never looks here. Only
+# followers that declare `estimated_bpm: true` are given it, and the leaderboard
+# marks those rows — see docs/eval-protocol.md.
 #
 # A list is accepted, and the first name a manifest actually has is used, for
 # when a branch is mid-rename.

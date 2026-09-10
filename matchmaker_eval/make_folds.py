@@ -9,6 +9,13 @@ The folds are derived from the dataset metadata already in ``data/``:
 ``eval``     <- ``data/reduced/metadata-{asap,batik,vienna}.csv``
 ``example``  <- the single piece committed under ``resources/``
 
+``--from-repo`` instead rebuilds the folds from the data repository's own
+manifests. That is the authoritative path, and the only one that fills in
+``estimated_bpm``: the repository publishes a tempo for every performance it
+holds, and every one of them reproduces from the score and performance MIDI it
+ships. The default path leaves the column blank rather than guess, and the
+check step reports how many rows came out that way.
+
 The generated CSVs are committed so that any change to what the benchmark
 measures arrives as a reviewable diff rather than as a silent shift in the
 leaderboard. Regenerate them only deliberately: ``eval`` is frozen, and
@@ -59,6 +66,7 @@ EXAMPLE_PIECE = Piece(
     audio_performance="resources/ex_VuV01M.wav",
     match="resources/ex_VuV01M.match",
     difficulty="3",
+    estimated_bpm="58",
 )
 
 
@@ -74,14 +82,43 @@ REPO_COLUMNS = {
     "title": ("title", "piece", "name"),
     "composer": ("composer",),
     "difficulty": ("difficulty",),
+    "estimated_bpm": ("estimated_bpm", "tempo", "bpm"),
 }
+
+
+def repo_columns() -> dict:
+    """:data:`REPO_COLUMNS`, with the configured tempo column name first.
+
+    ``data/data_sources.yaml`` may name the tempo column explicitly, for a data
+    branch caught mid-rename. Honouring it here rather than at run time keeps
+    the guessing in the one place that reads the repository's manifests.
+    """
+    columns = dict(REPO_COLUMNS)
+    try:
+        import yaml
+
+        config = (
+            yaml.safe_load((METADATA_DIR / "data_sources.yaml").read_text()) or {}
+        )
+    except Exception:
+        return columns
+    configured = config.get("estimated_bpm_column")
+    if not configured:
+        return columns
+    names = (
+        [configured] if isinstance(configured, str) else [str(c) for c in configured]
+    )
+    columns["estimated_bpm"] = tuple(
+        dict.fromkeys([*names, *columns["estimated_bpm"]])
+    )
+    return columns
 
 
 def resolve_columns(header) -> dict:
     """Map each role to the column that carries it, or None."""
     present = {h.strip(): h.strip() for h in header}
     resolved = {}
-    for role, candidates in REPO_COLUMNS.items():
+    for role, candidates in repo_columns().items():
         resolved[role] = next((c for c in candidates if c in present), None)
     return resolved
 
@@ -212,6 +249,11 @@ def read_root_metadata(path: Path, datasets=("asap", "batik", "vienna")):
             difficulty=(
                 row.get(columns["difficulty"], "") if columns["difficulty"] else ""
             ),
+            estimated_bpm=(
+                row.get(columns["estimated_bpm"], "")
+                if columns["estimated_bpm"]
+                else ""
+            ),
         )
 
 
@@ -263,6 +305,11 @@ def read_repo_metadata(dataset: str, path: Path):
             audio_performance=value("audio_performance"),
             match=value("match"),
             difficulty=value("difficulty"),
+            estimated_bpm=(
+                row.get(columns["estimated_bpm"], "")
+                if columns["estimated_bpm"]
+                else ""
+            ),
         )
 
 
@@ -295,6 +342,13 @@ def read_metadata_rows(dataset: str, path: Path):
             audio_performance=row.get("audio_performance", ""),
             match=row.get("match", ""),
             difficulty=row.get("difficulty", ""),
+            # Left blank deliberately. data/perf_tempo_estimate/ holds tempi
+            # keyed by these very paths, but they were measured against the
+            # upstream corpora and four vienna rows disagree with the data
+            # repository's by 1-3 BPM. A blank stops an `estimated_bpm: true`
+            # run outright; a plausible wrong number would just quietly shift
+            # what it measured. --from-repo fills these in.
+            estimated_bpm="",
         )
 
 
@@ -340,6 +394,26 @@ def check(eval_pieces, valid_pieces) -> int:
     if duplicates:
         print(f"FAIL  duplicate piece ids in the eval fold: {duplicates[:10]}")
         failures += 1
+
+    # A blank tempo is not a failure — most followers never ask for it — but it
+    # silently disarms every entry that declares `estimated_bpm: true`, so it
+    # has to be visible when a fold is regenerated.
+    without_tempo = [p.piece_id for p in eval_pieces + valid_pieces
+                     if not p.estimated_bpm]
+    if without_tempo:
+        total = len(eval_pieces) + len(valid_pieces)
+        print(
+            f"note  {len(without_tempo)}/{total} row(s) carry no estimated_bpm, so a "
+            "follower declaring\n      it uses the tempo cannot run on them:"
+        )
+        for piece_id in without_tempo[:5]:
+            print(f"        {piece_id}")
+        print(
+            "      Only --from-repo fills this column in:\n"
+            "        python matchmaker_eval/make_folds.py --from-repo"
+        )
+    else:
+        print("ok    every row carries an estimated_bpm")
 
     eval_titles = {(p.dataset, p.title) for p in eval_pieces}
     shared_scores = sorted(eval_titles & {(p.dataset, p.title) for p in valid_pieces})
@@ -473,6 +547,7 @@ def build_from_repo() -> int:
                             audio_performance=recovered.get("audio_performance", ""),
                             match=recovered.get("match", ""),
                             difficulty=piece.difficulty,
+                            estimated_bpm=piece.estimated_bpm,
                         )
                     )
                     recovered_count += 1
@@ -491,6 +566,10 @@ def build_from_repo() -> int:
                     audio_performance=match.audio_performance,
                     match=match.match,
                     difficulty=match.difficulty or piece.difficulty,
+                    # The repository measured these on the audio it actually
+                    # ships, so its value wins; the fold keeps whatever it
+                    # already had when the manifest carries no tempo.
+                    estimated_bpm=match.estimated_bpm or piece.estimated_bpm,
                 )
             )
         if missing:

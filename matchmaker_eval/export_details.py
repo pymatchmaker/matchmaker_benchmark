@@ -53,7 +53,19 @@ PRECISION = 2
 #: piece record is a metric and is carried through verbatim. Listing the
 #: exclusions rather than the inclusions means a metric added to the evaluation
 #: reaches the website without a change here.
-PIECE_IDENTITY = ("index", "piece_id", "dataset", "title", "tracked", "error")
+#: ``used_estimated_bpm`` is a condition the piece was run under, not a
+#: measurement of the follower, so it is excluded here too — otherwise it lands
+#: in the site's metric table as a boolean among the error statistics. The run's
+#: count of it is published once, alongside n_tracked.
+PIECE_IDENTITY = (
+    "index",
+    "piece_id",
+    "dataset",
+    "title",
+    "tracked",
+    "error",
+    "used_estimated_bpm",
+)
 
 #: Order metrics are presented in. Anything not named here still appears, after
 #: these, so nothing is ever silently dropped.
@@ -189,6 +201,9 @@ def export(run_dir: Path, include_paths: bool = True) -> dict:
         "fold_sha256": metrics.get("fold_sha256"),
         "n_pieces": metrics.get("n_pieces"),
         "n_tracked": metrics.get("n_tracked"),
+        # How many pieces the follower was actually given a measured tempo for.
+        # Only meaningful when the entry declared it; 0 otherwise.
+        "n_estimated_bpm": metrics.get("n_estimated_bpm", 0),
         "path_points": PATH_POINTS if include_paths else 0,
         "axes": {"x": "performance time (s)", "y": "score position (beats)"},
         # Every metric the evaluation produced, in presentation order, so the

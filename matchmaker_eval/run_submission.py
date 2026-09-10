@@ -34,8 +34,10 @@ for _path in (_REPO_ROOT, _REPO_ROOT / "matchmaker_eval"):
 import argparse
 import hashlib
 import json
+import os
 import signal
 import traceback
+import warnings
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -53,7 +55,6 @@ from matchmaker.base import OnlineAlignment
 
 from matchmaker_eval.fetch_data import FetchError, fetch_for_pieces, load_config
 from matchmaker_eval.folds import (
-    EstimatedBpmUnavailable,
     LEADERBOARD_FOLD,
     REPO_ROOT,
     fold_path,
@@ -70,6 +71,18 @@ from matchmaker_eval.submission import (
 )
 
 sys.setrecursionlimit(10000)
+
+# Partitura narrates every score it parses — invisible-object notes, unparsable
+# direction strings, composite durations it declines to convert. They are
+# properties of the corpus, not of the run: the same handful repeat for all 146
+# pieces and no submitter can act on them, so they bury the per-piece result
+# lines this script exists to print. Scoped to partitura by module, so a
+# warning raised by a submission's own code still comes through.
+#
+# Set PYTHONWARNINGS to anything to keep them — PYTHONWARNINGS=default when a
+# score looks like it parsed wrongly.
+if not os.environ.get("PYTHONWARNINGS"):
+    warnings.filterwarnings("ignore", category=UserWarning, module=r"partitura.*")
 
 #: Tracking verdict thresholds, per input type. A piece counts as "tracked"
 #: unless some 30-second onset-wise window's median beat error exceeds the
@@ -218,17 +231,15 @@ def run_piece(
     ``estimated_bpm`` gives the follower the performance's tempo instead of the
     score's notated one. Off unless the submission declared it, and recorded so
     the leaderboard can mark the row.
+
+    A piece whose fold row carries no tempo is run anyway, on ``tempo=None`` —
+    which is matchmaker's ordinary default of the score's notated marking, or
+    120 BPM where the score has none. The flat metrics report it in
+    ``used_estimated_bpm`` so the count reaches the run summary: the entry is
+    still marked as using the tempo, and how many pieces actually had one is
+    then visible rather than assumed.
     """
-    tempo = None
-    if estimated_bpm:
-        tempo = piece.estimated_bpm(input_type)
-        if tempo is None:
-            raise EstimatedBpmUnavailable(
-                f"{piece.piece_id}: no estimated tempo published for this piece, "
-                "but this entry declares it uses one. The value comes from the "
-                "data repository's metadata CSV; check that the column is "
-                "there and the metadata is downloaded."
-            )
+    tempo = piece.performance_tempo if estimated_bpm else None
 
     mm = Matchmaker(
         score_file=str(piece.score_path),
@@ -284,6 +295,11 @@ def run_piece(
             segment_duration=SEGMENT_DURATION,
             threshold=threshold,
         )
+
+    # Whether this piece actually got a measured tempo. False both when the
+    # entry never asked and when it asked and the fold had none — the run
+    # summary separates the two, since only the second is worth reporting.
+    nested["used_estimated_bpm"] = tempo is not None
 
     with open(run_dir / f"{index}.json", "w") as f:
         json.dump(nested, f, indent=4, default=float)
@@ -465,14 +481,40 @@ def evaluate_submission(
         for key, value in flat.items():
             results[key].append(value)
 
+        no_tempo = estimated_bpm and not flat.get("used_estimated_bpm")
         print(
             f"  {'TRACKED' if flat.get('tracked') else 'FAILED '}"
             f"  beat_median={flat.get('beat_median', float('nan')):.3f}"
             f"  max_dev={flat.get('max_deviation', float('nan')):.3f}b"
+            + ("  (no estimated_bpm in the fold: used the score's tempo)"
+               if no_tempo else "")
         )
 
     n_tracked = sum(1 for r in piece_records if r.get("tracked"))
     print(f"\ntracked {n_tracked}/{len(pieces)} pieces")
+
+    # Ran, but not on the tempo it declared. Not a failure — matchmaker falls
+    # back to the score's marking, which is what every other entry uses — but
+    # the run is then a blend of two conditions, so it must not go unsaid.
+    #
+    # Counted off the fold rather than off the run records: a piece that
+    # crashed has no verdict either way, and reporting it as "no tempo" would
+    # blame the fold for an unrelated failure.
+    n_with_tempo = sum(1 for r in piece_records if r.get("used_estimated_bpm"))
+    missing_tempo = (
+        [p for _, p in indexed if p.performance_tempo is None]
+        if estimated_bpm
+        else []
+    )
+    if missing_tempo:
+        print(
+            f"note: {len(missing_tempo)}/{len(indexed)} piece(s) carry no "
+            f"estimated_bpm in {fold_file_label(fold)}, so the follower was "
+            f"given the score's notated tempo for them instead.\n"
+            f"      first: {', '.join(p.piece_id for p in missing_tempo[:3])}\n"
+            f"      Fill the column in with:  "
+            f"python matchmaker_eval/make_folds.py --from-repo"
+        )
 
     summary_all = compute_event_pooled_summary(results, run_dir, tracked_only=False)
     summary_tracked = compute_event_pooled_summary(results, run_dir, tracked_only=True)
@@ -484,6 +526,11 @@ def evaluate_submission(
         # the leaderboard so a row that had it is never compared silently with
         # rows that did not.
         "estimated_bpm": estimated_bpm,
+        # Of the pieces run, how many actually had a published tempo. Equal to
+        # n_pieces on a complete fold; lower means the rest fell back to the
+        # score's marking, and the difference belongs in the record rather than
+        # only in the log.
+        "n_estimated_bpm": n_with_tempo,
         "kind": metadata.get("kind", "submission"),
         "metadata": metadata,
         "fold": str(fold),

@@ -449,6 +449,13 @@ If the fold has to change (a dataset is corrected, a piece is withdrawn):
 `make_folds.py --check` runs in CI on every pull request and fails if the
 committed folds do not satisfy the disjointness property.
 
+**A new column is not a new fold.** Adding one — `estimated_bpm` was added this
+way — changes the SHA-256 without changing which performances are measured, so
+published numbers stay comparable and nothing has to be re-run. The hash is a
+tripwire, not a verdict: check the diff before concluding a fold changed. What
+does invalidate published numbers is a row appearing, disappearing, or pointing
+somewhere else.
+
 ## Publishing
 
 `.github/workflows/pages.yml` builds the site from `docs/` plus a copy of

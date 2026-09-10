@@ -117,117 +117,185 @@ class TestTheLeaderboardMarksIt:
         assert "estimated_bpm" in build()["metrics"]
 
 
-class TestLookup:
-    def test_a_piece_reports_none_when_no_tempo_is_published(self):
-        from matchmaker_eval.folds import clear_bpm_cache, load_fold
+class TestTheFoldCarriesIt:
+    """The tempo is frozen in the fold, beside the paths it belongs to."""
 
-        clear_bpm_cache()
+    def test_the_example_piece_publishes_one(self):
+        from matchmaker_eval.folds import load_fold
+
         piece = load_fold("example", input_type="midi")[0]
-        assert piece.estimated_bpm("midi") is None
+        assert piece.performance_tempo == 58.0
 
-    def test_it_reads_the_column_from_the_dataset_metadata(self, tmp_path, monkeypatch):
-        import matchmaker_eval.folds as F
+    def test_every_eval_row_has_one(self):
+        """A missing value would silently disarm `estimated_bpm: true` runs."""
+        from matchmaker_eval.folds import load_fold
 
-        F.clear_bpm_cache()
-        root = tmp_path / "asap"
-        root.mkdir()
-        (root / "metadata-asap.csv").write_text(
+        for fold in ("eval", "valid"):
+            blank = [p.piece_id for p in load_fold(fold) if not p.estimated_bpm]
+            assert blank == [], f"{fold}: {len(blank)} row(s) without a tempo"
+
+    def test_it_is_one_value_per_performance_not_per_container(self):
+        """mp3 and MIDI are two renderings of the same playing, so one column.
+
+        A per-container tempo would have to be two columns, and a follower's
+        audio and MIDI runs would then be measured against different tempi.
+        """
+        from matchmaker_eval.folds import FOLD_COLUMNS
+
+        assert [c for c in FOLD_COLUMNS if "bpm" in c] == ["estimated_bpm"]
+
+    def test_an_absent_value_reads_as_none(self):
+        from matchmaker_eval.folds import Piece
+
+        piece = Piece("p", "asap", "Bach", "t", "s.musicxml", "p.mid", "", "p.match")
+        assert piece.performance_tempo is None
+
+    def test_a_non_numeric_value_is_refused(self):
+        """Better a named failure than a follower handed a nonsense tempo."""
+        from matchmaker_eval.folds import FoldError, Piece
+
+        piece = Piece(
+            "p", "asap", "Bach", "t", "s.musicxml", "p.mid", "", "p.match",
+            estimated_bpm="presto",
+        )
+        with pytest.raises(FoldError, match="not a number"):
+            piece.performance_tempo
+
+
+class TestOlderFoldsStillLoad:
+    """The column arrived after folds were already in circulation."""
+
+    def test_a_fold_without_the_column_loads(self, tmp_path):
+        from matchmaker_eval.folds import REQUIRED_FOLD_COLUMNS, load_fold
+
+        csv_path = tmp_path / "old.csv"
+        csv_path.write_text(
+            ",".join(REQUIRED_FOLD_COLUMNS) + "\n"
+            "local/x/y,local,Bach,x,s.musicxml,p.mid,p.wav,p.match,3\n"
+        )
+        piece = load_fold(csv_path)[0]
+        assert piece.estimated_bpm == ""
+        assert piece.performance_tempo is None
+
+    def test_a_required_column_is_still_required(self, tmp_path):
+        from matchmaker_eval.folds import FoldError, load_fold
+
+        csv_path = tmp_path / "broken.csv"
+        csv_path.write_text("piece_id,dataset\nlocal/x/y,local\n")
+        with pytest.raises(FoldError, match="missing columns"):
+            load_fold(csv_path)
+
+
+class TestMissingTempoFallsBack:
+    """matchmaker already has a fallback: the score's marking, then 120 BPM.
+
+    Failing the run instead would be worse than the thing it guards against —
+    a follower that never sees a tempo simply performs the ordinary task.
+    """
+
+    def _piece_without_tempo(self):
+        import dataclasses
+
+        from matchmaker_eval.folds import load_fold
+
+        piece = load_fold("example", input_type="midi")[0]
+        return dataclasses.replace(piece, estimated_bpm="")
+
+    def test_it_runs_anyway(self, tmp_path):
+        from run_submission import run_piece
+
+        flat, _ = run_piece("pthmm", self._piece_without_tempo(), "midi", 1,
+                            tmp_path, False, estimated_bpm=True)
+        assert flat["used_estimated_bpm"] is False
+        assert flat["tracked"] is True
+
+    def test_a_piece_with_a_tempo_records_that_it_used_one(self, tmp_path):
+        from matchmaker_eval.folds import load_fold
+        from run_submission import run_piece
+
+        piece = load_fold("example", input_type="midi")[0]
+        flat, _ = run_piece("pthmm", piece, "midi", 1, tmp_path, False,
+                            estimated_bpm=True)
+        assert flat["used_estimated_bpm"] is True
+
+    def test_an_entry_that_never_asked_records_false(self, tmp_path):
+        from matchmaker_eval.folds import load_fold
+        from run_submission import run_piece
+
+        piece = load_fold("example", input_type="midi")[0]
+        flat, _ = run_piece("pthmm", piece, "midi", 1, tmp_path, False,
+                            estimated_bpm=False)
+        assert flat["used_estimated_bpm"] is False
+
+
+class TestManifestShapes:
+    """make_folds reads the manifests; nothing does so at run time any more."""
+
+    def _columns(self, header):
+        from matchmaker_eval.make_folds import resolve_columns
+
+        return resolve_columns(header)
+
+    def test_the_tempo_column_is_recognised(self):
+        assert self._columns(
+            ["audio", "score", "midi", "match", "estimated_bpm"]
+        )["estimated_bpm"] == "estimated_bpm"
+
+    def test_an_alternative_column_name_is_accepted(self):
+        """For a data branch caught mid-rename."""
+        assert self._columns(
+            ["audio", "score", "midi", "match", "tempo"]
+        )["estimated_bpm"] == "tempo"
+
+    def test_a_manifest_without_it_resolves_to_nothing(self):
+        assert self._columns(["audio", "score", "midi", "match"])[
+            "estimated_bpm"
+        ] is None
+
+    def test_a_per_dataset_manifest_yields_the_tempo(self, tmp_path):
+        from matchmaker_eval.make_folds import read_repo_metadata
+
+        path = tmp_path / "metadata-asap.csv"
+        path.write_text(
             "audio,score,midi,match,estimated_bpm\n"
             "asap/audio/a.mp3,asap/score/s.musicxml,asap/midi/a.mid,"
             "asap/match/a.match,132.5\n"
         )
-        monkeypatch.setattr(F, "DATA_ROOT", tmp_path)
-        table = F._bpm_table("asap")
-        assert table["asap/midi/a.mid"] == 132.5
-        assert table["asap/audio/a.mp3"] == 132.5
-        F.clear_bpm_cache()
+        piece = list(read_repo_metadata("asap", path))[0]
+        assert piece.estimated_bpm == "132.5"
+        assert piece.performance_tempo == 132.5
+        assert piece.midi_performance == "midi/a.mid"
 
-    def test_a_metadata_file_without_the_column_yields_nothing(
-        self, tmp_path, monkeypatch
-    ):
-        import matchmaker_eval.folds as F
+    def test_a_root_manifest_yields_the_tempo(self, tmp_path):
+        """One file covers every dataset, keyed by a `dataset` column."""
+        from matchmaker_eval.make_folds import read_root_metadata
 
-        F.clear_bpm_cache()
-        root = tmp_path / "asap"
-        root.mkdir()
-        (root / "metadata-asap.csv").write_text("audio,score,midi,match\na,b,c,d\n")
-        monkeypatch.setattr(F, "DATA_ROOT", tmp_path)
-        assert F._bpm_table("asap") == {}
-        F.clear_bpm_cache()
-
-    def test_the_column_name_is_configurable(self):
-        from matchmaker_eval.folds import ESTIMATED_BPM_COLUMN, _bpm_column
-
-        assert _bpm_column()  # falls back to the default when unset
-        assert ESTIMATED_BPM_COLUMN == "estimated_bpm"
-
-
-class TestMissingTempoIsFatal:
-    def test_declaring_it_without_the_data_raises(self):
-        """Silently running without it would mislabel the row."""
-        from matchmaker_eval.folds import EstimatedBpmUnavailable, load_fold
-        from run_submission import run_piece
-
-        piece = load_fold("example", input_type="midi")[0]
-        with pytest.raises(EstimatedBpmUnavailable, match="no estimated tempo"):
-            run_piece("pthmm", piece, "midi", 1, Path("/tmp"), False,
-                      estimated_bpm=True)
-
-
-class TestManifestShapes:
-    """Branches use either per-dataset manifests or one at the repository root."""
-
-    def test_a_root_manifest_is_read(self, tmp_path, monkeypatch):
-        import matchmaker_eval.folds as F
-
-        F.clear_bpm_cache()
-        monkeypatch.setattr(F, "DATA_ROOT", tmp_path)
-        (tmp_path / "valid--metadata-valid.csv").write_text(
+        path = tmp_path / "metadata-valid.csv"
+        path.write_text(
             "dataset,audio,midi,score,match,estimated_bpm\n"
             "batik,batik/audio/a.mp3,batik/midi/a.mid,batik/score/a.musicxml,"
             "batik/match/a.match,69\n"
+            "asap,asap/audio/b.mp3,asap/midi/b.mid,asap/score/b.musicxml,"
+            "asap/match/b.match,120\n"
         )
-        assert F._bpm_table("batik")["batik/midi/a.mid"] == 69.0
-        F.clear_bpm_cache()
+        by_dataset = {p.dataset: p for p in read_root_metadata(path)}
+        assert by_dataset["batik"].performance_tempo == 69.0
+        assert by_dataset["asap"].performance_tempo == 120.0
 
-    def test_a_root_manifest_is_filtered_by_dataset(self, tmp_path, monkeypatch):
-        """One file covers every dataset, so rows must not leak across them."""
-        import matchmaker_eval.folds as F
+    def test_the_offline_path_leaves_the_tempo_blank(self, tmp_path):
+        """It must not guess: data/perf_tempo_estimate/ disagrees on 4 rows.
 
-        F.clear_bpm_cache()
-        monkeypatch.setattr(F, "DATA_ROOT", tmp_path)
-        (tmp_path / "valid--metadata-valid.csv").write_text(
-            "dataset,midi,estimated_bpm\n"
-            "batik,batik/midi/a.mid,69\n"
-            "asap,asap/midi/b.mid,120\n"
+        A blank stops an `estimated_bpm: true` run; a plausible wrong number
+        would quietly change what that run measured.
+        """
+        from matchmaker_eval.make_folds import read_metadata_rows
+
+        path = tmp_path / "metadata-vienna.csv"
+        path.write_text(
+            "composer,title,xml_score,midi_performance,audio_performance,"
+            "match,difficulty\n"
+            "Chopin,Chopin_op10_no3,musicxml/Chopin_op10_no3.musicxml,"
+            "midi/Chopin_op10_no3_p08.mid,audio/Chopin_op10_no3_p08.wav,"
+            "match/Chopin_op10_no3_p08.match,1\n"
         )
-        assert F._bpm_table("batik") == {"batik/midi/a.mid": 69.0}
-        F.clear_bpm_cache()
-        assert F._bpm_table("asap") == {"asap/midi/b.mid": 120.0}
-        F.clear_bpm_cache()
-
-    def test_an_alternative_column_name_can_be_configured(
-        self, tmp_path, monkeypatch
-    ):
-        """The config takes a list, for a branch caught mid-rename."""
-        import matchmaker_eval.folds as F
-
-        F.clear_bpm_cache()
-        monkeypatch.setattr(F, "DATA_ROOT", tmp_path)
-        monkeypatch.setattr(F, "_bpm_column", lambda: ["estimated_bpm", "tempo"])
-        root = tmp_path / "vienna"
-        root.mkdir()
-        (root / "metadata-vienna.csv").write_text(
-            "audio,score,midi,match,tempo\n"
-            "vienna/audio/a.mp3,vienna/score/a.musicxml,vienna/midi/a.mid,"
-            "vienna/match/a.match,88\n"
-        )
-        assert F._bpm_table("vienna")["vienna/midi/a.mid"] == 88.0
-        F.clear_bpm_cache()
-
-    def test_the_configured_names_are_a_list(self):
-        from matchmaker_eval.folds import _bpm_column
-
-        names = _bpm_column()
-        assert isinstance(names, list)
-        assert names[0] == "estimated_bpm"
+        assert list(read_metadata_rows("vienna", path))[0].estimated_bpm == ""
