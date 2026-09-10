@@ -69,6 +69,7 @@ DISPLAY_COLUMNS = [
     "ms_median",
     "ms_300ms",
     "ms_1000ms",
+    "sparc",
     "tracked",
 ]
 
