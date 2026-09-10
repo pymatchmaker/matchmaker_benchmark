@@ -33,6 +33,7 @@ from utils import (
 )
 from verify_tracking import check_tracking, plot_tracking
 
+from tabulate import tabulate
 import wandb
 
 import warnings
@@ -67,6 +68,28 @@ OUTPUT_DIR = WORKING_DIR / "output"
 TEMPO_DEPENDENT_METHODS = ["pfkorz"]
 
 TEMPO_METADATA_PATH = WORKING_DIR / "data/perf_tempo_estimate"
+
+DISPLAY_COLUMNS = [
+    "Index",
+    "Piece",
+    "beat_mean",
+    "beat_median",
+    "beat_0.1b",
+    "beat_0.5b",
+    "beat_1.0b",
+    "ms_mean",
+    "ms_median",
+    "ms_300ms",
+    "ms_1000ms",
+    "sparc",
+    "tracked",
+]
+
+
+def print_summary_table(results: dict):
+    display = {k: results[k] for k in DISPLAY_COLUMNS if k in results}
+    print(tabulate(display, headers="keys", tablefmt="fancy_grid", showindex=True))
+    return results
 
 
 def run_tests_and_eval_by_dataset(
@@ -211,6 +234,7 @@ def run_tests_and_eval_by_dataset(
             print(f"  ERROR: {e}")
             continue
 
+    print_summary_table(results)
     return results
 
 

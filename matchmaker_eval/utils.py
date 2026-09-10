@@ -74,21 +74,68 @@ def save_config(config, save_dir):
         yaml.dump(config_dict, f)
 
 
+def compute_sparc(
+    score_beat: np.ndarray,
+    perf_sec: np.ndarray,
+    fs: float = 50.0,
+    fc: float = 10.0,
+    padlevel: int = 4,
+) -> float:
+    """Compute Spectral Arc Length (SPARC) for an alignment path."""
+    score_beat = np.asarray(score_beat, dtype=float)
+    perf_sec = np.asarray(perf_sec, dtype=float)
+
+    valid = np.isfinite(score_beat) & np.isfinite(perf_sec)
+    score_beat = score_beat[valid]
+    perf_sec = perf_sec[valid]
+
+    if len(perf_sec) < 2:
+        return 0.0
+
+    t_start, t_end = float(perf_sec[0]), float(perf_sec[-1])
+    duration = t_end - t_start
+    if duration <= 0.1:
+        return 0.0
+
+    n_pts = max(int(np.round(duration * fs)), 2)
+    t_uniform = np.linspace(t_start, t_end, n_pts)
+    s_interp = np.interp(t_uniform, perf_sec, score_beat)
+    vel = np.gradient(s_interp, 1.0 / fs)
+
+    nfft = int(2 ** (np.ceil(np.log2(len(vel))) + padlevel))
+    freq = np.fft.rfftfreq(nfft, d=1.0 / fs)
+    mask = freq <= fc
+    freq_filtered = freq[mask]
+
+    Mf = np.abs(np.fft.rfft(vel, n=nfft))[mask]
+    max_mf = Mf.max()
+    if max_mf > 0:
+        Mf = Mf / max_mf
+
+    d_freq = np.diff(freq_filtered) / fc
+    d_mf = np.diff(Mf)
+    arc = np.sum(np.sqrt(d_freq ** 2 + d_mf ** 2))
+    return float(-arc)
+
+
 def compute_event_pooled_summary(
     results: dict,
     run_dir: Path,
     tracked_only: bool = True,
+    common_indices: Optional[set] = None,
 ) -> dict:
     """
     Compute event-wise pooled metrics.
 
     Accuracy metrics (mean, median, tolerances): pooled across all events.
-    RTF/latency metrics: piece-wise averaged.
+    RTF/latency/SPARC metrics: piece-wise averaged/median.
 
     Parameters
     ----------
     tracked_only : bool
         If True, only include tracked pieces. If False, include all pieces.
+    common_indices : set or None
+        If provided, only include pieces whose index is in common_indices.
     """
     n_total = len(results["Index"])
     tracked_flags = results.get("tracked", [False] * n_total)
@@ -99,8 +146,11 @@ def compute_event_pooled_summary(
     all_gt_score_beats = []
     all_pred_score_beats = []
     selected_indices = []
+    sparc_values = []
 
     for idx, is_tracked in zip(results["Index"], tracked_flags):
+        if common_indices is not None and idx not in common_indices:
+            continue
         if tracked_only and not is_tracked:
             continue
         selected_indices.append(idx)
@@ -131,9 +181,12 @@ def compute_event_pooled_summary(
         all_gt_score_beats.append(gt_score[valid_gt_perf][valid_b])
         all_pred_score_beats.append(pred_score[valid_b])
 
+        # Compute SPARC for the alignment path
+        sparc_val = compute_sparc(wp_t[1], wp_t[0])
+        sparc_values.append(sparc_val)
+
     summary = {}
     n_tracked = sum(1 for t in tracked_flags if t)
-    n_selected = len(selected_indices)
     summary["tracking_rate"] = round(n_tracked / n_total, 4) if n_total > 0 else 0.0
 
     # Beat metrics (primary)
@@ -164,10 +217,16 @@ def compute_event_pooled_summary(
         )
         summary["ms"] = ms_results
 
+    # SPARC: piece-wise mean across selected pieces
+    if sparc_values:
+        summary["sparc"] = float(f"{np.mean(sparc_values):.2f}")
+
     # RTF and latency: piece-wise average of selected pieces
     for key in ["rtf", "f_avg_latency", "i_avg_latency"]:
         if key in results:
-            if tracked_only:
+            if common_indices is not None:
+                vals = [v for v, idx, t in zip(results[key], results["Index"], tracked_flags) if idx in common_indices and (not tracked_only or t)]
+            elif tracked_only:
                 vals = [v for v, t in zip(results[key], tracked_flags) if t]
             else:
                 vals = list(results[key])
@@ -176,6 +235,7 @@ def compute_event_pooled_summary(
 
     summary["piece_count"] = n_total
     summary["tracked_count"] = n_tracked
+    summary["selected_count"] = len(selected_indices)
     return summary
 
 
