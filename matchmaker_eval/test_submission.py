@@ -39,17 +39,15 @@ def summarise(metrics: dict) -> str:
     """A readable verdict, rather than a path to a JSON file."""
     overall = metrics.get("summary_all") or {}
     tracked = metrics.get("summary_tracked") or {}
-    common = metrics.get("summary_common_tracked") or {}
     beat_all = (overall.get("beat") or {})
     beat_tracked = (tracked.get("beat") or {})
-    beat_common = (common.get("beat") or {})
     n, total = metrics["n_tracked"], metrics["n_pieces"]
 
     lines = [
         "",
         f"{metrics['submission']}  ({metrics['input_type']}, {metrics.get('fold', 'validation')} fold)",
         "-" * 65,
-        f"  tracking rate      {n}/{total} pieces ({overall.get('tracking_rate', 0.0):.1%})",
+        f"  tracking rate      {n}/{total} pieces ({overall.get('tracking_rate', 0.0):.0%})",
     ]
     if beat_tracked.get("mean") is not None:
         lines.append(
@@ -68,19 +66,6 @@ def summarise(metrics: dict) -> str:
         )
     if tracked.get("rtf") is not None:
         lines.append(f"  real-time factor   {tracked['rtf']:.4f}")
-
-    if common:
-        lines.append("-" * 65)
-        lines.append(f"  [Common Tracked Subset ({common.get('selected_count', 0)} pieces)]")
-        if beat_common.get("mean") is not None:
-            lines.append(
-                f"  common beat error  {beat_common['mean']:.3f} mean | "
-                f"{beat_common.get('median', float('nan')):.3f} median"
-            )
-        if common.get("sparc") is not None:
-            lines.append(f"  common SPARC       {common['sparc']:.2f}")
-        if common.get("rtf") is not None:
-            lines.append(f"  common RTF         {common['rtf']:.4f}")
 
     by_dataset: dict = {}
     for piece in metrics.get("pieces", []):
@@ -152,42 +137,61 @@ def main():
     )
     args = parser.parse_args()
 
-    # Determine if user wants to run all methods for an input_type
-    run_all = args.method == "all" or (args.submission is None and args.method is None and args.input_type is not None)
+    if args.submission is not None and args.method is not None:
+        parser.error("pass either a submission directory or --method, not both")
 
-    if not run_all and (args.submission is None) == (args.method is None):
-        parser.error("pass a submission directory, --method <name>, or --input-type <audio|midi> (to run all methods)")
+    if args.submission is None and args.method is None and args.input_type is None:
+        parser.error("pass either a submission directory or --method, not both")
 
-    if run_all and not args.input_type:
-        parser.error("pass --input-type <audio|midi> when running all methods")
+    # Determine methods to run
+    if args.method and "," in args.method:
+        methods_to_run = [m.strip() for m in args.method.split(",") if m.strip()]
+        run_multi = True
+    elif args.method == "all" or (args.submission is None and args.method is None and args.input_type is not None):
+        methods_to_run = available_methods(args.input_type)
+        if args.input_type == "midi":
+            methods_to_run = [m for m in methods_to_run if m not in ("OPTM", "SL_OLTW")]
+        run_multi = True
+    elif args.method is not None:
+        methods_to_run = [args.method]
+        run_multi = False
+    elif args.submission is not None:
+        methods_to_run = [None]
+        run_multi = False
+    else:
+        parser.error("pass a submission directory, --method <name> (or comma-separated list), or --input-type <audio|midi>")
 
-    methods_to_run = available_methods(args.input_type) if run_all else [args.method]
-    if run_all and args.input_type == "midi":
-        methods_to_run = [m for m in methods_to_run if m not in ("OPTM", "SL_OLTW")]
+    if (run_multi or args.method is not None) and not args.input_type and args.submission is None:
+        parser.error("pass --input-type <audio|midi> when specifying --method")
 
     all_metrics = []
-    if run_all:
-        print(f"Running all {len(methods_to_run)} methods for input_type='{args.input_type}' on {VALID_FOLD} fold...")
+    if run_multi:
+        print(f"Running {len(methods_to_run)} methods ({', '.join(methods_to_run)}) for input_type='{args.input_type}' on {VALID_FOLD} fold...")
 
     for m in methods_to_run:
         try:
+            method_run_dir = (
+                (args.output / m)
+                if (run_multi and args.output is not None and m is not None)
+                else args.output
+            )
             metrics = evaluate_submission(
-                args.submission if not run_all else None,
+                args.submission if args.submission is not None else None,
                 fold=VALID_FOLD,
-                builtin=m if run_all else args.method,
+                builtin=m,
                 input_type=args.input_type,
                 limit=args.limit,
                 save_plots=args.plots,
-                run_dir=args.output,
+                run_dir=method_run_dir,
             )
             all_metrics.append(metrics)
             print(summarise(metrics))
         except SubmissionError as e:
             print(f"\n[{m}] Error: {e}", file=sys.stderr)
-            if not run_all:
+            if not run_multi:
                 return 1
 
-    if run_all and len(all_metrics) > 1:
+    if run_multi and len(all_metrics) > 1:
         # Compute common tracked subset across all evaluated methods
         tracked_sets = {}
         for met in all_metrics:
