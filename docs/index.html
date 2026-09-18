@@ -371,17 +371,12 @@
   }
   .dpanel[hidden] { display: none; }
 
-  .ds-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
-  .ds-card {
-    border: 1px solid var(--rule); border-radius: 3px; padding: 12px 14px;
-    background: var(--surface); display: flex; flex-direction: column; gap: 5px;
+  /* By dataset: which pooling the table shows. */
+  .pool-bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+    margin-bottom: 10px; font-size: 12.5px; color: var(--ink-soft);
   }
-  .ds-card b { font-size: 14px; }
-  .ds-line {
-    display: flex; justify-content: space-between; gap: 12px;
-    font-family: var(--mono); font-size: 11.5px; color: var(--ink-mute);
-  }
-  .ds-line span:last-child { color: var(--ink-soft); }
+  .pool-bar .dtab { padding: 4px 10px; }
 
   /* Piece table: many columns, so the identity columns stay put. */
   .piece-scroll {
@@ -416,6 +411,18 @@
   table.pieces tbody tr { cursor: pointer; }
   table.pieces tbody tr:hover td { background: var(--accent-dim); }
   table.pieces tbody tr.selected td { background: var(--accent-dim); font-weight: 500; }
+  /* The dataset table reuses the piece table's frame, minus the click. */
+  table.datasets .c0 { width: auto; min-width: 110px; border-right: 1px solid var(--rule-firm); }
+  table.datasets th { cursor: default; }
+  table.datasets th:hover { color: var(--ink-mute); }
+  table.datasets tbody tr.total td { border-top: 1px solid var(--rule-firm); font-weight: 500; }
+  /* The piece table narrowed to one dataset. */
+  .filter-bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+    margin-bottom: 10px; font-size: 12.5px; color: var(--ink-soft);
+  }
+  .filter-bar b { color: var(--ink); }
+  .filter-bar .dtab { padding: 4px 10px; }
   .verdict-ok { color: var(--accent); }
   .verdict-lost { color: var(--crit); }
   .delta-better { color: var(--accent); }
@@ -599,10 +606,11 @@
       </p>
     </section>
     <section>
-      <h2>Per-piece results</h2>
+      <h2>Per-piece and per-dataset results</h2>
       <p>
-        Opening a row loads its full record: how it did on each dataset, a table
-        of all 146 pieces, and the alignment of any one of them against the
+        Opening a row loads its full record: every pooled metric for each
+        dataset and for the whole fold, a table of all 146 pieces — or of one
+        dataset's, by clicking it — and the alignment of any piece against the
         ground truth. The plots are drawn here from the raw path coordinates —
         no images are stored.
       </p>
@@ -622,7 +630,7 @@
         Write one Python file and open a pull request.
         <a href="https://github.com/pymatchmaker/matchmaker_benchmark/blob/main/docs/submitting.md">How to submit</a> ·
         <a href="https://github.com/pymatchmaker/matchmaker_benchmark/blob/main/docs/eval-protocol.md">Evaluation protocol</a> ·
-        <a href="leaderboard.csv">Download CSV</a>
+        <a href="leaderboard.csv">Download CSV</a><span id="dataset-downloads"></span>
       </p>
     </section>
   </footer>
@@ -864,20 +872,107 @@ async function loadDetail(entry) {
   return null;
 }
 
-function datasetCards(detail) {
-  return Object.entries(detail.datasets).map(([name, d]) => {
-    const pct = Math.round((d.tracking_rate || 0) * 100);
+// ── By dataset ───────────────────────────────────────────────────────────────
+// Every pooled metric, one row per dataset and one for the whole run. The
+// detail file carries both poolings — over the tracked pieces, which is what
+// the main table reports, and over every piece, lost ones included — and the
+// toggle above the table picks which one is shown.
+
+// The nested summary {beat: {mean, "0.3b", …}, ms: {…}, sparc, rtf} under the
+// flat beat_mean / ms_50ms names the per-piece table uses, in the same order,
+// so the same formatting and better/worse rules apply.
+function flatSummary(summary) {
+  const out = {};
+  for (const group of ["beat", "ms"]) {
+    for (const [key, value] of Object.entries(summary?.[group] || {})) {
+      out[`${group}_${key}`] = value;
+    }
+  }
+  for (const key of ["sparc", "rtf", "f_avg_latency", "i_avg_latency"]) {
+    if (summary && key in summary) out[key] = summary[key];
+  }
+  return out;
+}
+
+function datasetRows(detail, pool) {
+  const rows = Object.entries(detail.datasets || {}).map(([name, block]) => ({ name, block }));
+  if (detail.overall) rows.push({ name: "all datasets", block: detail.overall, total: true });
+  return rows.map(({ name, block, total }) => ({
+    name,
+    total,
+    n_pieces: block.n_pieces,
+    n_tracked: block.n_tracked,
+    metrics: flatSummary(block[`summary_${pool}`]),
+  }));
+}
+
+function trackedText(row) {
+  const pct = Math.round(((row.n_tracked || 0) / (row.n_pieces || 1)) * 100);
+  return `${row.n_tracked}/${row.n_pieces} · ${pct}%`;
+}
+
+function datasetTable(detail, other, pool, active) {
+  const mine = datasetRows(detail, pool);
+  if (!mine.length) {
+    return '<p class="plot-hint">No per-dataset summary is published for this entry.</p>';
+  }
+  const theirs = new Map(other ? datasetRows(other, pool).map((r) => [r.name, r]) : []);
+  const columns = [];
+  for (const row of mine) {
+    for (const m of Object.keys(row.metrics)) if (!columns.includes(m)) columns.push(m);
+  }
+
+  const head = `
+    <tr>
+      <th class="sticky c0">dataset</th>
+      <th>tracked</th>
+      ${columns.map((m) => `<th>${escapeHtml(m.replace(/_/g, " "))}</th>`).join("")}
+    </tr>`;
+
+  const dim = (text) => `<br><span style="color:var(--ink-mute)">${text}</span>`;
+  const body = mine.map((row) => {
+    const cmp = theirs.get(row.name);
+    const cells = columns.map((m) => {
+      const a = row.metrics[m];
+      if (!cmp) return `<td>${showMetric(m, a)}</td>`;
+      const b = cmp.metrics[m];
+      let cls = "";
+      if (typeof a === "number" && typeof b === "number" && a !== b) {
+        cls = (LOWER_IS_BETTER.has(m) ? a < b : a > b) ? "delta-better" : "delta-worse";
+      }
+      return `<td class="${cls}">${showMetric(m, a)}${dim(showMetric(m, b))}</td>`;
+    }).join("");
+    const tracked = `<td>${trackedText(row)}${cmp ? dim(trackedText(cmp)) : ""}</td>`;
+    // A click narrows the piece table to this dataset; the total row widens
+    // it back to every piece.
+    const dataset = row.total ? "" : row.name;
+    const selected = row.total ? active === null : active === row.name;
     return `
-      <div class="ds-card">
-        <b>${escapeHtml(name)}</b>
-        <div class="ds-line"><span>tracked</span><span>${d.n_tracked}/${d.n_pieces} · ${pct}%</span></div>
-        <div class="ds-line"><span>beat err (mean)</span><span>${showMetric("beat_mean", d.beat?.mean)}</span></div>
-        <div class="ds-line"><span>beat err (median)</span><span>${showMetric("beat_median", d.beat?.median)}</span></div>
-        <div class="ds-line"><span>≤ 0.3 beat</span><span>${showMetric("beat_0.3b", d.beat?.["0.3b"])}</span></div>
-        <div class="ds-line"><span>ms err (median)</span><span>${showMetric("ms_median", d.ms?.median)}</span></div>
-        <div class="ds-line"><span>RTF</span><span>${showMetric("rtf", d.rtf)}</span></div>
-      </div>`;
+      <tr data-dataset="${escapeHtml(dataset)}" class="${row.total ? "total" : ""}${selected ? " selected" : ""}">
+        <td class="sticky c0">${escapeHtml(row.name)}</td>
+        ${tracked}${cells}
+      </tr>`;
   }).join("");
+
+  return `<div class="piece-scroll"><table class="pieces datasets"><thead>${head}</thead><tbody>${body}</tbody></table></div>
+    <p class="plot-hint">Click a dataset to see each of its pieces, and to plot any of them.</p>`;
+}
+
+function datasetPanel(detail, other, otherDetail, pool, active) {
+  const legend = other
+    ? `<p class="plot-hint">Upper value: ${escapeHtml(detail.name)}. Lower: ${escapeHtml(otherDetail.name)}.
+       Green means the upper method is better on that metric.</p>`
+    : "";
+  return `
+    <div class="pool-bar" role="tablist">
+      <span>pooled over</span>
+      <button class="dtab" data-pool="tracked" role="tab" aria-selected="${pool === "tracked"}">tracked pieces</button>
+      <button class="dtab" data-pool="all" role="tab" aria-selected="${pool === "all"}">all pieces</button>
+      <span>${pool === "tracked"
+        ? "— what the main table reports"
+        : "— lost pieces included, so a follower that bails out shows it here"}</span>
+    </div>
+    ${legend}${datasetTable(detail, other, pool, active)}`;
 }
 
 // Every metric, for every piece. Wide on purpose: the identity columns are
@@ -894,7 +989,7 @@ function pieceTable(detail, other, state) {
     </tr>`;
 
   const otherByIndex = new Map((other?.pieces || []).map((p) => [p.index, p]));
-  let rows = detail.pieces.slice();
+  let rows = detail.pieces.filter((p) => state.dataset === null || p.dataset === state.dataset);
   if (state.sort) {
     const key = state.sort;
     rows.sort((a, b) => {
@@ -977,7 +1072,12 @@ async function fillDetail(entry, container) {
   const comparable = entries.filter(
     (e) => e.input_type === detail.input_type && e.submission !== detail.submission
   );
-  const state = { tab: "pieces", sort: null, dir: "asc", selected: null, other: null };
+  const state = {
+    tab: "pieces", sort: null, dir: "asc", selected: null, other: null,
+    pool: "tracked",
+    // A dataset name narrows the piece table to that dataset; null is all.
+    dataset: null,
+  };
 
   container.innerHTML = `
     <div class="dtabs" role="tablist">
@@ -986,9 +1086,7 @@ async function fillDetail(entry, container) {
       <button class="dtab" data-tab="compare" role="tab" aria-selected="false">Compare</button>
     </div>
     <div class="dpanel" data-panel="pieces"></div>
-    <div class="dpanel" data-panel="datasets" hidden>
-      <div class="ds-grid">${datasetCards(detail)}</div>
-    </div>
+    <div class="dpanel" data-panel="datasets" hidden></div>
     <div class="dpanel" data-panel="compare" hidden>
       <div class="cmp-bar">
         <label>Compare <b>${escapeHtml(detail.name)}</b> against
@@ -1013,9 +1111,25 @@ async function fillDetail(entry, container) {
   };
 
   function renderPieces(host, other, otherDetail) {
+    const shown = detail.pieces.filter((p) => state.dataset === null || p.dataset === state.dataset).length;
+    const filter = state.dataset === null ? "" : `
+      <div class="filter-bar">
+        <span><b>${escapeHtml(state.dataset)}</b> · ${shown} of ${detail.pieces.length} pieces</span>
+        <button class="dtab" data-clear-dataset>show all pieces</button>
+      </div>`;
     host.innerHTML =
+      filter +
       pieceTable(detail, other, state) +
       '<div data-piece-view><p class="plot-hint">Click a piece to draw its alignment against the ground truth.</p></div>';
+    container.querySelector('.dtab[data-tab="pieces"]').textContent =
+      state.dataset === null ? "All pieces" : `Pieces · ${state.dataset}`;
+
+    host.querySelector("[data-clear-dataset]")?.addEventListener("click", () => {
+      state.dataset = null;
+      state.selected = null;
+      renderPieces(host, other, otherDetail);
+      renderDatasets(panels.datasets, other, otherDetail);
+    });
 
     host.querySelectorAll("table.pieces th[data-sort]").forEach((th) => {
       th.addEventListener("click", () => {
@@ -1069,9 +1183,29 @@ async function fillDetail(entry, container) {
     };
   }
 
-  renderPieces(panels.pieces, null, null);
+  function renderDatasets(host, other, otherDetail) {
+    host.innerHTML = datasetPanel(detail, other, otherDetail, state.pool, state.dataset);
+    host.querySelectorAll("[data-pool]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.pool = button.dataset.pool;
+        renderDatasets(host, other, otherDetail);
+      });
+    });
+    host.querySelectorAll("table.datasets tbody tr[data-dataset]").forEach((row) => {
+      row.addEventListener("click", () => {
+        state.dataset = row.dataset.dataset || null;
+        state.selected = null;
+        renderPieces(panels.pieces, other, otherDetail);
+        renderDatasets(host, other, otherDetail);
+        container.querySelector('.dtab[data-tab="pieces"]').click();
+      });
+    });
+  }
 
-  container.querySelectorAll(".dtab").forEach((tab) => {
+  renderPieces(panels.pieces, null, null);
+  renderDatasets(panels.datasets, null, null);
+
+  container.querySelectorAll(".dtabs .dtab").forEach((tab) => {
     tab.addEventListener("click", () => {
       state.tab = tab.dataset.tab;
       container.querySelectorAll(".dtab").forEach((t) =>
@@ -1089,6 +1223,7 @@ async function fillDetail(entry, container) {
     if (!chosen) {
       compareBody.innerHTML = '<p class="plot-hint">Pick a method to compare against.</p>';
       renderPieces(panels.pieces, null, null);
+      renderDatasets(panels.datasets, null, null);
       return;
     }
     compareBody.innerHTML = '<p class="plot-hint">Loading…</p>';
@@ -1101,11 +1236,11 @@ async function fillDetail(entry, container) {
       <p class="plot-hint">
         <span class="swatch" style="background:var(--accent)"></span>${escapeHtml(detail.name)}
         &nbsp;&nbsp;<span class="swatch" style="background:var(--warn)"></span>${escapeHtml(otherDetail.name)}
-        &mdash; the All pieces table now shows both values in every cell, and
-        clicking a piece draws both alignments together.
-      </p>
-      <div class="ds-grid">${datasetCards(otherDetail)}</div>`;
+        &mdash; the All pieces and By dataset tables now show both values in
+        every cell, and clicking a piece draws both alignments together.
+      </p>`;
     renderPieces(panels.pieces, otherDetail, otherDetail);
+    renderDatasets(panels.datasets, otherDetail, otherDetail);
     container.querySelector('.dtab[data-tab="pieces"]').click();
   });
 }
@@ -1286,6 +1421,14 @@ loadBoard().then((board) => {
     ["entries", entries.length],
     ["generated", (board.generated || "").replace("T", " ").replace("+00:00", " UTC")],
   ].map(([k, v]) => `<span>${k} <b>${escapeHtml(v)}</b></span>`).join("");
+
+  // leaderboard-<dataset>.csv sits next to leaderboard.csv wherever the page
+  // found it; the datasets are whichever the entries were evaluated on.
+  const datasets = [...new Set(entries.flatMap((e) => Object.keys(e.datasets || {})))].sort();
+  el("dataset-downloads").innerHTML = datasets.length
+    ? " · per dataset: " + datasets.map((d) =>
+        `<a href="leaderboard-${encodeURIComponent(d)}.csv">${escapeHtml(d)}</a>`).join(" · ")
+    : "";
   render();
 });
 </script>

@@ -3,10 +3,10 @@
     python matchmaker_eval/build_site.py _site      # what Pages publishes
     python matchmaker_eval/build_site.py --serve    # ...and open it locally
 
-The site is ``docs/`` plus the three things the page reads: the leaderboard
-JSON, the CSV, and the per-entry detail files. Both the publish workflow and the
-staging preview call this, so what you look at before merging is assembled by
-the same code as what goes live.
+The site is ``docs/`` plus what the page reads and links to: the leaderboard
+JSON and CSV, the same pair per dataset, and the per-entry detail files. Both
+the publish workflow and the staging preview call this, so what you look at
+before merging is assembled by the same code as what goes live.
 
 The page also reads ``../results/`` when it is served from a checkout, so
 ``--serve`` from the repository root works without assembling anything; the
@@ -44,13 +44,18 @@ def build(destination: Path) -> dict:
         raise SiteError(f"{DOCS_DIR} is missing.")
     shutil.copytree(DOCS_DIR, destination)
 
-    summary = {"details": 0, "missing": []}
+    summary = {"boards": [], "details": 0, "missing": []}
     for name in ("leaderboard.json", "leaderboard.csv"):
         source = RESULTS_DIR / name
         if source.exists():
             shutil.copy2(source, destination / name)
         else:
             summary["missing"].append(name)
+    # leaderboard-<dataset>.json/.csv: the page links to them for download.
+    for source in sorted(RESULTS_DIR.glob("leaderboard-*.*")):
+        if source.suffix in (".json", ".csv"):
+            shutil.copy2(source, destination / source.name)
+            summary["boards"].append(source.name)
 
     details = RESULTS_DIR / "details"
     if details.is_dir():
@@ -73,9 +78,15 @@ def serve(directory: Path, port: int) -> None:
     import http.server
     import socketserver
 
-    handler = functools.partial(
-        http.server.SimpleHTTPRequestHandler, directory=str(directory)
-    )
+    class Handler(http.server.SimpleHTTPRequestHandler):
+        # Without this a browser may keep showing the page from the previous
+        # build: with no cache headers it treats a file as fresh for a share
+        # of its age, and index.html is often days old.
+        def end_headers(self):
+            self.send_header("Cache-Control", "no-store")
+            super().end_headers()
+
+    handler = functools.partial(Handler, directory=str(directory))
     with socketserver.TCPServer(("127.0.0.1", port), handler) as httpd:
         print(f"\nserving {directory} at http://localhost:{port}/  (ctrl-c to stop)")
         try:
@@ -107,7 +118,10 @@ def main():
         return 1
 
     print(f"assembled {args.destination} from docs/ + results/")
-    print(f"  leaderboard.json, leaderboard.csv, {summary['details']} detail file(s)")
+    print(
+        f"  leaderboard.json, leaderboard.csv, {len(summary['boards'])} "
+        f"per-dataset file(s), {summary['details']} detail file(s)"
+    )
     for name in summary["missing"]:
         print(f"  note: results/{name} was not there")
     if args.serve:

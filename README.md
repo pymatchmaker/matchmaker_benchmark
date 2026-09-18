@@ -223,11 +223,13 @@ matchmaker_eval/
   run_references.py       — evaluate every built-in method, then republish
   validate_submission.py  — pull-request checks: structure, contract, smoke run
   merge_shards.py         — recombine parallel shards into one metrics record
-  leaderboard.py          — metrics.json files -> leaderboard.json / .csv
+  leaderboard.py          — metrics.json files -> leaderboard.json / .csv,
+                            plus the same ranked per dataset
   test_submission.py      — what a submitter runs: their follower, validation fold
   retract.py              — withdraw a published result, with a reason
   merge_references.py     — regroup and merge a sharded multi-method run
-  export_details.py       — per-dataset/per-piece detail + decimated paths
+  export_details.py       — every pooled metric per dataset, per-piece
+                            detail and decimated alignment paths
   folds.py, make_folds.py — fold definitions and their integrity checks
   fetch_data.py           — locate a fold's data (--source), check it is all
                             present (--verify), or download just what it needs
@@ -247,7 +249,8 @@ tests/                    — registry/benchmark consistency checks (pytest)
 resources/                — the one example performance, CC BY-NC-SA 4.0
                             (see resources/ATTRIBUTION.md — not Apache-2.0)
 results/
-  leaderboard.json/.csv   — the published ranking
+  leaderboard.json/.csv   — the published ranking, with per-dataset columns
+  leaderboard-<ds>.json/.csv — the same entries ranked on one dataset
   retracted.json          — results withdrawn from it, and why
   details/<name>.json     — per-dataset, per-piece and alignment-path detail
   submissions/<name>/     — per-submission metrics.json
