@@ -46,7 +46,7 @@ on:
     paths:
       - "submissions/**"
       - "matchmaker_eval/**"
-      - "data/folds/**"
+      - "data/**"
       - ".github/workflows/evaluate.yml"
   workflow_dispatch:
     inputs:
