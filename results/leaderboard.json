@@ -1,6 +1,6 @@
 {
   "fold": "eval",
-  "generated": "2026-09-18T20:15:33+00:00",
+  "generated": "2026-09-18T23:26:59+00:00",
   "ranking": "tracking_rate desc, then beat_median asc",
   "metrics": {
     "tracking_rate": "share of pieces followed to the end within tolerance",
@@ -218,23 +218,23 @@
       "input_type": "audio",
       "tracking_rate": 0.911,
       "beat_median": 0.0944,
-      "beat_mean": 0.3499,
-      "beat_0.3b": 0.7542,
-      "beat_0.5b": 0.841,
-      "beat_1.0b": 0.9282,
-      "ms_median": 46.8751,
-      "ms_300ms": 0.8733,
-      "beat_median_all": 0.1109,
-      "ms_median_all": 55.1961,
-      "rtf": 0.0832,
+      "beat_mean": 0.3487,
+      "beat_0.3b": 0.7544,
+      "beat_0.5b": 0.8411,
+      "beat_1.0b": 0.9283,
+      "ms_median": 46.875,
+      "ms_300ms": 0.8735,
+      "beat_median_all": 0.1108,
+      "ms_median_all": 54.1799,
+      "rtf": 0.1059,
       "n_pieces": 146,
       "n_tracked": 133,
       "n_failed": 0,
-      "evaluated": "2026-09-18T20:11:11+00:00",
+      "evaluated": "2026-09-18T22:25:43+00:00",
       "fold": "eval",
       "fold_sha256": "5ef6e8eabe14d43c3002ec468118f1198596319e1e934fa7f0cb74361de98f83",
       "matchmaker": "0.3.0",
-      "benchmark_commit": "8c1cdbb5fa0591f5a229abfb294eb8bb3fd85a70",
+      "benchmark_commit": "008722d17b2b0f54ea6682169565aec08388d80f",
       "datasets": {
         "asap": {
           "n_pieces": 32,
@@ -254,6 +254,251 @@
       },
       "details": "details/soft-oltw.json",
       "rank": 5
+    },
+    {
+      "submission": "softoltw_no_imm-audio",
+      "kind": "reference",
+      "method": "softoltw_no_imm",
+      "name": "Soft-OLTW (No-IMM)",
+      "authors": "Park et al. (2026)",
+      "affiliation": "",
+      "url": "https://github.com/pymatchmaker/matchmaker",
+      "description": "Soft-min Online Time Warping with directional weighting without IMM tempo tracking, on chroma features.",
+      "input_type": "audio",
+      "tracking_rate": 0.911,
+      "beat_median": 0.1033,
+      "beat_mean": 0.3454,
+      "beat_0.3b": 0.7532,
+      "beat_0.5b": 0.8472,
+      "beat_1.0b": 0.9316,
+      "ms_median": 38.5356,
+      "ms_300ms": 0.877,
+      "beat_median_all": 0.1233,
+      "ms_median_all": 44.7917,
+      "rtf": 0.0887,
+      "n_pieces": 146,
+      "n_tracked": 133,
+      "n_failed": 0,
+      "evaluated": "2026-09-18T22:31:14+00:00",
+      "fold": "eval",
+      "fold_sha256": "5ef6e8eabe14d43c3002ec468118f1198596319e1e934fa7f0cb74361de98f83",
+      "matchmaker": "0.3.0",
+      "benchmark_commit": "008722d17b2b0f54ea6682169565aec08388d80f",
+      "datasets": {
+        "asap": {
+          "n_pieces": 32,
+          "n_tracked": 32,
+          "tracking_rate": 1.0
+        },
+        "batik": {
+          "n_pieces": 30,
+          "n_tracked": 25,
+          "tracking_rate": 0.8333
+        },
+        "vienna": {
+          "n_pieces": 84,
+          "n_tracked": 76,
+          "tracking_rate": 0.9048
+        }
+      },
+      "details": "details/softoltw_no_imm-audio.json",
+      "rank": 6
+    },
+    {
+      "submission": "dixon-audio",
+      "kind": "reference",
+      "method": "dixon",
+      "name": "OLTW (Dixon)",
+      "authors": "Dixon (2005)",
+      "affiliation": "",
+      "url": "https://github.com/pymatchmaker/matchmaker",
+      "description": "On-line time warping with a forward path constraint, on log-spectral energy features.",
+      "input_type": "audio",
+      "tracking_rate": 0.8699,
+      "beat_median": 0.158,
+      "beat_mean": 0.5813,
+      "beat_0.3b": 0.6623,
+      "beat_0.5b": 0.7771,
+      "beat_1.0b": 0.8861,
+      "ms_median": 48.1256,
+      "ms_300ms": 0.8711,
+      "beat_median_all": 0.17,
+      "ms_median_all": 50.6219,
+      "rtf": 0.2162,
+      "n_pieces": 146,
+      "n_tracked": 127,
+      "n_failed": 0,
+      "evaluated": "2026-09-18T22:32:05+00:00",
+      "fold": "eval",
+      "fold_sha256": "5ef6e8eabe14d43c3002ec468118f1198596319e1e934fa7f0cb74361de98f83",
+      "matchmaker": "0.3.0",
+      "benchmark_commit": "008722d17b2b0f54ea6682169565aec08388d80f",
+      "datasets": {
+        "asap": {
+          "n_pieces": 32,
+          "n_tracked": 28,
+          "tracking_rate": 0.875
+        },
+        "batik": {
+          "n_pieces": 30,
+          "n_tracked": 27,
+          "tracking_rate": 0.9
+        },
+        "vienna": {
+          "n_pieces": 84,
+          "n_tracked": 72,
+          "tracking_rate": 0.8571
+        }
+      },
+      "details": "details/dixon-audio.json",
+      "rank": 7
+    },
+    {
+      "submission": "arzt-audio",
+      "kind": "reference",
+      "method": "arzt",
+      "name": "OLTW (Arzt)",
+      "authors": "Brazier and Widmer (2020)",
+      "affiliation": "",
+      "url": "https://github.com/pymatchmaker/matchmaker",
+      "description": "On-line time warping against a synthesised rendering of the score, on chroma features.",
+      "input_type": "audio",
+      "tracking_rate": 0.863,
+      "beat_median": 0.1156,
+      "beat_mean": 0.484,
+      "beat_0.3b": 0.7244,
+      "beat_0.5b": 0.8167,
+      "beat_1.0b": 0.9058,
+      "ms_median": 43.751,
+      "ms_300ms": 0.8422,
+      "beat_median_all": 0.1333,
+      "ms_median_all": 55.2083,
+      "rtf": 0.0692,
+      "n_pieces": 146,
+      "n_tracked": 126,
+      "n_failed": 0,
+      "evaluated": "2026-09-18T22:23:26+00:00",
+      "fold": "eval",
+      "fold_sha256": "5ef6e8eabe14d43c3002ec468118f1198596319e1e934fa7f0cb74361de98f83",
+      "matchmaker": "0.3.0",
+      "benchmark_commit": "008722d17b2b0f54ea6682169565aec08388d80f",
+      "datasets": {
+        "asap": {
+          "n_pieces": 32,
+          "n_tracked": 31,
+          "tracking_rate": 0.9688
+        },
+        "batik": {
+          "n_pieces": 30,
+          "n_tracked": 26,
+          "tracking_rate": 0.8667
+        },
+        "vienna": {
+          "n_pieces": 84,
+          "n_tracked": 69,
+          "tracking_rate": 0.8214
+        }
+      },
+      "details": "details/arzt-audio.json",
+      "rank": 8
+    },
+    {
+      "submission": "arzt_tempo-audio",
+      "kind": "reference",
+      "method": "arzt_tempo",
+      "name": "OLTW (Arzt with Tempo)",
+      "authors": "Brazier and Widmer (2020)",
+      "affiliation": "",
+      "url": "https://github.com/pymatchmaker/matchmaker",
+      "description": "On-line time warping with dynamic tempo model against a synthesised rendering of the score, on chroma features.",
+      "input_type": "audio",
+      "tracking_rate": 0.8562,
+      "beat_median": 0.1075,
+      "beat_mean": 0.4724,
+      "beat_0.3b": 0.73,
+      "beat_0.5b": 0.8206,
+      "beat_1.0b": 0.9076,
+      "ms_median": 43.7561,
+      "ms_300ms": 0.8438,
+      "beat_median_all": 0.1178,
+      "ms_median_all": 47.9177,
+      "rtf": 0.1643,
+      "n_pieces": 146,
+      "n_tracked": 125,
+      "n_failed": 0,
+      "evaluated": "2026-09-18T22:31:15+00:00",
+      "fold": "eval",
+      "fold_sha256": "5ef6e8eabe14d43c3002ec468118f1198596319e1e934fa7f0cb74361de98f83",
+      "matchmaker": "0.3.0",
+      "benchmark_commit": "008722d17b2b0f54ea6682169565aec08388d80f",
+      "datasets": {
+        "asap": {
+          "n_pieces": 32,
+          "n_tracked": 31,
+          "tracking_rate": 0.9688
+        },
+        "batik": {
+          "n_pieces": 30,
+          "n_tracked": 26,
+          "tracking_rate": 0.8667
+        },
+        "vienna": {
+          "n_pieces": 84,
+          "n_tracked": 68,
+          "tracking_rate": 0.8095
+        }
+      },
+      "details": "details/arzt_tempo-audio.json",
+      "rank": 9
+    },
+    {
+      "submission": "outerhmm-audio",
+      "kind": "reference",
+      "method": "outerhmm",
+      "name": "Outer-product HMM",
+      "authors": "Nakamura (2014)",
+      "affiliation": "",
+      "url": "https://github.com/pymatchmaker/matchmaker",
+      "description": "Outer-product HMM on CQT spectral-flux features.",
+      "input_type": "audio",
+      "tracking_rate": 0.774,
+      "beat_median": 0.25,
+      "beat_mean": 0.8282,
+      "beat_0.3b": 0.5602,
+      "beat_0.5b": 0.7239,
+      "beat_1.0b": 0.8588,
+      "ms_median": 77.2918,
+      "ms_300ms": 0.7506,
+      "beat_median_all": 0.375,
+      "ms_median_all": 118.3359,
+      "rtf": 0.94,
+      "n_pieces": 146,
+      "n_tracked": 113,
+      "n_failed": 1,
+      "evaluated": "2026-09-18T23:20:14+00:00",
+      "fold": "eval",
+      "fold_sha256": "5ef6e8eabe14d43c3002ec468118f1198596319e1e934fa7f0cb74361de98f83",
+      "matchmaker": "0.3.0",
+      "benchmark_commit": "008722d17b2b0f54ea6682169565aec08388d80f",
+      "datasets": {
+        "asap": {
+          "n_pieces": 32,
+          "n_tracked": 22,
+          "tracking_rate": 0.6875
+        },
+        "batik": {
+          "n_pieces": 30,
+          "n_tracked": 25,
+          "tracking_rate": 0.8333
+        },
+        "vienna": {
+          "n_pieces": 84,
+          "n_tracked": 66,
+          "tracking_rate": 0.7857
+        }
+      },
+      "details": "details/outerhmm-audio.json",
+      "rank": 10
     },
     {
       "submission": "dixon-midi",
@@ -302,7 +547,56 @@
         }
       },
       "details": "details/dixon-midi.json",
-      "rank": 6
+      "rank": 11
+    },
+    {
+      "submission": "skf-audio",
+      "kind": "reference",
+      "method": "skf",
+      "name": "Switching Kalman filter",
+      "authors": "Jiang and Raphael (2020)",
+      "affiliation": "",
+      "url": "https://github.com/pymatchmaker/matchmaker",
+      "description": "Switching Kalman filter with hidden tempo, on raw spectrum features.",
+      "input_type": "audio",
+      "tracking_rate": 0.6507,
+      "beat_median": 0.141,
+      "beat_mean": 0.4505,
+      "beat_0.3b": 0.7342,
+      "beat_0.5b": 0.8666,
+      "beat_1.0b": 0.9488,
+      "ms_median": 44.8313,
+      "ms_300ms": 0.9071,
+      "beat_median_all": 0.3708,
+      "ms_median_all": 107.8344,
+      "rtf": 0.2957,
+      "n_pieces": 146,
+      "n_tracked": 95,
+      "n_failed": 0,
+      "evaluated": "2026-09-18T22:44:58+00:00",
+      "fold": "eval",
+      "fold_sha256": "5ef6e8eabe14d43c3002ec468118f1198596319e1e934fa7f0cb74361de98f83",
+      "matchmaker": "0.3.0",
+      "benchmark_commit": "008722d17b2b0f54ea6682169565aec08388d80f",
+      "datasets": {
+        "asap": {
+          "n_pieces": 32,
+          "n_tracked": 25,
+          "tracking_rate": 0.7812
+        },
+        "batik": {
+          "n_pieces": 30,
+          "n_tracked": 14,
+          "tracking_rate": 0.4667
+        },
+        "vienna": {
+          "n_pieces": 84,
+          "n_tracked": 56,
+          "tracking_rate": 0.6667
+        }
+      },
+      "details": "details/skf-audio.json",
+      "rank": 12
     },
     {
       "submission": "example-pitch-matcher",
@@ -351,7 +645,7 @@
         }
       },
       "details": "details/example-pitch-matcher.json",
-      "rank": 7
+      "rank": 13
     },
     {
       "submission": "baseline-constant-tempo-audio",
@@ -400,7 +694,7 @@
         }
       },
       "details": "details/baseline-constant-tempo-audio.json",
-      "rank": 8
+      "rank": 14
     },
     {
       "submission": "baseline-constant-tempo",
@@ -449,14 +743,9 @@
         }
       },
       "details": "details/baseline-constant-tempo.json",
-      "rank": 9
+      "rank": 15
     }
   ],
-  "skipped": [
-    "/home/runner/work/matchmaker_benchmark/matchmaker_benchmark/results/submissions/arzt-audio/metrics.json: partial run (144/146 pieces) \u2014 rerun the full fold",
-    "/home/runner/work/matchmaker_benchmark/matchmaker_benchmark/results/submissions/dixon-audio/metrics.json: partial run (144/146 pieces) \u2014 rerun the full fold",
-    "/home/runner/work/matchmaker_benchmark/matchmaker_benchmark/results/submissions/outerhmm-audio/metrics.json: partial run (144/146 pieces) \u2014 rerun the full fold",
-    "/home/runner/work/matchmaker_benchmark/matchmaker_benchmark/results/submissions/skf-audio/metrics.json: partial run (144/146 pieces) \u2014 rerun the full fold"
-  ],
+  "skipped": [],
   "retracted": []
 }

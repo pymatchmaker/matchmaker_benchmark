@@ -3,8 +3,14 @@ rank,submission,kind,name,authors,input_type,tracking_rate,beat_median,beat_mean
 2,arzt-midi,reference,OLTW (Arzt),Brazier and Widmer (2020),midi,0.9589,0.0,0.2476,0.8083,0.9174,0.9753,0.0036,0.9613,0.0,0.0041,0.0007,146,140,2026-08-26T16:15:49+00:00
 3,outerhmm-midi,reference,Outer-product HMM,Nakamura (2014),midi,0.9247,0.0,4.7332,0.7948,0.8995,0.9515,0.0036,0.9509,0.0,0.0036,0.0212,146,135,2026-08-26T16:30:29+00:00
 4,hmm-midi,reference,Pitch-IOI HMM,Cancino-Chacón et al. (2023),midi,0.911,0.0,0.2116,0.8212,0.9253,0.9778,0.0041,0.9395,0.0,0.0041,0.0528,146,133,2026-08-27T08:45:29+00:00
-5,soft-oltw,submission,Soft-OLTW,Jiyun Park,audio,0.911,0.0944,0.3499,0.7542,0.841,0.9282,46.8751,0.8733,0.1109,55.1961,0.0832,146,133,2026-09-18T20:11:11+00:00
-6,dixon-midi,reference,OLTW (Dixon),Dixon (2005),midi,0.7329,0.125,0.3094,0.7592,0.8894,0.9555,0.0051,0.9219,0.1667,0.0051,0.0023,146,107,2026-08-26T16:16:41+00:00
-7,example-pitch-matcher,submission,Pitch matcher (example),matchmaker maintainers,midi,0.3425,0.125,0.3679,0.7374,0.8648,0.9359,0.0051,0.8726,0.25,0.0102,0.0001,146,50,2026-08-26T10:35:04+00:00
-8,baseline-constant-tempo-audio,submission,"Constant tempo, audio (baseline)",matchmaker maintainers,audio,0.0137,0.9667,1.6051,0.1786,0.308,0.5179,496.8753,0.3571,48.1269,24985.4202,0.0839,146,2,2026-09-03T09:25:58+00:00
-9,baseline-constant-tempo,submission,Constant tempo (baseline),matchmaker maintainers,midi,0.0,,,,,,,,46.675,24035.4141,,146,0,2026-08-26T10:40:39+00:00
+5,soft-oltw,submission,Soft-OLTW,Jiyun Park,audio,0.911,0.0944,0.3487,0.7544,0.8411,0.9283,46.875,0.8735,0.1108,54.1799,0.1059,146,133,2026-09-18T22:25:43+00:00
+6,softoltw_no_imm-audio,reference,Soft-OLTW (No-IMM),Park et al. (2026),audio,0.911,0.1033,0.3454,0.7532,0.8472,0.9316,38.5356,0.877,0.1233,44.7917,0.0887,146,133,2026-09-18T22:31:14+00:00
+7,dixon-audio,reference,OLTW (Dixon),Dixon (2005),audio,0.8699,0.158,0.5813,0.6623,0.7771,0.8861,48.1256,0.8711,0.17,50.6219,0.2162,146,127,2026-09-18T22:32:05+00:00
+8,arzt-audio,reference,OLTW (Arzt),Brazier and Widmer (2020),audio,0.863,0.1156,0.484,0.7244,0.8167,0.9058,43.751,0.8422,0.1333,55.2083,0.0692,146,126,2026-09-18T22:23:26+00:00
+9,arzt_tempo-audio,reference,OLTW (Arzt with Tempo),Brazier and Widmer (2020),audio,0.8562,0.1075,0.4724,0.73,0.8206,0.9076,43.7561,0.8438,0.1178,47.9177,0.1643,146,125,2026-09-18T22:31:15+00:00
+10,outerhmm-audio,reference,Outer-product HMM,Nakamura (2014),audio,0.774,0.25,0.8282,0.5602,0.7239,0.8588,77.2918,0.7506,0.375,118.3359,0.94,146,113,2026-09-18T23:20:14+00:00
+11,dixon-midi,reference,OLTW (Dixon),Dixon (2005),midi,0.7329,0.125,0.3094,0.7592,0.8894,0.9555,0.0051,0.9219,0.1667,0.0051,0.0023,146,107,2026-08-26T16:16:41+00:00
+12,skf-audio,reference,Switching Kalman filter,Jiang and Raphael (2020),audio,0.6507,0.141,0.4505,0.7342,0.8666,0.9488,44.8313,0.9071,0.3708,107.8344,0.2957,146,95,2026-09-18T22:44:58+00:00
+13,example-pitch-matcher,submission,Pitch matcher (example),matchmaker maintainers,midi,0.3425,0.125,0.3679,0.7374,0.8648,0.9359,0.0051,0.8726,0.25,0.0102,0.0001,146,50,2026-08-26T10:35:04+00:00
+14,baseline-constant-tempo-audio,submission,"Constant tempo, audio (baseline)",matchmaker maintainers,audio,0.0137,0.9667,1.6051,0.1786,0.308,0.5179,496.8753,0.3571,48.1269,24985.4202,0.0839,146,2,2026-09-03T09:25:58+00:00
+15,baseline-constant-tempo,submission,Constant tempo (baseline),matchmaker maintainers,midi,0.0,,,,,,,,46.675,24035.4141,,146,0,2026-08-26T10:40:39+00:00
