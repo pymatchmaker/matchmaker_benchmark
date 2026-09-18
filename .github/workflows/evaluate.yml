@@ -51,7 +51,7 @@ on:
   workflow_dispatch:
     inputs:
       submission:
-        description: "Submission directory (empty = whatever this push changed)"
+        description: "Target method or submission directory (empty = evaluate all manuscript models)"
         required: false
         default: ""
       fold:
@@ -78,8 +78,7 @@ jobs:
   plan:
     runs-on: ubuntu-latest
     outputs:
-      submission: ${{ steps.plan.outputs.submission }}
-      input_type: ${{ steps.plan.outputs.input_type }}
+      targets: ${{ steps.plan.outputs.targets }}
       shards: ${{ steps.plan.outputs.shards }}
       num_shards: ${{ steps.plan.outputs.num_shards }}
       data_repo: ${{ steps.source.outputs.data_repo }}
@@ -97,31 +96,34 @@ jobs:
         id: plan
         run: |
           pip install --quiet pyyaml
-          if [ -n "${{ github.event.inputs.submission }}" ]; then
-            dir="${{ github.event.inputs.submission }}"
-          else
-            dir=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" \
-                  | grep -E '^submissions/[^_][^/]*/' \
-                  | cut -d/ -f1,2 | sort -u | head -n1)
-          fi
-          if [ -z "$dir" ]; then
-            dir="submissions/soft-oltw"
-          fi
-          echo "submission=${dir}" >> "$GITHUB_OUTPUT"
-          if [ -z "$dir" ]; then
-            echo "Nothing to evaluate."
-            echo "input_type=" >> "$GITHUB_OUTPUT"
-            echo "shards=[]" >> "$GITHUB_OUTPUT"
-            echo "num_shards=0" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          python -c "
+          import json, os
 
-          input_type=$(python -c "import yaml,sys; print(yaml.safe_load(open(sys.argv[1]))['input_type'])" "$dir/metadata.yaml")
+          sub = '${{ github.event.inputs.submission }}'
+          if sub:
+              if os.path.isdir(sub):
+                  targets = [{'id': os.path.basename(sub.rstrip('/')), 'type': 'submission', 'target': sub, 'input_type': 'audio'}]
+              else:
+                  targets = [{'id': f'{sub}-audio', 'type': 'method', 'target': sub, 'input_type': 'audio'}]
+          else:
+              targets = [
+                  {'id': 'soft-oltw', 'type': 'submission', 'target': 'submissions/soft-oltw', 'input_type': 'audio'},
+                  {'id': 'softoltw_no_imm-audio', 'type': 'method', 'target': 'softoltw_no_imm', 'input_type': 'audio'},
+                  {'id': 'arzt-audio', 'type': 'method', 'target': 'arzt', 'input_type': 'audio'},
+                  {'id': 'arzt_tempo-audio', 'type': 'method', 'target': 'arzt_tempo', 'input_type': 'audio'},
+                  {'id': 'skf-audio', 'type': 'method', 'target': 'skf', 'input_type': 'audio'},
+                  {'id': 'dixon-audio', 'type': 'method', 'target': 'dixon', 'input_type': 'audio'},
+                  {'id': 'outerhmm-audio', 'type': 'method', 'target': 'outerhmm', 'input_type': 'audio'},
+              ]
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'targets={json.dumps(targets)}\n')
+          print(f'Configured {len(targets)} target(s) for evaluation.')
+          "
           n="${{ github.event.inputs.shards || '8' }}"
-          echo "input_type=${input_type}" >> "$GITHUB_OUTPUT"
           echo "num_shards=${n}" >> "$GITHUB_OUTPUT"
           echo "shards=$(python -c "import json,sys; print(json.dumps(list(range(int(sys.argv[1])))))" "$n")" >> "$GITHUB_OUTPUT"
-          echo "Evaluating $dir ($input_type) on ${FOLD} in $n shards"
+          echo "Evaluating on ${FOLD} in $n shards"
 
       - name: Locate this fold's data
         id: source
@@ -136,12 +138,13 @@ jobs:
 
   evaluate:
     needs: plan
-    if: needs.plan.outputs.submission != ''
+    if: needs.plan.outputs.targets != '[]'
     runs-on: ${{ vars.BENCHMARK_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 350
     strategy:
       fail-fast: false  # one bad shard should not discard the rest
       matrix:
+        target: ${{ fromJSON(needs.plan.outputs.targets) }}
         shard: ${{ fromJSON(needs.plan.outputs.shards) }}
 
     steps:
@@ -162,20 +165,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install "pymatchmaker @ git+https://github.com/laurenceyoon/matchmaker.git@softoltw-with-imm"
           pip install pyyaml pydantic-settings
-          if [ -s "${{ needs.plan.outputs.submission }}/requirements.txt" ]; then
-            pip install --force-reinstall --no-deps -r "${{ needs.plan.outputs.submission }}/requirements.txt"
+          if [ "${{ matrix.target.type }}" = "submission" ] && [ -s "${{ matrix.target.target }}/requirements.txt" ]; then
+            pip install --force-reinstall --no-deps -r "${{ matrix.target.target }}/requirements.txt"
           fi
 
       - name: Check out the benchmark data
-        # The data repository's layout is the one MATCHMAKER_DATA_DIR expects,
-        # so this checkout is the whole data step: one shallow clone of the
-        # branch this fold reads, and nothing fetched file by file.
-        #
-        # MATCHMAKER_DATA_TOKEN is only needed while the data repository is
-        # private. Add it as a repository secret with read access to that repo;
-        # once the repository is public, delete the secret and this keeps
-        # working. Skipped entirely when MATCHMAKER_DATA_DIR is set to a copy
-        # the runner already holds.
         if: vars.MATCHMAKER_DATA_DIR == ''
         uses: actions/checkout@v4
         with:
@@ -194,22 +188,16 @@ jobs:
           fi
 
       - name: Check this shard's files are all present
-        # Names anything the fold asks for that the checkout did not provide,
-        # before spending an hour discovering it piece by piece. Allowed to
-        # fail so the fetch below can fill the gap.
         id: verify
         continue-on-error: true
         run: |
           python matchmaker_eval/fetch_data.py --verify \
             --fold "$FOLD" \
-            --input-type "${{ needs.plan.outputs.input_type }}" \
+            --input-type "${{ matrix.target.input_type }}" \
             --shard ${{ matrix.shard }} \
             --num-shards ${{ needs.plan.outputs.num_shards }}
 
       - name: Fetch anything the checkout did not provide
-        # The checkout is the fast path, not the only one. A fold whose data is
-        # not all in that branch — or a dataset served from somewhere else via
-        # `url_template` — is downloaded file by file into the same directory.
         if: steps.verify.outcome == 'failure'
         env:
           MATCHMAKER_DATA_TOKEN: ${{ secrets.MATCHMAKER_DATA_TOKEN }}
@@ -217,39 +205,47 @@ jobs:
           echo "::notice::the checkout was incomplete; fetching the rest"
           python matchmaker_eval/fetch_data.py \
             --fold "$FOLD" \
-            --input-type "${{ needs.plan.outputs.input_type }}" \
+            --input-type "${{ matrix.target.input_type }}" \
             --shard ${{ matrix.shard }} \
             --num-shards ${{ needs.plan.outputs.num_shards }}
 
       - name: Confirm the data is complete
-        # The hard gate: whichever route got the files here, the shard does not
-        # start until everything the fold names is on disk.
         if: steps.verify.outcome == 'failure'
         run: |
           python matchmaker_eval/fetch_data.py --verify \
             --fold "$FOLD" \
-            --input-type "${{ needs.plan.outputs.input_type }}" \
+            --input-type "${{ matrix.target.input_type }}" \
             --shard ${{ matrix.shard }} \
             --num-shards ${{ needs.plan.outputs.num_shards }}
 
       - name: Run the shard
         run: |
-          python matchmaker_eval/run_submission.py \
-            "${{ needs.plan.outputs.submission }}" \
-            --fold "$FOLD" \
-            --shard ${{ matrix.shard }} \
-            --num-shards ${{ needs.plan.outputs.num_shards }} \
-            --output "results/shards/shard-${{ matrix.shard }}"
+          if [ "${{ matrix.target.type }}" = "submission" ]; then
+            python matchmaker_eval/run_submission.py \
+              "${{ matrix.target.target }}" \
+              --fold "$FOLD" \
+              --shard ${{ matrix.shard }} \
+              --num-shards ${{ needs.plan.outputs.num_shards }} \
+              --output "results/shards/${{ matrix.target.id }}/shard-${{ matrix.shard }}"
+          else
+            python matchmaker_eval/run_submission.py \
+              --method "${{ matrix.target.target }}" \
+              --input-type "${{ matrix.target.input_type }}" \
+              --fold "$FOLD" \
+              --shard ${{ matrix.shard }} \
+              --num-shards ${{ needs.plan.outputs.num_shards }} \
+              --output "results/shards/${{ matrix.target.id }}/shard-${{ matrix.shard }}"
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
-          name: shard-${{ matrix.shard }}
-          path: results/shards/shard-${{ matrix.shard }}
+          name: ${{ matrix.target.id }}-shard-${{ matrix.shard }}
+          path: results/shards/${{ matrix.target.id }}/shard-${{ matrix.shard }}
           retention-days: 30
 
   merge:
     needs: [plan, evaluate]
-    if: always() && needs.plan.outputs.submission != ''
+    if: always() && needs.plan.outputs.targets != '[]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -259,34 +255,63 @@ jobs:
           python-version: "3.12"
 
       - name: Install what the merge needs
-        # Merging only recomputes the pooled summary from the shards' alignment
-        # paths, so it needs numpy and the eval helpers, not matchmaker itself.
         run: |
+          python -m pip install --upgrade pip
           pip install --quiet "pymatchmaker @ git+https://github.com/laurenceyoon/matchmaker.git@softoltw-with-imm"
           pip install --quiet pyyaml pydantic-settings
 
       - uses: actions/download-artifact@v4
         with:
-          pattern: shard-*
-          path: results/shards
+          pattern: "*-shard-*"
+          path: results/downloaded_shards
 
-      - name: Merge the shards
-        run: python matchmaker_eval/merge_shards.py results/shards
+      - name: Reorganize and merge all targets
+        run: |
+          python -c "
+          import os, shutil
+          from pathlib import Path
+
+          dl_root = Path('results/downloaded_shards')
+          shards_root = Path('results/shards')
+          shards_root.mkdir(parents=True, exist_ok=True)
+
+          for art_dir in dl_root.glob('*-shard-*'):
+              if not art_dir.is_dir():
+                  continue
+              name = art_dir.name
+              idx = name.rfind('-shard-')
+              if idx == -1:
+                  continue
+              target_id = name[:idx]
+              shard_id = name[idx+1:]
+              dest = shards_root / target_id / shard_id
+              dest.mkdir(parents=True, exist_ok=True)
+              for f in art_dir.iterdir():
+                  if f.is_file():
+                      shutil.copy2(f, dest / f.name)
+
+          print('Reorganized targets:', [p.name for p in shards_root.iterdir() if p.is_dir()])
+          "
+
+          for target_dir in results/shards/*; do
+            if [ -d "$target_dir" ]; then
+              echo "::group::Merging $target_dir"
+              python matchmaker_eval/merge_shards.py "$target_dir"
+              echo "::endgroup::"
+            fi
+          done
+
+      - name: Clean up temporary shard artifacts before committing
+        run: |
+          rm -rf results/downloaded_shards results/shards
 
       - name: Export the per-piece detail
-        # Dataset breakdowns, per-piece rows and the decimated alignment paths
-        # the leaderboard page plots. Written per entry and loaded on demand.
         run: python matchmaker_eval/export_details.py
 
       - name: Rebuild the leaderboard
         run: python matchmaker_eval/leaderboard.py
 
       - name: Assemble the site for review
-        # The `submissions` branch does not publish (see pages.yml), so the
-        # only way to see what a run did to the leaderboard would otherwise be
-        # to read JSON. This uploads the real page as an artifact: download it,
-        # `python -m http.server` inside it, and you are looking at what `main`
-        # would publish.
         run: python matchmaker_eval/build_site.py _site
 
       - uses: actions/upload-artifact@v4
@@ -304,8 +329,8 @@ jobs:
             echo "Leaderboard unchanged."
             exit 0
           fi
-          git commit -m "benchmark: evaluate ${{ needs.plan.outputs.submission }} on the ${{ env.FOLD }} fold
+          git commit -m "benchmark: evaluate all manuscript models on the ${{ env.FOLD }} fold
 
-          Run ${{ github.run_id }}, ${{ needs.plan.outputs.num_shards }} shards."
+          Run ${{ github.run_id }}."
           git pull --rebase --autostash
           git push
