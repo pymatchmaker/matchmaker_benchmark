@@ -1,0 +1,10 @@
+name: Soft-OLTW
+authors:
+  - Jiyun Park
+input_type: audio
+description: >
+  Soft-min Online Time Warping with directional weighting and score-informed IMM tempo tracking.
+eval_fold_untouched: true
+affiliation: KAIST
+license: Apache-2.0
+tuned_on: [valid]
