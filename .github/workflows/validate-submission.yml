@@ -54,10 +54,7 @@ jobs:
         # matchmaker_eval/utils.py, and nothing else.
         run: |
           python -m pip install --upgrade pip
-          # TEMPORARY pin. matchmaker_eval/methods.py reads the method
-          # spec from matchmaker.registry, which is on this branch and
-          # not yet on matchmaker's main. Revert to @main once merged.
-          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@feature/clean_method_registration"
+          pip install "pymatchmaker @ git+https://github.com/laurenceyoon/matchmaker.git@softoltw-with-imm"
           pip install pyyaml pydantic-settings
 
       - name: Find the submissions touched by this pull request
@@ -86,7 +83,7 @@ jobs:
           for dir in ${{ steps.changed.outputs.dirs }}; do
             if [ -s "$dir/requirements.txt" ]; then
               echo "::group::pip install -r $dir/requirements.txt"
-              pip install -r "$dir/requirements.txt"
+              pip install --force-reinstall --no-deps -r "$dir/requirements.txt"
               echo "::endgroup::"
             fi
           done

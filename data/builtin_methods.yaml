@@ -76,3 +76,21 @@ audio:
     description: >
       Sequential Monte Carlo tracking of score position and tempo, on
       Korzeniowski features.
+  arzt_tempo:
+    name: OLTW (Arzt with Tempo)
+    authors: ["Brazier and Widmer (2020)"]
+    description: >
+      On-line time warping with dynamic tempo model against a synthesised rendering
+      of the score, on chroma features.
+  softoltw:
+    name: Soft-OLTW (IMM)
+    authors: ["Park et al. (2026)"]
+    description: >
+      Soft-min Online Time Warping with directional weighting and score-informed
+      IMM tempo tracking, on chroma features.
+  softoltw_no_imm:
+    name: Soft-OLTW (No-IMM)
+    authors: ["Park et al. (2026)"]
+    description: >
+      Soft-min Online Time Warping with directional weighting without IMM tempo
+      tracking, on chroma features.
