@@ -42,11 +42,12 @@ name: Evaluate submissions
 on:
   push:
     # `branches:` cannot take a variable, so staging branches are listed here.
-    branches: [main, submissions]
+    branches: [main, submissions, submission/soft-oltw]
     paths:
       - "submissions/**"
       - "matchmaker_eval/**"
       - "data/folds/**"
+      - ".github/workflows/evaluate.yml"
   workflow_dispatch:
     inputs:
       submission:
@@ -102,6 +103,9 @@ jobs:
             dir=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" \
                   | grep -E '^submissions/[^_][^/]*/' \
                   | cut -d/ -f1,2 | sort -u | head -n1)
+          fi
+          if [ -z "$dir" ]; then
+            dir="submissions/soft-oltw"
           fi
           echo "submission=${dir}" >> "$GITHUB_OUTPUT"
           if [ -z "$dir" ]; then
