@@ -34,7 +34,7 @@ from verify_tracking import check_tracking, plot_tracking
 sys.setrecursionlimit(10000)
 
 TRACKING_THRESHOLD = 0.5  # beats
-TRACKING_MIN_FAILS = 2
+TRACKING_MIN_FAILS = 1
 
 WORKING_DIR = Path(__file__).parent.parent
 DATASET_DIR = {

@@ -61,7 +61,7 @@ on:
       shards:
         description: "How many parallel shards"
         required: false
-        default: "8"
+        default: "2"
 
 permissions:
   contents: write
@@ -120,7 +120,7 @@ jobs:
               f.write(f'targets={json.dumps(targets)}\n')
           print(f'Configured {len(targets)} target(s) for evaluation.')
           "
-          n="${{ github.event.inputs.shards || '8' }}"
+          n="${{ github.event.inputs.shards || '2' }}"
           echo "num_shards=${n}" >> "$GITHUB_OUTPUT"
           echo "shards=$(python -c "import json,sys; print(json.dumps(list(range(int(sys.argv[1])))))" "$n")" >> "$GITHUB_OUTPUT"
           echo "Evaluating on ${FOLD} in $n shards"

@@ -73,7 +73,7 @@ sys.setrecursionlimit(10000)
 #: unless at least MIN_FAILS 30-second segments exceed the median beat error
 #: threshold. MIDI is held to a tighter bound than audio.
 TRACKING_THRESHOLD = {"audio": 1.0, "midi": 0.5}
-TRACKING_MIN_FAILS = 2
+TRACKING_MIN_FAILS = 1
 SEGMENT_DURATION = 30.0
 
 DEFAULT_RESULTS_DIR = REPO_ROOT / "results" / "submissions"
