@@ -100,12 +100,7 @@ jobs:
           import json, os
 
           sub = '${{ github.event.inputs.submission }}'
-          if sub:
-              if os.path.isdir(sub):
-                  targets = [{'id': os.path.basename(sub.rstrip('/')), 'type': 'submission', 'target': sub, 'input_type': 'audio'}]
-              else:
-                  targets = [{'id': f'{sub}-audio', 'type': 'method', 'target': sub, 'input_type': 'audio'}]
-          else:
+          if sub == 'all':
               targets = [
                   {'id': 'soft-oltw', 'type': 'submission', 'target': 'submissions/soft-oltw', 'input_type': 'audio'},
                   {'id': 'softoltw_no_imm-audio', 'type': 'method', 'target': 'softoltw_no_imm', 'input_type': 'audio'},
@@ -115,12 +110,22 @@ jobs:
                   {'id': 'dixon-audio', 'type': 'method', 'target': 'dixon', 'input_type': 'audio'},
                   {'id': 'outerhmm-audio', 'type': 'method', 'target': 'outerhmm', 'input_type': 'audio'},
               ]
+          elif sub:
+              if os.path.isdir(sub):
+                  targets = [{'id': os.path.basename(sub.rstrip('/')), 'type': 'submission', 'target': sub, 'input_type': 'audio'}]
+              else:
+                  targets = [{'id': f'{sub}-audio', 'type': 'method', 'target': sub, 'input_type': 'audio'}]
+          else:
+              targets = [
+                  {'id': 'soft-oltw', 'type': 'submission', 'target': 'submissions/soft-oltw', 'input_type': 'audio'},
+                  {'id': 'softoltw_no_imm-audio', 'type': 'method', 'target': 'softoltw_no_imm', 'input_type': 'audio'},
+              ]
 
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f'targets={json.dumps(targets)}\n')
           print(f'Configured {len(targets)} target(s) for evaluation.')
           "
-          n="${{ github.event.inputs.shards || '2' }}"
+          n="${{ github.event.inputs.shards || '4' }}"
           echo "num_shards=${n}" >> "$GITHUB_OUTPUT"
           echo "shards=$(python -c "import json,sys; print(json.dumps(list(range(int(sys.argv[1])))))" "$n")" >> "$GITHUB_OUTPUT"
           echo "Evaluating on ${FOLD} in $n shards"
