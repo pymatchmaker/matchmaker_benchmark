@@ -1,5 +1,32 @@
 # IMM implementation review and diagnostic evaluation — 2026-09-20
 
+## Current result: final SoftOLTW + IMM
+
+The main manuscript comparison is SoftOLTW versus the final combined method. Earlier IMM checkpoints below are development history, not additional methods required in the manuscript.
+
+| Full146, event-pooled tracked-only accuracy | TR | Beat MAE | MedAE | ≤0.5b | ≤1b |
+|---|---:|---:|---:|---:|---:|
+| SoftOLTW | 86.99% (127/146) | 0.2938 | 0.1000 | 86.57% | 94.33% |
+| **SoftOLTW + IMM** | **91.78% (134/146)** | **0.2680** | **0.0840** | **88.13%** | **95.00%** |
+
+Dataset successes are ASAP 30/32, Batik 26/30, Vienna 78/84. Relative to SoftOLTW there are nine gains and two losses, a net gain of seven. The two losses are Vienna Schubert D783 no.15 p13 and p21. On their common 125 tracked pieces, baseline/final MAE is 0.2900/0.2589, MedAE 0.1000/0.0828, ≤0.5b 86.68/88.44%, and ≤1b 94.41/95.21%. The goal of at least 133 tracked pieces is achieved. This is practical benchmark improvement, not a statistical significance claim.
+
+The selected validation20 result is 19/20, MAE 0.1994, MedAE 0.0731, ≤0.5b 90.30%, ≤1b 95.92%; baseline is 19/20, 0.2306, 0.1000, 89.01%, 95.64%. Validation and evaluation share no identical `(dataset, audio_performance)` pairs. No new scalar parameter was swept. Architecture selection still constitutes model selection, and the previously inspected full set is not an unseen test.
+
+The final implementation adds one Gaussian position/tempo estimate per DP position candidate. Incoming path branches use the same constant-velocity dynamics, Gaussian predictive transition costs, and Kalman updates, followed by moment matching including between-mean covariance. Traversed score-frame acoustic costs and path-length normalization are retained. Process noise is calibrated to the existing observation variance over one nominal beat. Existing step size, gamma, observation variance and score time scale are reused; these modeling choices acquire new roles and are not parameter-free.
+
+This is one bounded-step DP lattice with path-conditioned Kalman mixtures, followed by the existing correlated-error CV/CA/ZV IMM. The DP's Kalman mixtures combine path histories; the output IMM combines different motion models. The output IMM posterior is not fed into the lattice transition calculation. Thus the full improvement cannot be attributed to the output IMM alone. The changed DP recurrence is a motion-regularized DTW approximation, not the original unchanged SoftOLTW recurrence or an exact Bayesian posterior.
+
+A validation ablation removing only the Kalman transition cost, while retaining DP geometry and output IMM, obtained 19/20, MAE 0.2069, MedAE 0.0744, ≤0.5b 89.99%, ≤1b 95.84%. This supports an additional contribution from the transition prior on validation; it does not isolate the output IMM or establish full-set attribution.
+
+Implementation commit: `06e1ae3`. Production defaults exactly matched the frozen candidate over 720 synthetic steps; 55 implementation tests passed. Full-run artifacts are `output/imm_path_dtw_full_146_20260920/{summary_tracked,summary_common_tracked,comparison_tracked,verification}.json`, with frozen selection and source snapshots in `protocol/`. Every audio run uses `matchmaker_eval/test_audio.py --no-plots`.
+
+Mean millisecond error also falls (148.4645 to 146.6399), but median millisecond error rises (35.4238 to 46.8750); not every metric improves. A fresh seven-method paper reproduction is being run under `output/paper_reproduction_146_20260920`. Its common subset, SPARC and RTF must be recomputed before replacing the manuscript table. SPARC uses each method's own tracked pieces, averaging 30-second windows within each piece and then across pieces.
+
+## Historical 130-piece checkpoint
+
+The following sections describe the earlier frozen checkpoint and its contemporaneous conclusions; references to its final implementation apply only to that checkpoint.
+
 ## Outcome and reporting convention
 
 Accuracy is **event-pooled across tracked pieces**, taken from `summary_tracked.json`. Tracking count uses every evaluated piece. Dataset means are not averaged to form the 146-piece result. Different methods may track different subsets; count and accuracy must be read together.

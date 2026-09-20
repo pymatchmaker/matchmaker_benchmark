@@ -110,3 +110,37 @@ validation 결과는 다음과 같다. 모든 오차는 tracked-only이며 정�
 map matching의 후보 경로 유지 및 재진입 구조는 검토할 가치가 있다. 현재 IMM은 DP의 단일 위치 출력을 관측하므로 잘못된 DP 경로 자체를 복구하지는 않는다. 다만 Murphy 등의 독립 off-road KF와 달리 이 KF는 DP 관측에 의존한다. 이를 독립 추정기로 간주해 DP와 다시 결합하면 같은 음향 증거를 중복 사용한다. 다음 실험에서는 후보 경로의 관측 likelihood와 tempo transition을 구분하고, 잘못된 후보가 나머지 후보를 오염시키지 않는 최소 구조를 우선 검토한다.
 
 이 항목은 다음 실험의 설계 방향이며 구현 또는 성능 향상이 검증되었다는 뜻은 아니다. 기존 colored-error IMM을 대조군으로 유지하고, 실패했던 단순 acoustic mixture 및 feedback 실험과 구별되는 관측 모델을 먼저 명시한다.
+
+## 직접적인 KF–DP 결합 선행연구 추가 조사
+
+2026-09-20, 130곡 버전 커밋 이후 조사. DP는 DTW뿐 아니라 Viterbi 경로 탐색도 포함하지만, 두 알고리즘을 같은 것으로 취급하지 않는다. 아래의 적용 판단은 우리의 설계 제안이며 해당 논문이 score following에서 이를 검증한 것은 아니다.
+
+| 연구 | 결합 방식 | 확인 범위와 현재 구현에 대한 의미 |
+|---|---|---|
+| [Jang, 2021, The Optical Tracking Method of Flight Target using Kalman Filter with DTW](https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci?sereArticleSearchBean.artiId=ART002736087) | 기준 비행 궤적과 실제 관측 궤적을 DTW로 정렬하고, 그 결과에서 얻은 각속도 등을 KF 관측으로 사용한다. | KCI에 등록된 저자 초록 확인, 수식 원문 미확보. 기준 악보와 연주를 정렬한 결과를 KF에 넣는 현재 구조와 직접적인 유사성이 있다. 관측 상관 처리까지 같다고 주장할 수는 없다. DOI 10.12673/jant.2021.25.3.217. |
+| [Huang, Xue & Guo, 2012, Penalty Dynamic Programming Algorithm for Dim Targets Detection in Sensor Systems](https://pmc.ncbi.nlm.nih.gov/articles/PMC3355457/) | 추적 추정값으로 DP merit function의 penalty를 구성한다. 원문의 tracking block은 IMM 및 PDA/MHT를 사용한다. | 논문 본문 검색 텍스트와 저자 공개 원문 Section 4.2 확인. 직접 PDF 접근 실패. IMM과 DP의 피드백 결합 자체에 선행 사례가 있다. 여러 표적의 association과 추가 threshold까지 현재 문제에 가져올 필요는 없다. |
+| [Pavlovic, Rehg & MacCormick, CVPR 2000, Impact of Dynamic Model Learning on Classification of Human Motion](https://users.cecs.anu.edu.au/~hartley/LearningPapers/Learning/Pavlovic-CVPR00.pdf) | SLDS의 approximate Viterbi에서 전이 후보마다 Kalman prediction/update를 계산한다. innovation likelihood와 discrete transition probability로 경로 점수를 갱신하고, 현재 상태별 최선 predecessor의 mean/covariance를 보존한다. | 원문 Section 3.1, 식 4와 의사코드 확인. 후보별 연속 상태를 유지하는 직접적인 구현 패턴이다. 상태별 하나의 survivor를 남기는 것은 근사이며 전역 최적성을 보장하지 않는다. 원문의 최종 backtracking/RTS smoothing은 온라인 평가에 그대로 사용할 수 없다. |
+| [Jiang & Raphael, ISMIR 2020, Score Following with Hidden Tempo Using a Switching State-Space Model](https://archives.ismir.net/ismir2020/paper/000159.pdf) | note-index/age 경로마다 Gaussian tempo를 유지한다. stay/advance 확률은 tempo와 duration에서 계산하고, advance 때만 해당 경로의 KF를 업데이트한다. 음향 likelihood는 경로 확률에 곱한다. | 원문 Sections 3–4 재확인. DTW 후처리가 아니라 hybrid state-space의 경로 추론이다. 현재 SKF의 장점과 연결되는 가장 직접적인 score-following 근거다. 단일 전역 tempo를 모든 후보에 공유하지 않는 점이 중요하다. |
+| [A Markov-Switching Model Approach to Heart Sound Segmentation and Classification, 2018 preprint](https://arxiv.org/pdf/1809.03395) | SKF 출력과 duration-dependent Viterbi를 결합해 상태 전환과 체류시간을 추론한다. | 원문 식 8, Algorithm 3 확인. duration prior의 유용한 관련 사례지만 offline backtracking을 사용한다. 누적 관측을 사용한 SKF posterior를 연속 emission처럼 곱하는 구조여서, 그대로 이식하면 증거 중복 문제를 해결했다는 근거가 되지 않는다. |
+| [Murphy, Pao & Yuen, 2019 v2, Map matching when the map is wrong](https://arxiv.org/html/1809.09755v2) | 독립적인 off-road KF가 on-road HMM 후보를 생성할 수 있는 semi-interacting 구조다. | 원문 Section 3.1 확인. 우리 KF는 DP 결과를 관측하므로 이 논문의 독립 fallback 조건을 만족하지 않는다. 단순히 DP와 KF 출력을 혼합하는 구현의 근거로 쓰면 안 된다. |
+
+추가 서지 후보: Yue 등의 ICCCAS 2010 논문 `A Kalman filtering-based dynamic programming track-before-detect algorithm for turn target` (DOI 10.1109/ICCCAS.2010.5581958)은 KF prediction으로 DP transition step을 조절한다고 저자 초록에 기술한다. IEEE 직접 본문은 확보하지 못했으므로 세부 수식의 구현 근거로 사용하지 않는다. 2024년 [Wu 등의 RD-plane DP-TBD 논문](https://www.mdpi.com/2072-4292/16/14/2639) 참고문헌에서 관련 2010·2016·2019 연구의 서지를 확인했다. 이 2024 논문 자체를 KF–DP 결합 연구라고 단정하지 않는다.
+
+### 다음 실험 설계에 주는 구체적인 영향
+
+현재 구조는 단일 DP 위치를 상관 오차 IMM에 입력한다. 후보 경로가 틀렸을 때 다른 후보로 돌아갈 수 있는 구조는 별도로 필요하다. 우선순위는 Pavlovic의 후보별 Kalman 상태와 Jiang–Raphael의 경로 조건부 tempo를 참고해, 음향 경로 후보와 그 후보에 조건화된 tempo 분포를 함께 유지하는 방식이다. 동일한 악보 위치에 도착해도 tempo 이력이 다르면 미래의 전이 분포가 다르므로 위치만으로 후보를 합치는 것은 근사다.
+
+피드백 자체가 확률적으로 잘못된 것은 아니다. 과거 관측에서 얻은 prediction과 현재 프레임의 likelihood를 결합하는 것은 정상적인 Bayesian filtering이다. 문제가 되는 것은 현재 관측으로 이미 선택·보정한 결과를 다시 독립 관측으로 넣거나, 누적 DP 비용을 매 프레임의 새로운 likelihood로 해석하는 경우다. 후보의 이전 점수, 현재 음향 likelihood, 해당 후보의 tempo transition을 분리해 각 항이 한 번씩 사용되도록 설계해야 한다.
+
+기존 softmin recurrence를 Viterbi max로 바꾸면 경로 합산과 최선 경로 선택이라는 추론 목표까지 달라진다. 최소 변경 실험에서도 이 차이를 명시하고, Kalman 상태를 soft mixture로 합칠 경우 between-mean covariance를 포함해야 한다. 상관 오차 상태는 DP-derived position 관측을 계속 쓸 때 유지할 근거가 있으며, raw acoustic likelihood로 관측 모델을 바꾸면 자동으로 같은 오차 모델을 붙이지 않는다.
+
+이 조사 시점에는 새 구현이나 benchmark 결과가 없었다. 기준 커밋은 matchmaker `faf4f33`, benchmark `0938290`이다. 다음 목표는 133/146 이상이며 모델 선택은 validation 20곡으로 제한한다.
+
+
+## KF–DP 조사 이후 구현 및 검증 결과
+
+Pavlovic의 경로별 연속 상태 유지와 Jiang–Raphael의 경로 조건부 tempo를 참고해 `KalmanPathLattice`를 구현했다. 위치 후보마다 등속도 KF를 유지하고, 들어오는 경로별 prediction likelihood와 acoustic cost로 soft weight를 계산한다. 각 Kalman posterior를 between-mean covariance까지 포함해 Gaussian 하나로 합친다. 이는 표준 IMM의 운동 모델 혼합과 구별되는 경로 가설 혼합이며, 원문의 코드를 직접 이식한 것은 아니다. 최종 출력에는 기존 CV/CA/ZV 상관 관측 오차 IMM이 이어진다.
+
+처음의 hard-survivor 및 단일 emission 방식은 validation 중단 기준에 걸렸다. 통과한 구성은 지나간 악보 프레임의 acoustic cost와 DTW 길이 정규화를 보존한다. 따라서 개선은 단순히 KF를 추가한 효과가 아니라 경로 추론 구성과 결합된 결과다. score-clock 관측 상관 후보는 validation에서 미세한 개선 뒤 full 평가 66곡에서 손실을 보여 중단했고 채택하지 않았다. 어떤 full 결과로도 숫자 parameter를 조정하지 않았다.
+
+선택된 모델은 validation 19/20, beat MAE 0.1994, MedAE 0.0731, ≤0.5b 90.30%, ≤1b 95.92%였다. 고정 후 full146에서 134/146, 0.2680, 0.0840, 88.13%, 95.00%를 얻었다. SoftOLTW는 127/146, 0.2938, 0.1000, 86.57%, 94.33%다. 기존 checkpoint는 실험 이력으로 보관하며 원고의 주 비교는 SoftOLTW와 최종 방법으로 한다. 원고에는 경로 추론의 변경도 명시해야 하며, 모든 개선을 출력 IMM만의 효과로 해석하지 않는다.
