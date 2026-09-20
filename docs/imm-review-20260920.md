@@ -214,3 +214,21 @@ IMM is slightly more accurate than the adaptive single CV on these common pieces
 The standard IMM recovers none of the baseline failures and loses three Vienna performances: Op.38 p10 (worst 30-second median error 0.9667→1.0331 beats), Schubert p13 (0.9000→1.0263), and Schubert p21 (1.0000→1.0118). The existing success threshold was not changed. These marginal failures are still failures under the prescribed metric.
 
 Full comparison: `output/imm_standard_full_146_20260920/comparison_tracked.json`. Piece changes: `tracking_changes.tsv`. The baseline was preferable to this earlier three-state model. The later augmented observation-error model at the top of this report supersedes this conclusion for the current implementation.
+
+## Completed Table 1 aggregation
+
+All seven methods were re-evaluated from saved trajectories using the current canonical ground truth, existing `check_tracking`, and `evaluate_native` / `compute_event_pooled_summary`. No audio reruns or standalone evaluation scripts were needed. The common-tracked intersection contains 46 performances. All original Table 1 tracking counts are preserved.
+
+Dixon and SKF trajectories matching the manuscript 101/89 successes were found in `results/submissions/{dixon,skf}-audio`; the preceding audit had missed this location. Two ASAP ground-truth files (indices 17 and 18) differ from the canonical annotations in those submissions. Both pieces fail for both methods under either annotation set, so tracked-only results are unaffected. Arzt / Arzt-with-Tempo use `output/arzt_vs_tempo_146`, OPHMM uses `output/linear_reduced146_20260906`, and the two SoftOLTW variants use their verified full runs. Existing Arzt all-tracked paper values used a different aggregation and are replaced by native event-pooled values.
+
+| Method | TR | Tracked MAE | MedAE | ≤0.5b | ≤1b | Common MAE (46) | Common ≤1b | SPARC |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| arzt | 71.23% (104/146) | 0.3367 | 0.1000 | 85.25% | 93.22% | 0.2375 | 95.95% | -12.4359 |
+| arzt_tempo | 73.97% (108/146) | 0.3434 | 0.1000 | 85.10% | 93.00% | 0.2373 | 95.86% | -12.5126 |
+| dixon | 69.18% (101/146) | 0.3956 | 0.1317 | 82.19% | 91.94% | 0.3373 | 93.42% | -17.9970 |
+| outerhmm | 53.42% (78/146) | 0.4825 | 0.2500 | 78.86% | 91.22% | 0.4389 | 92.29% | -27.7876 |
+| skf | 60.96% (89/146) | 0.2476 | 0.1243 | 89.67% | 96.56% | 0.1867 | 97.98% | -15.0873 |
+| softoltw_no_imm | 86.99% (127/146) | 0.2938 | 0.1000 | 86.57% | 94.33% | 0.2039 | 97.08% | -11.8547 |
+| softoltw | 91.78% (134/146) | 0.2680 | 0.0840 | 88.13% | 95.00% | 0.1779 | 97.42% | -5.4245 |
+
+Full reports, symlinks to source paths, and per-path hashes are saved under `output/table1_complete_20260920`. Timing protocols differ among historical sources; existing manuscript RTF cells are retained and are not claimed to have been reproduced on a common hardware setup. RTF values remain unbolded. The manuscript contains only the evaluation definition and results, not this provenance history.
