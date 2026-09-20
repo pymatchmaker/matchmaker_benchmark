@@ -21,7 +21,29 @@ A validation ablation removing only the Kalman transition cost, while retaining 
 
 Implementation commit: `06e1ae3`. Production defaults exactly matched the frozen candidate over 720 synthetic steps; 55 implementation tests passed. Full-run artifacts are `output/imm_path_dtw_full_146_20260920/{summary_tracked,summary_common_tracked,comparison_tracked,verification}.json`, with frozen selection and source snapshots in `protocol/`. Every audio run uses `matchmaker_eval/test_audio.py --no-plots`.
 
-Mean millisecond error also falls (148.4645 to 146.6399), but median millisecond error rises (35.4238 to 46.8750); not every metric improves. A fresh seven-method paper reproduction is being run under `output/paper_reproduction_146_20260920`. Its common subset, SPARC and RTF must be recomputed before replacing the manuscript table. SPARC uses each method's own tracked pieces, averaging 30-second windows within each piece and then across pieces.
+Mean millisecond error also falls (148.4645 to 146.6399), but median millisecond error rises (35.4238 to 46.8750); not every metric improves. The fresh reproduction under `output/paper_reproduction_146_20260920` completed both SoftOLTW variants. At the user's request, the remaining five audio reruns were cancelled. Their manuscript accuracy cells have not been newly verified. The two-method common subset contains 125 pieces. SPARC uses each method's own tracked pieces, averaging 30-second windows within each piece and then across pieces.
+
+## Refactoring verification
+
+Implementation commit `225038a` separates acoustic SoftOLTW, the path-conditioned Kalman lattice, and output IMM into their respective modules. The baseline constructs neither Kalman component. Hierarchical alignment retains composition because it owns multiple followers. Unused experimental paths and diagnostics were removed without changing numerical parameters.
+
+All 56 implementation tests pass. A 1,588-step comparison across baseline, output-IMM-only, final combined, and hierarchical configurations produced exactly equal states and paths. The final refactored validation run reproduces all 20 saved paths byte for byte. The full baseline rerun reproduces all 146 saved paths byte for byte, retaining 127 tracked pieces and all accuracy values above. Its measured all-piece RTF is 0.0456411. Artifacts are in `output/imm_refactor_verification_20260920`, including `protocol/final_verification.json`.
+
+## SPARC correction
+
+The legacy report helper removed mean speed before spectrum normalization, assigned constant-speed windows an arbitrary -100, and normalized frequency differences by the fixed cutoff rather than the selected spectral span. Removing DC makes relative jitter magnitude disappear after peak normalization. The manuscript also mixed values obtained under different definitions. These errors explain the apparent reversal; no tracker was changed to obtain the corrected smoothness values.
+
+The existing report helper now follows the [authors' SPARC implementation](https://github.com/siva82kb/SPARC/blob/master/scripts/smoothness.py), with the definition in [Balasubramanian et al. (2015)](https://doi.org/10.1186/s12984-015-0090-9): retain the speed spectrum's DC component, normalize its magnitude, select support below 10 Hz with relative amplitude threshold 0.05, and normalize arc length by that support's frequency span. Speed is the absolute derivative of position resampled at 50 Hz. Windows last 30 seconds with a 15-second hop; short pieces use their full duration. Zero-speed windows have undefined normalized spectra and are excluded. No parameters were tuned. Three reporting tests pass, including the authors' Gaussian example, amplitude scaling, jitter magnitude, and native event pooling.
+
+| Method | Own tracked pieces | Corrected SPARC |
+|---|---:|---:|
+| Arzt | 104 | -12.4359 |
+| Arzt with Tempo | 108 | -12.5126 |
+| OPHMM | 78 | -27.7876 |
+| SoftOLTW | 127 | -11.8547 |
+| **SoftOLTW + IMM** | 134 | **-5.4245** |
+
+The saved Dixon and SKF runs have 99 and 88 successes, whereas the manuscript rows have 101 and 89. Their recomputed SPARC values therefore cannot populate those manuscript rows; those cells are left blank (`--`). No additional audio methods were rerun. Detailed provenance and values are in `output/paper_reproduction_146_20260920/sparc_corrected_audit.json`; the corrected helper and tests are preserved in `protocol/sparc/`. RTF values are never bold in the manuscript.
 
 ## Historical 130-piece checkpoint
 

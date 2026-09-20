@@ -6,6 +6,23 @@ import pytest
 from scripts import evaluate_and_report_146 as report
 
 
+def test_sparc_matches_authors_gaussian_example():
+    times = np.arange(-1., 1., .01)
+    speed = np.exp(-5 * times**2)
+    assert report.compute_sparc(speed, 100.) == pytest.approx(-1.41403, abs=5e-6)
+    assert report.compute_sparc(10 * speed, 100.) == pytest.approx(report.compute_sparc(speed, 100.))
+
+
+def test_sparc_retains_mean_speed_and_has_no_stationary_sentinel():
+    times = np.arange(1500) / 50.
+    constant = report.compute_sparc(np.ones(len(times)), 50.)
+    small = report.compute_sparc(1 + 1e-6 * np.sin(2 * np.pi * 3 * times), 50.)
+    large = report.compute_sparc(1 + .6 * np.sin(2 * np.pi * 3 * times), 50.)
+    assert small == pytest.approx(constant, abs=1e-5)
+    assert large < small
+    assert np.isnan(report.compute_sparc(np.zeros(len(times)), 50.))
+
+
 def test_native_report_pools_events_and_uses_each_methods_tracked_sparc(tmp_path, monkeypatch):
     monkeypatch.setattr(report, "DATASETS", [("example", 3)])
     monkeypatch.setattr(report, "compute_piece_sparc_30s", lambda path: float(path.stem.split("_")[1]))

@@ -61,75 +61,36 @@ def evaluate_native(output_dir, methods):
     print(json.dumps(report, indent=2))
     return report
 
-def compute_sparc(vel, fs, padlevel=4, fc=10.0, amp_th=0.05):
-    """Spectral Arc Length (SPARC) smoothness metric."""
-    if len(vel) < 2 or np.all(vel == vel[0]):
-        return -100.0
-    n = len(vel)
-    n_fft = int(2 ** (np.ceil(np.log2(n)) + padlevel))
-    vel_centered = vel - np.mean(vel)
-    spec = np.abs(np.fft.rfft(vel_centered, n=n_fft))
-    freqs = np.fft.rfftfreq(n_fft, d=1.0 / fs)
-    
-    mask = freqs <= fc
-    freqs = freqs[mask]
-    spec = spec[mask]
-    
-    if len(spec) < 2:
-        return -100.0
-        
-    max_amp = np.max(spec)
-    if max_amp == 0:
-        return -100.0
-    spec_norm = spec / max_amp
-    
-    valid = spec_norm >= amp_th
-    if not np.any(valid):
-        return -100.0
-    last_idx = np.where(valid)[0][-1]
-    if last_idx < 1:
-        return -100.0
-        
-    freqs_sub = freqs[:last_idx + 1]
-    spec_sub = spec_norm[:last_idx + 1]
-    
-    df = np.diff(freqs_sub) / fc
-    dmag = np.diff(spec_sub)
-    arc_length = -np.sum(np.sqrt(df**2 + dmag**2))
-    return float(arc_length)
+def compute_sparc(speed, fs, padlevel=4, fc=10.0, amp_th=0.05):
+    speed = np.asarray(speed)
+    if len(speed) < 2 or not np.any(speed):
+        return np.nan
+    n_fft = int(2 ** (np.ceil(np.log2(len(speed))) + padlevel))
+    spectrum = np.abs(np.fft.rfft(speed, n=n_fft))
+    spectrum /= spectrum.max()
+    frequencies = np.fft.rfftfreq(n_fft, d=1.0 / fs)
+    support = np.flatnonzero((frequencies <= fc) & (spectrum >= amp_th))
+    if len(support) < 2:
+        return np.nan
+    band = slice(support[0], support[-1] + 1)
+    frequencies, spectrum = frequencies[band], spectrum[band]
+    span = frequencies[-1] - frequencies[0]
+    return float(-np.hypot(np.diff(frequencies) / span, np.diff(spectrum)).sum())
+
 
 def compute_piece_sparc_30s(wp_path, window_sec=30.0, hop_sec=15.0, fps=50.0):
-    """Compute average SPARC over sliding 30-second windows along the trajectory."""
-    if not os.path.exists(wp_path):
+    wp = np.loadtxt(wp_path, skiprows=1, ndmin=2)
+    times = np.arange(wp[0, 0], wp[-1, 0], 1.0 / fps)
+    if len(times) < 2:
         return None
-    try:
-        wp = np.loadtxt(wp_path, skiprows=1)
-        if wp.ndim != 2 or wp.shape[0] < int(window_sec * fps * 0.5):
-            return None
-        t = wp[:, 0]
-        pos = wp[:, 1]
-        
-        t_min, t_max = t[0], t[-1]
-        if t_max - t_min < window_sec:
-            vel = np.gradient(pos, t)
-            return compute_sparc(vel, fps)
-            
-        t_uniform = np.arange(t_min, t_max, 1.0 / fps)
-        pos_uniform = np.interp(t_uniform, t, pos)
-        vel_uniform = np.gradient(pos_uniform, 1.0 / fps)
-        
-        win_len = int(window_sec * fps)
-        hop_len = int(hop_sec * fps)
-        
-        sparcs = []
-        for start in range(0, len(vel_uniform) - win_len + 1, hop_len):
-            chunk = vel_uniform[start:start + win_len]
-            sp = compute_sparc(chunk, fps)
-            if np.isfinite(sp) and sp > -500:
-                sparcs.append(sp)
-        return float(np.mean(sparcs)) if sparcs else None
-    except Exception:
-        return None
+    position = np.interp(times, wp[:, 0], wp[:, 1])
+    speed = np.abs(np.gradient(position, 1.0 / fps))
+    window = min(int(window_sec * fps), len(speed))
+    values = [compute_sparc(speed[start:start + window], fps)
+              for start in range(0, len(speed) - window + 1, int(hop_sec * fps))]
+    finite = [value for value in values if np.isfinite(value)]
+    return float(np.mean(finite)) if finite else None
+
 
 def load_benchmark_data(output_dir, methods):
     output_dir = Path(output_dir)
