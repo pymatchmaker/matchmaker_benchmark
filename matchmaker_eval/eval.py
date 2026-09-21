@@ -156,8 +156,32 @@ def run_evaluation(
             ref_frame_to_beat=getattr(sf, "_ref_frame_to_beat", None),
             make_plot=make_plot,
         )
+        if getattr(sf, "filter_output", False) and getattr(sf, "kalman", None) is not None:
+            save_imm_diagnostics(sf, perf_sec, save_dir / f"imm_{run_name or 'results'}.tsv")
 
     return eval_results
+
+
+def save_imm_diagnostics(follower, times, path):
+    imm = follower.kalman
+    probabilities = np.asarray(imm.mu_history)
+    count = len(probabilities) - 1
+    if count == 0:
+        return
+    filtered = follower.alignment_path[1, -count:]
+    previous = np.r_[follower._frame_to_beat(0), filtered[:-1]]
+    allowed = np.full(count, not getattr(imm, "score_pause_gating", True), dtype=bool)
+    for start, end in imm.pause_ranges:
+        allowed |= (previous >= start) & (previous < end)
+    transitions = np.where(allowed[:, None, None], imm.M_pause, imm.M_play)
+    priors = np.einsum("ti,tij->tj", probabilities[:-1], transitions)
+    priors[0] = probabilities[0]
+    raw = np.array([follower._frame_to_beat(frame) for frame in follower._pos_history[-count:]])
+    values = np.column_stack((times[-count:], raw, filtered, allowed, priors, probabilities[1:]))
+    np.savetxt(path, values, delimiter="\t", comments="", header=(
+        "perf_sec\tdp_beat\toutput_beat\tpause_allowed\tprior_cv\tprior_ca\tprior_zv"
+        "\tposterior_cv\tposterior_ca\tposterior_zv"
+    ))
 
 
 # ---------------------------------------------------------------------------
