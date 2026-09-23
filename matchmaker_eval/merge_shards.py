@@ -24,9 +24,8 @@ for _path in (_REPO_ROOT, _REPO_ROOT / "matchmaker_eval"):
 import argparse
 import json
 import shutil
-from collections import defaultdict
 
-from utils import compute_event_pooled_summary
+from utils import dataset_summaries, pooled_summaries
 
 from matchmaker_eval.folds import REPO_ROOT
 
@@ -68,7 +67,6 @@ def merge(root: Path, output: Path) -> dict:
     output.mkdir(parents=True, exist_ok=True)
 
     pieces, failures = [], []
-    results = defaultdict(list)
     seen_indices = set()
 
     for path, record in zip(shard_paths, records):
@@ -82,19 +80,6 @@ def merge(root: Path, output: Path) -> dict:
                 )
             seen_indices.add(index)
             pieces.append(piece)
-
-            results["Index"].append(index)
-            results["tracked"].append(bool(piece.get("tracked")))
-            for key, value in piece.items():
-                if key not in (
-                    "index",
-                    "piece_id",
-                    "dataset",
-                    "title",
-                    "tracked",
-                    "error",
-                ):
-                    results[key].append(value)
 
             # Alignment paths are what the pooled summary is computed from.
             for prefix in ("wp", "gt"):
@@ -142,12 +127,8 @@ def merge(root: Path, output: Path) -> dict:
         "n_estimated_bpm": sum(1 for p in pieces if p.get("used_estimated_bpm")),
         "n_failed": len(failures),
         "failures": failures,
-        "summary_all": compute_event_pooled_summary(
-            results, output, tracked_only=False
-        ),
-        "summary_tracked": compute_event_pooled_summary(
-            results, output, tracked_only=True
-        ),
+        **pooled_summaries(pieces, output),
+        "datasets": dataset_summaries(pieces, output),
         "pieces": pieces,
     }
 

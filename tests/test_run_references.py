@@ -66,6 +66,45 @@ class TestPiecesDone:
         assert R.pieces_done("arzt", "audio", "eval") == 2
 
 
+class TestRerun:
+    """A rerun starts from a clean run directory.
+
+    The previous run's wp_*.tsv made pieces_done() read 146/146 from the
+    first second, and would have been pooled into summary_all for any piece
+    that crashed the second time.
+    """
+
+    def test_a_previous_runs_piece_files_are_cleared(self, tmp_path):
+        from run_submission import clear_piece_outputs
+
+        d = tmp_path / "run"
+        write_pieces(d, 3)
+        for name in ("gt_0.tsv", "0.json", "tracking_0.png"):
+            (d / name).write_text("")
+        (d / "metrics.json").write_text("{}")
+        assert clear_piece_outputs(d) == 6
+        assert sorted(f.name for f in d.iterdir()) == ["metrics.json"]
+
+    def test_the_log_is_written_while_the_child_runs(self, results, monkeypatch):
+        """tail -f must show this run, not the previous one until it ends."""
+        seen = {}
+
+        def fake_run(command, stdout, **kwargs):
+            seen["streamed"] = stdout.writable() and not stdout.closed
+            stdout.write("[1/2] piece\nboom\n")
+
+            class Done:
+                returncode = 1
+
+            return Done()
+
+        monkeypatch.setattr(R.subprocess, "run", fake_run)
+        record = R.run_one("arzt", "midi", "eval", [])
+        assert seen["streamed"]
+        assert (R.LOG_DIR / "arzt-midi.log").read_text() == "[1/2] piece\nboom\n"
+        assert record["tail"] == ["[1/2] piece", "boom"]
+
+
 class TestProgress:
     def test_it_reports_every_job(self, results):
         write_pieces(R.run_dir_for("arzt", "audio", "eval"), 10)

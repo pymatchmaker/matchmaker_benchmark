@@ -38,7 +38,6 @@ import os
 import signal
 import traceback
 import warnings
-from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Optional
@@ -47,7 +46,7 @@ import numpy as np
 from matchmaker.utils.eval import resolve_gt
 
 from eval import run_evaluation
-from utils import TOLERANCES_IN_BEATS, compute_event_pooled_summary
+from utils import TOLERANCES_IN_BEATS, dataset_summaries, pooled_summaries
 from verify_tracking import check_tracking, plot_tracking
 
 from matchmaker import Matchmaker
@@ -321,6 +320,24 @@ def fold_file_label(fold) -> str:
         return str(path)
 
 
+#: What a run writes per piece. A rerun removes these first: the pooled
+#: summary reads wp_/gt_ for every piece it selects, so a piece that crashes on
+#: the rerun would otherwise be scored on the previous run's path — and the
+#: progress count in run_references.py would read 146/146 from the first
+#: second. metrics.json stays until the run replaces it.
+PIECE_OUTPUTS = ("wp_*.tsv", "gt_*.tsv", "tracking_*.png", "[0-9]*.json")
+
+
+def clear_piece_outputs(run_dir: Path) -> int:
+    """Remove a previous run's per-piece files from ``run_dir``."""
+    removed = 0
+    for pattern in PIECE_OUTPUTS:
+        for path in run_dir.glob(pattern):
+            path.unlink()
+            removed += 1
+    return removed
+
+
 def evaluate_submission(
     directory: Optional[Path] = None,
     fold: str = "eval",
@@ -429,6 +446,7 @@ def evaluate_submission(
         )
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
+    stale = clear_piece_outputs(run_dir)
 
     shard_label = f" shard {shard + 1}/{num_shards}" if num_shards > 1 else ""
     print(
@@ -436,10 +454,11 @@ def evaluate_submission(
         f"method     : {method}\n"
         f"input type : {input_type}\n"
         f"fold       : {fold} ({len(pieces)}/{fold_size} pieces{shard_label})\n"
-        f"output     : {run_dir}\n"
+        f"output     : {run_dir}"
+        + (f" (cleared {stale} file(s) from a previous run)" if stale else "")
+        + "\n"
     )
 
-    results = defaultdict(list)
     piece_records, failures = [], []
 
     for position, (index, piece) in enumerate(indexed, 1):
@@ -471,15 +490,10 @@ def evaluate_submission(
             record.update({"tracked": False, "error": reason})
             piece_records.append(record)
             failures.append({"piece_id": piece.piece_id, "error": reason})
-            results["Index"].append(index)
-            results["tracked"].append(False)
             continue
 
         record.update(flat)
         piece_records.append(record)
-        results["Index"].append(index)
-        for key, value in flat.items():
-            results[key].append(value)
 
         no_tempo = estimated_bpm and not flat.get("used_estimated_bpm")
         print(
@@ -516,9 +530,6 @@ def evaluate_submission(
             f"python matchmaker_eval/make_folds.py --from-repo"
         )
 
-    summary_all = compute_event_pooled_summary(results, run_dir, tracked_only=False)
-    summary_tracked = compute_event_pooled_summary(results, run_dir, tracked_only=True)
-
     metrics = {
         "submission": name,
         "method": method,
@@ -549,8 +560,10 @@ def evaluate_submission(
         "n_tracked": n_tracked,
         "n_failed": len(failures),
         "failures": failures,
-        "summary_all": summary_all,
-        "summary_tracked": summary_tracked,
+        **pooled_summaries(piece_records, run_dir),
+        # The same counts and summaries once per dataset, so the leaderboard
+        # can show how an entry does on each without re-reading the paths.
+        "datasets": dataset_summaries(piece_records, run_dir),
         "pieces": piece_records,
     }
 

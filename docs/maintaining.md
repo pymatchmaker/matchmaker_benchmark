@@ -459,20 +459,37 @@ somewhere else.
 ## Publishing
 
 `.github/workflows/pages.yml` builds the site from `docs/` plus a copy of
-`results/leaderboard.json` and `results/details/`, and deploys it to GitHub
-Pages. It runs whenever the leaderboard changes.
+`results/leaderboard*.json`, the CSVs and `results/details/`, and deploys it to
+GitHub Pages. It runs whenever the leaderboard changes.
 
 ### What the site can show
 
 `results/leaderboard.json` is the index: one row per entry, small enough to load
-instantly however many entries accumulate. Everything heavier lives in
-`results/details/<entry>.json`, which the page fetches only when someone opens
-that row:
+instantly however many entries accumulate. Each row carries the headline columns
+once for the whole fold and again under `datasets`, once per dataset — a few
+hundred bytes each — so "how does it do on asap, at ≤ 0.5 beats" is answered by
+the index alone.
 
-* a per-dataset breakdown, pooled the same way the headline numbers are, so an
-  asap number means what the number above it means;
+The other pivot, "who is best on asap", is `results/leaderboard-<dataset>.json`
+and `.csv`: the same rows ranked within one dataset, with `overall_rank` kept so
+a rank over thirty pieces is never mistaken for one over the whole fold. They
+are cut from the same rows as the index, by the same script, so the two cannot
+disagree. The page links to the CSVs in its footer.
+
+Everything heavier lives in `results/details/<entry>.json`, which the page
+fetches only when someone opens that row:
+
+* every pooled metric — each tolerance, the moments, SPARC, RTF — for the
+  whole run and per dataset, both over the tracked pieces and over all of them.
+  The *By dataset* tab shows them as one table with a pooling toggle;
 * one row per piece, with its metrics and its tracked/lost verdict;
 * the alignment path and the ground truth for every piece.
+
+All of it is pooled by the one function that produces the headline row, in
+`run_submission.py` and `merge_shards.py`, and stored in the run's
+`metrics.json` under `summary_all`, `summary_tracked` and `datasets`.
+`leaderboard.py` and `export_details.py` only read and reshape it, so a number
+reported for one dataset means what the number above it means.
 
 ```bash
 python matchmaker_eval/export_details.py

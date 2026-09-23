@@ -171,29 +171,29 @@ def run_one(method: str, input_type: str, fold: str, extra: list) -> dict:
         fold,
         *extra,
     ]
-    started = time.monotonic()
-    completed = subprocess.run(
-        command,
-        cwd=REPO_ROOT,
-        env={**os.environ, **SINGLE_THREADED},
-        capture_output=True,
-        text=True,
-    )
-    elapsed = time.monotonic() - started
-
-    # Captured output is otherwise lost unless the run fails. Writing it out
-    # means a run in progress can be followed with `tail -f`.
+    # The child's output goes to a log file as it runs, so a run in progress
+    # can be followed with `tail -f`. Capturing it and writing at the end
+    # would leave the previous run's log in place until this one finished.
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     log = LOG_DIR / f"{method}-{input_type}.log"
-    log.write_text((completed.stdout or "") + (completed.stderr or ""))
+    started = time.monotonic()
+    with open(log, "w") as stream:
+        completed = subprocess.run(
+            command,
+            cwd=REPO_ROOT,
+            env={**os.environ, **SINGLE_THREADED},
+            stdout=stream,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+    elapsed = time.monotonic() - started
 
     record = {
         "method": method,
         "input_type": input_type,
         "seconds": elapsed,
         "returncode": completed.returncode,
-        "tail": completed.stderr.strip().splitlines()[-3:]
-        or completed.stdout.strip().splitlines()[-3:],
+        "tail": log.read_text().strip().splitlines()[-3:],
     }
     metrics_path = metrics_path_for(method, input_type, fold)
     if completed.returncode == 0 and metrics_path.exists():

@@ -1,5 +1,6 @@
 import csv
 import json
+from collections import defaultdict
 from pathlib import Path
 from typing import Optional
 
@@ -237,6 +238,60 @@ def compute_event_pooled_summary(
     summary["tracked_count"] = n_tracked
     summary["selected_count"] = len(selected_indices)
     return summary
+
+
+#: Per-piece timing columns the pooled summary averages piece-wise.
+TIMING_KEYS = ("rtf", "f_avg_latency", "i_avg_latency")
+
+
+def pooled_summaries(pieces: list, run_dir: Path) -> dict:
+    """Pool a run's metrics over every piece and over the tracked ones.
+
+    ``pieces`` are the per-piece records of a run — each with ``index``,
+    ``tracked`` and, when the piece ran, its timing columns. Returns the
+    ``summary_all`` / ``summary_tracked`` pair that ``metrics.json`` carries.
+
+    A piece that crashed has no timing columns; it is padded with NaN so the
+    columns stay aligned with ``Index`` and the piece-wise averages skip it.
+    """
+    results = defaultdict(list)
+    timing = [key for key in TIMING_KEYS if any(key in piece for piece in pieces)]
+    for piece in pieces:
+        results["Index"].append(piece["index"])
+        results["tracked"].append(bool(piece.get("tracked")))
+        for key in timing:
+            results[key].append(piece.get(key, float("nan")))
+    return {
+        "summary_all": compute_event_pooled_summary(
+            results, run_dir, tracked_only=False
+        ),
+        "summary_tracked": compute_event_pooled_summary(
+            results, run_dir, tracked_only=True
+        ),
+    }
+
+
+def dataset_summaries(pieces: list, run_dir: Path) -> dict:
+    """The same pooled summaries, once per dataset.
+
+    Each dataset's block has the shape of the run's own record — piece counts
+    plus ``summary_all`` and ``summary_tracked`` — and is computed by the same
+    function over that dataset's pieces alone, so a per-dataset number means
+    exactly what the number for the whole run means.
+    """
+    by_dataset = defaultdict(list)
+    for piece in pieces:
+        by_dataset[piece.get("dataset") or "unknown"].append(piece)
+
+    summaries = {}
+    for dataset, rows in sorted(by_dataset.items()):
+        summaries[dataset] = {
+            "n_pieces": len(rows),
+            "n_tracked": sum(1 for r in rows if r.get("tracked")),
+            "n_failed": sum(1 for r in rows if r.get("error")),
+            **pooled_summaries(rows, run_dir),
+        }
+    return summaries
 
 
 def save_results_to_csv(results: dict, save_path: str):

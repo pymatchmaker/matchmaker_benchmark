@@ -4,7 +4,8 @@
 
 Writes one file per evaluated entry to ``results/details/<entry>.json``:
 
-* a per-dataset breakdown, pooled the same way the headline numbers are;
+* the run's pooled summaries and the same per dataset, copied from its
+  ``metrics.json`` — every metric, not just the columns the main table shows;
 * one row per piece, with its metrics and its tracking verdict;
 * the alignment path and the ground truth for every piece, decimated to a fixed
   budget of points.
@@ -31,12 +32,11 @@ for _path in (_REPO_ROOT, _REPO_ROOT / "matchmaker_eval"):
 
 import argparse
 import json
-from collections import defaultdict
 
 import numpy as np
-from utils import compute_event_pooled_summary
 
 from matchmaker_eval.folds import LEADERBOARD_FOLD, REPO_ROOT
+from matchmaker_eval.leaderboard import without_nan
 
 SUBMISSION_RESULTS = REPO_ROOT / "results" / "submissions"
 DETAILS_DIR = REPO_ROOT / "results" / "details"
@@ -133,37 +133,19 @@ def read_path(path: Path) -> np.ndarray:
     return data if data.shape[1] >= 2 else np.empty((0, 2))
 
 
-def dataset_summaries(pieces: list, run_dir: Path) -> dict:
-    """Pool the metrics per dataset, using the same function as the headline.
+def summary_block(record: dict) -> dict:
+    """Piece counts and both pooled summaries, as one block.
 
-    Reported over tracked pieces only, exactly like the leaderboard, so a
-    per-dataset number means the same thing as the number above it.
+    The run's record and each entry of its ``datasets`` share this shape, so
+    the page can put the whole run and every dataset in one table.
     """
-    by_dataset = defaultdict(list)
-    for piece in pieces:
-        by_dataset[piece.get("dataset", "unknown")].append(piece)
-
-    summaries = {}
-    for dataset, rows in sorted(by_dataset.items()):
-        results = defaultdict(list)
-        for row in rows:
-            results["Index"].append(row["index"])
-            results["tracked"].append(bool(row.get("tracked")))
-            for key in ("rtf", "f_avg_latency", "i_avg_latency"):
-                if key in row:
-                    results[key].append(row[key])
-        tracked = compute_event_pooled_summary(results, run_dir, tracked_only=True)
-        summaries[dataset] = {
-            "n_pieces": len(rows),
-            "n_tracked": sum(1 for r in rows if r.get("tracked")),
-            "tracking_rate": round(
-                sum(1 for r in rows if r.get("tracked")) / len(rows), 4
-            ),
-            "beat": tracked.get("beat", {}),
-            "ms": tracked.get("ms", {}),
-            "rtf": tracked.get("rtf"),
-        }
-    return summaries
+    return {
+        "n_pieces": record.get("n_pieces"),
+        "n_tracked": record.get("n_tracked"),
+        "n_failed": record.get("n_failed"),
+        "summary_all": record.get("summary_all", {}),
+        "summary_tracked": record.get("summary_tracked", {}),
+    }
 
 
 def export(run_dir: Path, include_paths: bool = True) -> dict:
@@ -209,7 +191,14 @@ def export(run_dir: Path, include_paths: bool = True) -> dict:
         # Every metric the evaluation produced, in presentation order, so the
         # website can render the full table without knowing the metric set.
         "metrics": ordered_metrics(pieces[0]) if pieces else [],
-        "datasets": dataset_summaries(pieces, run_dir),
+        # Pooled over the whole run, and per dataset in the same shape. Both
+        # come from the run's own record, computed there by the one function
+        # that also produces the headline row.
+        "overall": summary_block(metrics),
+        "datasets": {
+            name: summary_block(block)
+            for name, block in sorted(metrics.get("datasets", {}).items())
+        },
         "pieces": detail_pieces,
     }
 
@@ -260,7 +249,7 @@ def main():
             continue
         detail = export(metrics_path.parent, include_paths=not args.no_paths)
         out = DETAILS_DIR / f"{detail['submission']}.json"
-        out.write_text(json.dumps(detail, separators=(",", ":")) + "\n")
+        out.write_text(json.dumps(without_nan(detail), separators=(",", ":")) + "\n")
         current.add(out.name)
         size = out.stat().st_size / 1e6
         print(

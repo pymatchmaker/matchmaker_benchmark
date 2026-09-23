@@ -15,7 +15,7 @@ dependencies:
   - pytorch==2.4.1
   - scipy==1.14.1
   - tqdm==4.66.5
-  - wandb==0.18
+  - wandb
   - pip
 
   - pip:
