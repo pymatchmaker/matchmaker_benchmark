@@ -31,7 +31,7 @@ def test_selected_rows_keep_metadata_ids(metadata, monkeypatch):
 
     monkeypatch.setattr(runner, "run_score_following", evaluate)
     result = runner.run_tests_and_eval_by_dataset(
-        "asap", AudioEvalConfig(method="softoltw", dataset="asap"),
+        "asap", AudioEvalConfig(method="arzt", dataset="asap"),
         metadata / "out", indices=[2, 3], save_plots=False,
         matchmaker_kwargs={"use_imm": False},
     )
@@ -44,7 +44,7 @@ def test_selected_rows_keep_metadata_ids(metadata, monkeypatch):
 def test_invalid_selection_fails(metadata, indices, workers):
     with pytest.raises(ValueError):
         runner.run_tests_and_eval_by_dataset(
-            "asap", AudioEvalConfig(method="softoltw", dataset="asap"),
+            "asap", AudioEvalConfig(method="arzt", dataset="asap"),
             metadata / "out", indices=indices, workers=workers,
         )
 
@@ -53,7 +53,7 @@ def test_incomplete_run_is_not_summarized(metadata, monkeypatch):
     monkeypatch.setattr(runner, "run_score_following",
                         lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("bad audio")))
     args = runner.build_parser().parse_args([
-        "--method", "softoltw", "--dataset", "asap", "--no-plots",
+        "--method", "arzt", "--dataset", "asap", "--no-plots",
         "--output-dir", str(metadata / "out"),
     ])
     with pytest.raises(RuntimeError, match="Incomplete evaluation: 0/3"):

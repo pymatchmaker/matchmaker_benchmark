@@ -42,7 +42,7 @@ name: Evaluate submissions
 on:
   push:
     # `branches:` cannot take a variable, so staging branches are listed here.
-    branches: [main, submissions, submission/soft-oltw]
+    branches: [main, submissions]
     paths:
       - "submissions/**"
       - "matchmaker_eval/**"
@@ -102,8 +102,6 @@ jobs:
           sub = '${{ github.event.inputs.submission }}'
           if sub == 'all':
               targets = [
-                  {'id': 'soft-oltw', 'type': 'submission', 'target': 'submissions/soft-oltw', 'input_type': 'audio'},
-                  {'id': 'softoltw_no_imm-audio', 'type': 'method', 'target': 'softoltw_no_imm', 'input_type': 'audio'},
                   {'id': 'arzt-audio', 'type': 'method', 'target': 'arzt', 'input_type': 'audio'},
                   {'id': 'arzt_tempo-audio', 'type': 'method', 'target': 'arzt_tempo', 'input_type': 'audio'},
                   {'id': 'skf-audio', 'type': 'method', 'target': 'skf', 'input_type': 'audio'},
@@ -116,10 +114,7 @@ jobs:
               else:
                   targets = [{'id': f'{sub}-audio', 'type': 'method', 'target': sub, 'input_type': 'audio'}]
           else:
-              targets = [
-                  {'id': 'soft-oltw', 'type': 'submission', 'target': 'submissions/soft-oltw', 'input_type': 'audio'},
-                  {'id': 'softoltw_no_imm-audio', 'type': 'method', 'target': 'softoltw_no_imm', 'input_type': 'audio'},
-              ]
+              targets = []
 
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f'targets={json.dumps(targets)}\n')

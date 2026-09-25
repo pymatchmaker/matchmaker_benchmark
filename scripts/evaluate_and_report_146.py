@@ -112,9 +112,7 @@ def load_benchmark_data(output_dir, methods):
                         pass
     return data
 
-def evaluate(output_dir, methods=None):
-    if methods is None:
-        methods = ["softoltw", "softoltw_no_imm"]
+def evaluate(output_dir, methods):
     
     data = load_benchmark_data(output_dir, methods)
     
@@ -166,7 +164,7 @@ def evaluate(output_dir, methods=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=str, required=True)
-    parser.add_argument("--methods", nargs="+", default=["softoltw", "softoltw_no_imm"])
+    parser.add_argument("--methods", nargs="+", required=True)
     parser.add_argument("--native", action="store_true", help="Read test_audio.py output in METHOD/DATASET directories and pool events")
     args = parser.parse_args()
     if args.native:
