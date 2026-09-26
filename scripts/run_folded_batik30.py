@@ -23,7 +23,7 @@ from verify_tracking import check_tracking  # noqa: E402
 
 
 def run_case(args):
-    case, method, out = args
+    case, method, out, kwargs = args
     from matchmaker import Matchmaker
     title = case['title']
     dest = Path(out) / title
@@ -35,7 +35,8 @@ def run_case(args):
             score, audio = data / row['xml_score'], data / row['audio_performance']
             start = time.perf_counter()
             mm = Matchmaker(score_file=score, performance_file=audio, method=method,
-                            input_type='audio', unfold_score=False, wait=False)
+                            input_type='audio', unfold_score=False, wait=False,
+                            kwargs=kwargs or None)
             setup_seconds = time.perf_counter() - start
             start = time.perf_counter()
             for _ in mm.run(verbose=False):
@@ -74,7 +75,10 @@ def main():
     parser.add_argument('--output-dir', required=True)
     parser.add_argument('--workers', type=int, default=2)
     parser.add_argument('--titles', nargs='*', help='subset of piece titles')
+    parser.add_argument('--kwargs', default='{}', help='JSON dict of method kwargs overrides (merged onto DEFAULT_KWARGS)')
     args = parser.parse_args()
+    from matchmaker.matchmaker import DEFAULT_KWARGS
+    kwargs = {**DEFAULT_KWARGS['audio'].get(args.method, {}), **json.loads(args.kwargs)}
     out = Path(args.output_dir)
     out.mkdir(parents=True, exist_ok=True)
     cases = json.loads((PROTOCOL / 'folded_cases.json').read_text())
@@ -82,7 +86,7 @@ def main():
         cases = [c for c in cases if c['title'] in args.titles]
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
         results = []
-        for r in pool.map(run_case, [(c, args.method, str(out)) for c in cases]):
+        for r in pool.map(run_case, [(c, args.method, str(out), kwargs) for c in cases]):
             results.append(r)
             print(json.dumps(r), flush=True)
     ok = [r for r in results if 'error' not in r]
