@@ -41,8 +41,10 @@ name: Evaluate submissions
 
 on:
   push:
-    # `branches:` cannot take a variable, so staging branches are listed here.
-    branches: [main, submissions]
+    # `submissions` only, as on the leaderboard branch: a full evaluation runs many
+    # shards on the organisation's Actions minutes, so pushes to `main` must not
+    # start one. `branches:` cannot take a variable, so the branch is named here.
+    branches: [submissions]
     paths:
       - "submissions/**"
       - "matchmaker_eval/**"
