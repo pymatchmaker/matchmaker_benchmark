@@ -1,4 +1,6 @@
 import argparse
+from concurrent.futures import ProcessPoolExecutor
+from functools import partial
 import json
 import sys
 from collections import defaultdict
@@ -100,6 +102,8 @@ def run_tests_and_eval_by_dataset(
     granularity: str = "note",
     matchmaker_kwargs: Optional[dict] = None,
     save_plots: bool = True,
+    indices: Optional[list] = None,
+    workers: int = 1,
 ):
     if run_dir is None and not dry_run:
         raise ValueError("run_dir must be provided if not dry_run")
@@ -111,6 +115,25 @@ def run_tests_and_eval_by_dataset(
     metadata.columns = metadata.columns.str.strip()
     str_cols = metadata.select_dtypes(include=["object"]).columns
     metadata[str_cols] = metadata[str_cols].apply(lambda x: x.str.strip())
+    if workers < 1:
+        raise ValueError("workers must be positive")
+    if indices is not None and (
+        len(set(indices)) != len(indices)
+        or any(i < 1 or i > len(metadata) for i in indices)
+    ):
+        raise ValueError("indices must be distinct one-based metadata rows")
+    if workers > 1:
+        selected = indices if indices is not None else list(range(1, len(metadata) + 1))
+        run_piece = partial(
+            run_tests_and_eval_by_dataset, dataset_type, config, run_dir,
+            dry_run, granularity, matchmaker_kwargs, save_plots,
+        )
+        results = defaultdict(list)
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            for piece in pool.map(run_piece, ([i] for i in selected)):
+                for key, values in piece.items():
+                    results[key].extend(values)
+        return results
     is_valid_dataset = dataset_type in ("valid", "example")
     if not is_valid_dataset:
         tempo_metadata_fn = TEMPO_METADATA_PATH / f"{dataset_type}_tempo_estimates.csv"
@@ -118,6 +141,8 @@ def run_tests_and_eval_by_dataset(
     
     results = defaultdict(list)
     for i, row in enumerate(metadata.itertuples(), 1):
+        if indices is not None and i not in indices:
+            continue
         print(row)
         # Handle validation dataset with mixed sources
         if is_valid_dataset:
@@ -238,7 +263,7 @@ def main(args):
     use_wandb = args.wandb
     granularity = args.granularity or "note"
 
-    matchmaker_kwargs = None
+    matchmaker_kwargs = json.loads(args.kwargs) if args.kwargs else None
 
     if args.sweep:
         method = wandb.config.get("method", method)
@@ -247,11 +272,7 @@ def main(args):
 
     # Report the rates the run will actually use: the method's defaults from
     # matchmaker's spec, overridden by the sweep config when there is one.
-    kw = (
-        matchmaker_kwargs
-        if matchmaker_kwargs is not None
-        else default_kwargs("audio", method)
-    )
+    kw = {**default_kwargs("audio", method), **(matchmaker_kwargs or {})}
     config = AudioEvalConfig(
         method=method,
         dataset=dataset_type,
@@ -267,7 +288,11 @@ def main(args):
             save_dir = OUTPUT_DIR / f"sweep_{config.method}_{ts}_{wandb.run.id}"
         else:
             save_dir = OUTPUT_DIR / f"test_{ts}_aud_{config.method}_{config.dataset}"
+        if args.output_dir:
+            save_dir = Path(args.output_dir)
         save_dir.mkdir(parents=True, exist_ok=True)
+        with (save_dir / "method_kwargs.json").open("w") as f:
+            json.dump({**default_kwargs("audio", method), **(matchmaker_kwargs or {})}, f, indent=2)
 
     run_dir = save_dir if not dry_run else None
     results = run_tests_and_eval_by_dataset(
@@ -278,6 +303,8 @@ def main(args):
         granularity,
         matchmaker_kwargs=matchmaker_kwargs,
         save_plots=not args.sweep and not args.no_plots,
+        indices=args.indices,
+        workers=args.workers,
     )
 
     if not dry_run:
@@ -287,6 +314,18 @@ def main(args):
         save_results_to_csv(
             results, save_path=(run_dir / f"test_results.tsv").as_posix()
         )
+
+        expected = len(args.indices) if args.indices is not None else len(
+            pd.read_csv(METADATA_PATH[config.dataset])
+        )
+        completed = len(results.get("Index", []))
+        with (run_dir / "completion.json").open("w") as f:
+            json.dump({"expected": expected, "completed": completed,
+                       "complete": completed == expected}, f, indent=2)
+        if completed != expected:
+            raise RuntimeError(
+                f"Incomplete evaluation: {completed}/{expected}; inspect the log"
+            )
 
         # Compute event-wise pooled summary (both all and tracked-only)
         summary_all = compute_event_pooled_summary(results, run_dir, tracked_only=False)
@@ -356,6 +395,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="skip saving per-piece plots (faster evaluation)",
         default=False,
     )
+    parser.add_argument("--workers", type=int, default=1, help="Parallel piece evaluations")
+    parser.add_argument("--indices", type=int, nargs="+", help="One-based metadata rows")
+    parser.add_argument("--kwargs", help="JSON overrides for method defaults")
+    parser.add_argument("--output-dir", help="Explicit result directory")
     return parser
 
 
