@@ -95,9 +95,15 @@ def dataset_root(dataset: str) -> Path:
     return repo_style
 
 
+#: Audio-only corpora of the data repository (``annotations/`` TSV ground truth,
+#: no performance MIDI). No leaderboard fold uses them; ``beyond_piano.csv``
+#: does.
+BEYOND_PIANO_DATASETS = ("chorale", "kraisler", "urmp", "winterreise")
+
 #: Kept for callers that want the mapping eagerly; prefer ``dataset_root()``.
 DATASET_ROOTS = {
-    name: dataset_root(name) for name in (*LEGACY_DIRS, "local")
+    name: dataset_root(name)
+    for name in (*LEGACY_DIRS, *BEYOND_PIANO_DATASETS, "local")
 }
 
 FOLD_COLUMNS = [
