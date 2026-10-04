@@ -16,7 +16,7 @@ keeping the longest increasing subsequence. The three mixes of a piece share one
 file. Writes ``<out-dir>/<k>.tsv`` (perf_sec, score_beat)::
 
     python matchmaker_eval/build_kraisler_gt.py --kraisler-dir ~/data/KRAISLER \\
-        --out-dir <data repo>/kraisler/annotations_note
+        --out-dir <data repo>/kraisler/annotations
 """
 
 import argparse
