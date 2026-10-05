@@ -55,16 +55,23 @@ from matchmaker_eval.folds import load_fold
 SCORE_LOADER = {"midi": "pthmm", "audio": "arzt"}
 
 
+_SCORE_PARTS: dict = {}
+
+
 def score_part(piece, input_type: str):
-    mm = Matchmaker(
-        score_file=str(piece.score_path),
-        performance_file=str(piece.performance_path(input_type)),
-        input_type=input_type,
-        method=SCORE_LOADER[input_type],
-        wait=False,
-        unfold_score=True,
-    )
-    return mm.score_part
+    """The unfolded score part a run of this piece aligns to, loaded once per score."""
+    key = (str(piece.score_path), input_type)
+    if key not in _SCORE_PARTS:
+        mm = Matchmaker(
+            score_file=str(piece.score_path),
+            performance_file=str(piece.performance_path(input_type)),
+            input_type=input_type,
+            method=SCORE_LOADER[input_type],
+            wait=False,
+            unfold_score=True,
+        )
+        _SCORE_PARTS[key] = mm.score_part
+    return _SCORE_PARTS[key]
 
 
 def rescore_piece(record: dict, piece, input_type: str, src: Path, dst: Path) -> dict:
