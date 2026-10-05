@@ -9,7 +9,8 @@ repeated: its ``wp_<i>.tsv`` paths are scored again by the same code
     python matchmaker_eval/rescore.py output/old/arzt-midi --output output/new/arzt-midi
 
 Timing columns (RTF, latency) cannot be measured again from a path and are
-carried over from the original records. The score is loaded by constructing
+carried over from the original records. The pieces and their ground truth come
+from the current fold CSV, whose hash replaces the original ``fold_sha256``. The score is loaded by constructing
 ``Matchmaker`` exactly as a run does, so the GT is joined to the same unfolded
 note array.
 """
@@ -36,6 +37,7 @@ from run_submission import (
     TRACKING_THRESHOLD,
     environment_info,
     flatten_metrics,
+    sha256_of,
 )
 from utils import (
     TIMING_KEYS,
@@ -48,7 +50,7 @@ from utils import (
 )
 from verify_tracking import check_tracking
 
-from matchmaker_eval.folds import load_fold
+from matchmaker_eval.folds import fold_path, load_fold
 
 #: Any MIDI method will do: only the score loading is used, and it does not
 #: depend on the method.
@@ -148,7 +150,9 @@ def rescore_run(src: Path, dst: Path) -> dict:
                 "run_dir": str(src),
                 "timestamp": metrics.get("timestamp"),
                 "environment": metrics.get("environment"),
+                "fold_sha256": metrics.get("fold_sha256"),
             },
+            "fold_sha256": sha256_of(fold_path(metrics["fold"])),
             "environment": environment_info(),
             "n_tracked": sum(1 for r in records if r.get("tracked")),
             **pooled_summaries(records, dst),
