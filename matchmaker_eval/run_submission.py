@@ -47,7 +47,7 @@ from matchmaker.utils.eval import resolve_gt
 
 from eval import run_evaluation
 from utils import TOLERANCES_IN_BEATS, dataset_summaries, pooled_summaries
-from verify_tracking import check_tracking, plot_tracking
+from verify_tracking import check_tracking, in_musical_beats, musical_beat_converter, plot_tracking
 
 from matchmaker import Matchmaker
 from matchmaker.base import OnlineAlignment
@@ -275,9 +275,11 @@ def run_piece(
     # alignment_path row 0 is already absolute performance seconds.
     wp_sec = np.stack([wp[0].astype(float), wp[1].astype(float)]).T
     threshold = TRACKING_THRESHOLD[input_type]
+    # the tracking criterion is judged in musical beats; precision stays in score beats
+    to_musical = musical_beat_converter(mm.score_part)
     tracking = check_tracking(
-        wp_sec,
-        gt,
+        in_musical_beats(wp_sec, to_musical),
+        in_musical_beats(gt, to_musical),
         segment_duration=SEGMENT_DURATION,
         threshold=threshold,
     )

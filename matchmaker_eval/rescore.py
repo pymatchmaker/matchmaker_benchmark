@@ -46,7 +46,7 @@ from utils import (
     pooled_summaries,
     save_nparray_to_csv,
 )
-from verify_tracking import check_tracking
+from verify_tracking import check_tracking, in_musical_beats, musical_beat_converter
 
 from matchmaker_eval.folds import load_fold
 
@@ -55,7 +55,7 @@ from matchmaker_eval.folds import load_fold
 SCORE_LOADER = {"midi": "pthmm", "audio": "arzt"}
 
 
-def score_notes(piece, input_type: str):
+def score_part(piece, input_type: str):
     mm = Matchmaker(
         score_file=str(piece.score_path),
         performance_file=str(piece.performance_path(input_type)),
@@ -64,7 +64,7 @@ def score_notes(piece, input_type: str):
         wait=False,
         unfold_score=True,
     )
-    return mm.score_part.note_array()
+    return mm.score_part
 
 
 def rescore_piece(record: dict, piece, input_type: str, src: Path, dst: Path) -> dict:
@@ -73,7 +73,8 @@ def rescore_piece(record: dict, piece, input_type: str, src: Path, dst: Path) ->
     shutil.copyfile(src / f"wp_{index}.tsv", dst / f"wp_{index}.tsv")
     perf_sec, score_beat = wp[:, 0], wp[:, 1]
 
-    gt_perf, gt_beat = resolve_gt(piece.match_path, score_notes(piece, input_type))
+    part = score_part(piece, input_type)
+    gt_perf, gt_beat = resolve_gt(piece.match_path, part.note_array())
     save_nparray_to_csv(
         np.column_stack([gt_perf, gt_beat]),
         (dst / f"gt_{index}.tsv").as_posix(),
@@ -93,9 +94,11 @@ def rescore_piece(record: dict, piece, input_type: str, src: Path, dst: Path) ->
         if key in old:
             nested[key] = old[key]
     nested["sparc"] = compute_sparc(score_beat, perf_sec)
+    # the tracking criterion is judged in musical beats; precision stays in score beats
+    to_musical = musical_beat_converter(part)
     tracking = check_tracking(
-        wp,
-        np.column_stack([gt_perf, gt_beat]),
+        in_musical_beats(wp, to_musical),
+        in_musical_beats(np.column_stack([gt_perf, gt_beat]), to_musical),
         segment_duration=SEGMENT_DURATION,
         threshold=TRACKING_THRESHOLD[input_type],
     )
