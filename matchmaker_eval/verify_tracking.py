@@ -36,20 +36,16 @@ def musical_beat_converter(score_part):
     the same deviation threshold is stricter in compound meters. The tracking
     criterion is applied in musical beats instead (a dotted quarter in 6/8 and
     12/8, a bar in 3/8; simple meters are unchanged). The map is built from the
-    note onsets of ``score_part``, so time-signature changes are followed; the
-    part is switched to musical beats only while they are read and is left in
-    notated beats. Positions between onsets are interpolated and positions
-    beyond them extrapolated at the end slopes.
+    note onsets of a copy of ``score_part``, so time-signature changes are
+    followed and the part itself is left as it is; positions between onsets are
+    interpolated and positions beyond them extrapolated at the end slopes.
     """
-    notated = score_part.note_array()["onset_beat"].astype(float)
-    if score_part._use_musical_beat:  # already musical: nothing to convert
-        musical = notated.copy()
-    else:
-        score_part.use_musical_beat()
-        try:
-            musical = score_part.note_array()["onset_beat"].astype(float)
-        finally:
-            score_part.use_notated_beat()
+    import copy
+
+    part = copy.deepcopy(score_part)
+    notated = part.note_array()["onset_beat"].astype(float)
+    part.use_musical_beat()
+    musical = part.note_array()["onset_beat"].astype(float)
     order = np.argsort(notated, kind="stable")
     notated, idx = np.unique(notated[order], return_index=True)
     musical = musical[order][idx]
