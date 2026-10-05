@@ -29,47 +29,6 @@ BEAT_ERROR_THRESHOLD = 1.0  # threshold for window median beat error (beats)
 SEGMENT_DURATION = 30.0  # window duration (seconds)
 
 
-def musical_beat_converter(score_part):
-    """Map score beats to musical beats for the tracking criterion.
-
-    Score beats follow the time signature's denominator (an eighth in 6/8), so
-    the same deviation threshold is stricter in compound meters. The tracking
-    criterion is applied in musical beats instead (a dotted quarter in 6/8 and
-    12/8, a bar in 3/8; simple meters are unchanged). The map is built from the
-    note onsets of a copy of ``score_part``, so time-signature changes are
-    followed and the part itself is left as it is; positions between onsets are
-    interpolated and positions beyond them extrapolated at the end slopes.
-    """
-    import copy
-
-    part = copy.deepcopy(score_part)
-    notated = part.note_array()["onset_beat"].astype(float)
-    part.use_musical_beat()
-    musical = part.note_array()["onset_beat"].astype(float)
-    order = np.argsort(notated, kind="stable")
-    notated, idx = np.unique(notated[order], return_index=True)
-    musical = musical[order][idx]
-
-    def convert(beats):
-        beats = np.asarray(beats, dtype=float)
-        if len(notated) < 2:
-            return beats.copy()
-        out = np.interp(beats, notated, musical)
-        lo, hi = beats < notated[0], beats > notated[-1]
-        out[lo] = musical[0] + (beats[lo] - notated[0]) * (musical[1] - musical[0]) / (notated[1] - notated[0])
-        out[hi] = musical[-1] + (beats[hi] - notated[-1]) * (musical[-1] - musical[-2]) / (notated[-1] - notated[-2])
-        return out
-
-    return convert
-
-
-def in_musical_beats(path: np.ndarray, convert) -> np.ndarray:
-    """An (N, 2) array of (perf_sec, score_beat) with its beats converted."""
-    path = np.array(path, dtype=float, copy=True)
-    path[:, 1] = convert(path[:, 1])
-    return path
-
-
 def _onset_wise_window_profile(
     times: np.ndarray,
     errors: np.ndarray,

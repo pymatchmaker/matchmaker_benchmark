@@ -46,7 +46,7 @@ from utils import (
     pooled_summaries,
     save_nparray_to_csv,
 )
-from verify_tracking import check_tracking, in_musical_beats, musical_beat_converter
+from verify_tracking import check_tracking
 
 from matchmaker_eval.folds import load_fold
 
@@ -80,8 +80,7 @@ def rescore_piece(record: dict, piece, input_type: str, src: Path, dst: Path) ->
     shutil.copyfile(src / f"wp_{index}.tsv", dst / f"wp_{index}.tsv")
     perf_sec, score_beat = wp[:, 0], wp[:, 1]
 
-    part = score_part(piece, input_type)
-    gt_perf, gt_beat = resolve_gt(piece.match_path, part.note_array())
+    gt_perf, gt_beat = resolve_gt(piece.match_path, score_part(piece, input_type).note_array())
     save_nparray_to_csv(
         np.column_stack([gt_perf, gt_beat]),
         (dst / f"gt_{index}.tsv").as_posix(),
@@ -101,11 +100,9 @@ def rescore_piece(record: dict, piece, input_type: str, src: Path, dst: Path) ->
         if key in old:
             nested[key] = old[key]
     nested["sparc"] = compute_sparc(score_beat, perf_sec)
-    # the tracking criterion is judged in musical beats; precision stays in score beats
-    to_musical = musical_beat_converter(part)
     tracking = check_tracking(
-        in_musical_beats(wp, to_musical),
-        in_musical_beats(np.column_stack([gt_perf, gt_beat]), to_musical),
+        wp,
+        np.column_stack([gt_perf, gt_beat]),
         segment_duration=SEGMENT_DURATION,
         threshold=TRACKING_THRESHOLD[input_type],
     )
