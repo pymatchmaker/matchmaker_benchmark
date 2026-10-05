@@ -1,0 +1,277 @@
+# Evaluate matchmaker's built-in methods on GitHub's runners.
+#
+# The reference rows are what a submission is trying to beat, so they have to be
+# measured the way submissions are measured. Until this workflow existed they
+# were produced by run_references.py on whoever's laptop was free, which made
+# them a different kind of measurement from the rows they are compared against:
+# different CPU, different thread count, different corpus on disk.
+#
+# Everything here mirrors evaluate.yml - the same data checkout, the same
+# eight-way round-robin sharding, the same merge and the same leaderboard
+# rebuild. The only difference is that it fans out over every described method
+# instead of one submission.
+#
+# Which methods run comes from data/builtin_methods.yaml: a method matchmaker
+# has but nobody has described yet is not a leaderboard row, so it is not run.
+#
+#   Actions -> Evaluate references -> Run workflow
+#     input_type: both      shards: 8
+#
+# 15 described entries x 8 shards is 120 jobs. They queue against the account's
+# concurrency limit rather than all starting at once, so expect this to take a
+# while; that is the price of every row being measured the same way.
+name: Evaluate references
+
+on:
+  workflow_dispatch:
+    inputs:
+      input_type:
+        description: "Which references to run"
+        required: false
+        default: both
+        type: choice
+        options: [both, midi, audio]
+      only:
+        description: "Space-separated method names (empty = all described)"
+        required: false
+        default: ""
+      fold:
+        description: "Fold to evaluate on"
+        required: false
+        default: eval
+      shards:
+        description: "How many shards per method"
+        required: false
+        default: "8"
+
+permissions:
+  contents: write
+
+concurrency:
+  # Shares evaluate.yml's group: both commit results/, and two at once would
+  # race on the leaderboard.
+  group: evaluate
+  cancel-in-progress: false
+
+env:
+  FOLD: ${{ github.event.inputs.fold || 'eval' }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      jobs: ${{ steps.plan.outputs.jobs }}
+      count: ${{ steps.plan.outputs.count }}
+      data_repo: ${{ steps.source.outputs.data_repo }}
+      data_branch: ${{ steps.source.outputs.branch }}
+      num_shards: ${{ steps.plan.outputs.num_shards }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Work out which references to run
+        id: plan
+        run: |
+          pip install --quiet pyyaml
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, yaml
+          described = yaml.safe_load(
+              open("data/builtin_methods.yaml").read()
+          ) or {}
+          wanted = os.environ["INPUT_TYPE"]
+          types = ("midi", "audio") if wanted == "both" else (wanted,)
+          only = [m for m in os.environ["ONLY"].split() if m]
+          n = int(os.environ["SHARDS"])
+
+          jobs = [
+              {"method": method, "input_type": t, "shard": s}
+              for t in types
+              for method in sorted(described.get(t) or {})
+              if not only or method in only
+              for s in range(n)
+          ]
+          print(f"jobs={json.dumps(jobs)}")
+          print(f"count={len(jobs)}")
+          print(f"num_shards={n}")
+          PY
+        env:
+          INPUT_TYPE: ${{ github.event.inputs.input_type || 'both' }}
+          ONLY: ${{ github.event.inputs.only }}
+          SHARDS: ${{ github.event.inputs.shards || '8' }}
+
+      - name: Locate this fold's data
+        id: source
+        run: |
+          eval "$(python matchmaker_eval/fetch_data.py --source --fold "$FOLD")"
+          echo "data_repo=${owner}/${repo}" >> "$GITHUB_OUTPUT"
+          echo "branch=${branch}" >> "$GITHUB_OUTPUT"
+          echo "Fold ${FOLD} reads ${owner}/${repo}@${branch}"
+
+      - name: Report the plan
+        run: |
+          echo "${{ steps.plan.outputs.count }} shard job(s) to run"
+
+  evaluate:
+    needs: plan
+    if: needs.plan.outputs.count != '0'
+    runs-on: ${{ vars.BENCHMARK_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false  # one bad method should not discard the others
+      max-parallel: 12
+      matrix:
+        job: ${{ fromJSON(needs.plan.outputs.jobs) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install system libraries
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fluidsynth libsndfile1 ffmpeg
+
+      - name: Install the benchmark environment
+        run: |
+          python -m pip install --upgrade pip
+          # TEMPORARY pin. matchmaker_eval/methods.py reads the method
+          # spec from matchmaker.registry, which is on this branch and
+          # not yet on matchmaker's main. Revert to @main once merged.
+          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@feature/clean_method_registration"
+          pip install pyyaml pydantic-settings
+
+      - name: Check out the benchmark data
+        if: vars.MATCHMAKER_DATA_DIR == ''
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ needs.plan.outputs.data_repo }}
+          ref: ${{ needs.plan.outputs.data_branch }}
+          token: ${{ secrets.MATCHMAKER_DATA_TOKEN || github.token }}
+          path: benchmark-data
+          persist-credentials: false
+
+      - name: Point the benchmark at the data
+        run: |
+          if [ -n "${{ vars.MATCHMAKER_DATA_DIR }}" ]; then
+            echo "MATCHMAKER_DATA_DIR=${{ vars.MATCHMAKER_DATA_DIR }}" >> "$GITHUB_ENV"
+          else
+            echo "MATCHMAKER_DATA_DIR=${{ github.workspace }}/benchmark-data" >> "$GITHUB_ENV"
+          fi
+
+      - name: Check this shard's files are all present
+        id: verify
+        continue-on-error: true
+        run: |
+          python matchmaker_eval/fetch_data.py --verify \
+            --fold "$FOLD" \
+            --input-type "${{ matrix.job.input_type }}" \
+            --shard ${{ matrix.job.shard }} \
+            --num-shards ${{ needs.plan.outputs.num_shards }}
+
+      - name: Fetch anything the checkout did not provide
+        if: steps.verify.outcome == 'failure'
+        env:
+          MATCHMAKER_DATA_TOKEN: ${{ secrets.MATCHMAKER_DATA_TOKEN }}
+        run: |
+          echo "::notice::the checkout was incomplete; fetching the rest"
+          python matchmaker_eval/fetch_data.py \
+            --fold "$FOLD" \
+            --input-type "${{ matrix.job.input_type }}" \
+            --shard ${{ matrix.job.shard }} \
+            --num-shards ${{ needs.plan.outputs.num_shards }}
+
+      - name: Confirm the data is complete
+        if: steps.verify.outcome == 'failure'
+        run: |
+          python matchmaker_eval/fetch_data.py --verify \
+            --fold "$FOLD" \
+            --input-type "${{ matrix.job.input_type }}" \
+            --shard ${{ matrix.job.shard }} \
+            --num-shards ${{ needs.plan.outputs.num_shards }}
+
+      - name: Run the shard
+        # Pinned to one BLAS thread so a runner's core count cannot change what
+        # the timing columns report between one reference and the next.
+        env:
+          OMP_NUM_THREADS: "1"
+          OPENBLAS_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
+          NUMEXPR_NUM_THREADS: "1"
+        run: |
+          python matchmaker_eval/run_submission.py \
+            --method "${{ matrix.job.method }}" \
+            --input-type "${{ matrix.job.input_type }}" \
+            --fold "$FOLD" \
+            --shard ${{ matrix.job.shard }} \
+            --num-shards ${{ needs.plan.outputs.num_shards }} \
+            --output "results/shards/current"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: refshard-${{ matrix.job.method }}-${{ matrix.job.input_type }}-${{ matrix.job.shard }}
+          path: results/shards/current
+          retention-days: 14
+
+  merge:
+    needs: [plan, evaluate]
+    if: always() && needs.plan.outputs.count != '0'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install what the merge needs
+        run: |
+          pip install --quiet "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@feature/clean_method_registration"
+          pip install --quiet pyyaml pydantic-settings
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: refshard-*
+          path: results/refshards
+
+      - name: Merge each reference
+        # One run produces shards for many entries; this regroups them by entry
+        # and merges each separately. An entry missing shards stays partial and
+        # off the leaderboard.
+        run: python matchmaker_eval/merge_references.py results/refshards
+
+      - name: Export the per-piece detail
+        run: python matchmaker_eval/export_details.py
+
+      - name: Rebuild the leaderboard
+        run: python matchmaker_eval/leaderboard.py
+
+      - name: Assemble the site for review
+        run: python matchmaker_eval/build_site.py _site
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: leaderboard-site
+          path: _site
+          retention-days: 14
+
+      - name: Commit the results
+        run: |
+          git config user.name "matchmaker-benchmark[bot]"
+          git config user.email "actions@github.com"
+          git add results/
+          if git diff --cached --quiet; then
+            echo "Leaderboard unchanged."
+            exit 0
+          fi
+          git commit -m "benchmark: evaluate references on the ${{ env.FOLD }} fold
+
+          Run ${{ github.run_id }}, ${{ needs.plan.outputs.count }} shard jobs."
+          git pull --rebase --autostash
+          git push

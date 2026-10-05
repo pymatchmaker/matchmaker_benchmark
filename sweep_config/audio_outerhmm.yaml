@@ -4,6 +4,8 @@ command:
   - python
   - ${program}
   - --sweep
+entity: matchmaker
+project: audio-outerhmm-sweep
 name: audio-outerhmm
 method: bayes
 

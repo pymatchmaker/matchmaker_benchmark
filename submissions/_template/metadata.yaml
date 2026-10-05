@@ -1,0 +1,27 @@
+# Required -----------------------------------------------------------------
+name: My Score Follower              # shown on the leaderboard
+authors:
+  - Your Name
+input_type: midi                     # "midi" or "audio" — must match solution.py
+description: >
+  One or two sentences: what the follower does and what is new about it.
+
+# Required declaration. By setting this to true you state that the eval fold
+# was not used to develop, tune, select or validate this submission.
+# Read docs/eval-protocol.md before you set it.
+eval_fold_untouched: true
+
+# Optional -----------------------------------------------------------------
+affiliation: Your Institution
+contact: you@example.org             # or an issue/discussion link
+url: https://github.com/you/your-repo
+license: Apache-2.0
+tuned_on: [valid]                   # which folds you tuned on
+# Set true only if your follower is given the performance's measured tempo.
+# The default is that a tracker knows nothing about the performance; a run that
+# uses the tempo is marked with an asterisk on the leaderboard.
+# estimated_bpm: false
+external_data: none                  # any data used beyond this benchmark
+notes: >
+  Anything a maintainer should know: expected runtime, hardware assumptions,
+  known failure modes.

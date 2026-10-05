@@ -1,3 +1,19 @@
+NOTE ON BUNDLED DATA
+====================
+
+This Apache-2.0 licence covers the software in this repository: the evaluation
+code, the fold definitions, the workflows and the leaderboard.
+
+It does NOT cover the example performance committed under `resources/`. That
+material comes from the (n)ASAP and MAESTRO datasets and is licensed
+CC BY-NC-SA 4.0 — attribution, non-commercial use and share-alike apply. See
+`resources/ATTRIBUTION.md`.
+
+The evaluation corpora themselves are not in this repository; they live in
+`matchmaker-benchmark-data`, which carries its own per-dataset licences.
+
+----------------------------------------------------------------------------
+
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/

@@ -181,3 +181,25 @@ plots/
 reports/
 *exports/
 scripts/
+
+# The top-level results/ directory is the published benchmark record, so it is
+# tracked. `*results/` above would otherwise swallow it, and git cannot
+# re-include a file whose parent directory is excluded — hence the explicit
+# un-ignore of the directory before its contents are filtered.
+!/results/
+/results/*
+!/results/leaderboard.json
+!/results/leaderboard.csv
+!/results/submissions/
+!/results/details/
+# Per-submission runs: keep the metrics record, drop the reproducible bulk
+# (alignment paths and plots, ~8 MB per submission per fold). Those are
+# published as workflow artifacts instead.
+/results/submissions/*/*
+!/results/submissions/*/metrics.json
+
+# Assembled leaderboard site (matchmaker_eval/build_site.py)
+_site/
+
+# Per-method output from run_references.py
+results/logs/

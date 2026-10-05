@@ -35,14 +35,30 @@ from utils import (
     TOLERANCES_IN_BEATS,
     TOLERANCES_IN_MS,
     AudioEvalConfig,
+    compute_sparc,
     save_debug_results,
 )
 from verify_tracking import check_tracking, plot_tracking
 
-
 # ---------------------------------------------------------------------------
 # Evaluation against ground truth (post-processing of a completed Matchmaker run)
 # ---------------------------------------------------------------------------
+
+
+def latency_stats(mm) -> dict:
+    """Per-frame latency, when the follower reports it.
+
+    ``latency_stats`` is not part of the ``OnlineAlignment`` contract — the
+    built-in audio followers each maintain their own, and a submission written
+    to the documented base class has none. It is a nice-to-have measurement, so
+    a follower without it is evaluated on everything else rather than failing.
+    """
+    if mm.input_type != "audio":
+        return {}
+    try:
+        return mm.get_latency_stats()
+    except (AttributeError, ZeroDivisionError, KeyError, TypeError):
+        return {}
 
 
 def run_evaluation(
@@ -113,8 +129,8 @@ def run_evaluation(
                     f"{mm.alignment_duration / perf_duration:.4f}"
                 )
 
-    if mm.input_type == "audio":
-        eval_results.update(mm.get_latency_stats())
+    eval_results.update(latency_stats(mm))
+    eval_results["sparc"] = compute_sparc(score_beat, perf_sec)
 
     if debug and save_dir is not None:
         wp_sec = np.array([perf_sec, score_beat])
@@ -244,9 +260,9 @@ def run_score_following(
     tempo: Optional[float] = 120.0,
 ) -> dict:
     """Run score following via Matchmaker (audio or MIDI methods)."""
-    from matchmaker import DEFAULT_KWARGS as _MM_DEFAULTS
+    from methods import default_kwargs
 
-    mm_kwargs = dict(_MM_DEFAULTS.get(input_type, {}).get(config.method, {}))
+    mm_kwargs = default_kwargs(input_type, config.method)
     if input_type == "audio":
         mm_kwargs["sample_rate"] = config.sample_rate
         mm_kwargs["frame_rate"] = config.frame_rate
@@ -450,11 +466,16 @@ def run_offline_alignment(
     predicted = transfer_offline_positions(wp, perf_annots, config.frame_rate)
     predicted_beats = np.interp(predicted, score_annots, score_beats)
     beat_res = get_evaluation_results(
-        score_beats, predicted_beats, total_counts=len(score_beats),
-        tolerances=TOLERANCES_IN_BEATS, in_seconds=False,
+        score_beats,
+        predicted_beats,
+        total_counts=len(score_beats),
+        tolerances=TOLERANCES_IN_BEATS,
+        in_seconds=False,
     )
     ms_res = get_evaluation_results(
-        score_annots, predicted, total_counts=len(score_annots),
+        score_annots,
+        predicted,
+        total_counts=len(score_annots),
         tolerances=TOLERANCES_IN_MS,
     )
     results = {f"beat_{k}": v for k, v in beat_res.items()}

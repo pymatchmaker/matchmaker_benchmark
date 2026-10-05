@@ -1,0 +1,1436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matchmaker Leaderboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+  /* Light palette — the complete token set. Neutrals carry a slight green
+     bias so they sit with the spruce accent instead of fighting it. */
+  :root {
+    --paper:      #f4f5f3;
+    --surface:    #ffffff;
+    --surface-2:  #eceeea;
+    --ink:        #14181a;
+    --ink-soft:   #4a534e;
+    --ink-mute:   #79837d;
+    --rule:       #d9ddd7;
+    --rule-firm:  #b9c0b8;
+    --accent:     #1f6b4f;
+    --accent-dim: #dfe9e3;
+    --warn:       #b4762a;
+    --crit:       #a33b32;
+    --shadow:     0 1px 2px rgba(20, 24, 26, .05), 0 8px 24px -16px rgba(20, 24, 26, .25);
+
+    --display: "Spectral", Georgia, "Times New Roman", serif;
+    --ui: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  /* Default "system" setting stamps nothing on the root, so this media query
+     is what most dark-mode viewers actually get. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #101412;
+      --surface:    #171d1a;
+      --surface-2:  #1e2622;
+      --ink:        #e7ebe7;
+      --ink-soft:   #a8b3ac;
+      --ink-mute:   #7c8880;
+      --rule:       #2a332e;
+      --rule-firm:  #3c4740;
+      --accent:     #4fbf8b;
+      --accent-dim: #1c2f27;
+      --warn:       #d09a4d;
+      --crit:       #d4655a;
+      --shadow:     0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -16px rgba(0, 0, 0, .8);
+    }
+  }
+  /* Explicit dark choice wins over a light OS. */
+  :root[data-theme="dark"] {
+    --paper:      #101412;
+    --surface:    #171d1a;
+    --surface-2:  #1e2622;
+    --ink:        #e7ebe7;
+    --ink-soft:   #a8b3ac;
+    --ink-mute:   #7c8880;
+    --rule:       #2a332e;
+    --rule-firm:  #3c4740;
+    --accent:     #4fbf8b;
+    --accent-dim: #1c2f27;
+    --warn:       #d09a4d;
+    --crit:       #d4655a;
+    --shadow:     0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -16px rgba(0, 0, 0, .8);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--ui);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    /* Follows the viewport rather than a fixed width: the results table wants
+       every pixel available, and a laptop and a 4K monitor want very different
+       numbers. Prose blocks keep their own measure below. */
+    width: 100%;
+    max-width: min(2000px, 96vw);
+    margin: 0 auto;
+    padding: clamp(28px, 4vw, 64px) clamp(14px, 2.5vw, 34px) 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  /* ── Masthead, set like the header of an engraved score ───────────────── */
+  .masthead { display: flex; flex-direction: column; gap: 14px; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0;
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(34px, 6vw, 52px);
+    line-height: 1.05;
+    letter-spacing: -.015em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .lede {
+    font-family: var(--display);
+    font-style: italic;
+    font-size: clamp(16px, 2.2vw, 19px);
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  /* Double rule, the way a system divider is drawn in engraving. */
+  .staff {
+    border-top: 1px solid var(--rule-firm);
+    border-bottom: 1px solid var(--rule);
+    height: 4px;
+    margin-top: 6px;
+  }
+
+  .provenance {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 26px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-mute);
+  }
+  .provenance b {
+    font-weight: 500;
+    color: var(--ink-soft);
+  }
+
+  /* ── Controls ─────────────────────────────────────────────────────────── */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  .chips { display: flex; gap: 8px; }
+  .chip {
+    font-family: var(--ui);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    background: transparent;
+    border: 1px solid var(--rule-firm);
+    border-radius: 2px;
+    padding: 6px 15px;
+    cursor: pointer;
+    transition: background .12s ease, color .12s ease, border-color .12s ease;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--ink); }
+  .chip[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--surface);
+  }
+  :root[data-theme="dark"] .chip[aria-pressed="true"],
+  .chip[aria-pressed="true"] { color: var(--paper); }
+
+  .ranking-note {
+    font-size: 13px;
+    color: var(--ink-mute);
+    max-width: 46ch;
+  }
+
+  /* ── Table ────────────────────────────────────────────────────────────── */
+  .table-wrap {
+    overflow-x: auto;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    box-shadow: var(--shadow);
+  }
+  /* table-layout: fixed is what stops the expanded detail row from resizing
+     the summary columns. Without it the nested 30-column piece table reports a
+     huge intrinsic width up through its <td>, and the columns above drift
+     apart to accommodate it. With it, the colgroup below decides the widths
+     and the nested table scrolls inside its own container. */
+  table.board {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 940px;
+    table-layout: fixed;
+  }
+
+  table.board > thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--surface);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    text-align: right;
+    padding: 14px 16px 11px;
+    border-bottom: 1px solid var(--rule-firm);
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+  }
+  table.board > thead th:first-child, table.board > thead th:nth-child(2) { text-align: left; }
+  table.board > thead th:hover { color: var(--accent); }
+  table.board > thead th .arrow { opacity: 0; margin-left: 4px; }
+  table.board > thead th[aria-sort] { color: var(--accent); }
+  table.board > thead th[aria-sort] .arrow { opacity: 1; }
+  thead th[aria-sort="ascending"] .arrow::after { content: "\2191"; }
+  thead th[aria-sort="descending"] .arrow::after { content: "\2193"; }
+
+  table.board > tbody td {
+    padding: 14px 14px;
+    border-bottom: 1px solid var(--rule);
+    text-align: right;
+    vertical-align: middle;
+  }
+  table.board > tbody td:first-child, table.board > tbody td:nth-child(2) { text-align: left; }
+  tbody tr.entry { cursor: pointer; transition: background .12s ease; }
+  tbody tr.entry:hover { background: var(--surface-2); }
+  tbody tr.entry:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  .rank {
+    font-family: var(--display);
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--ink-mute);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  tbody tr.entry:first-child .rank { color: var(--accent); }
+
+  .entry-name {
+    font-weight: 600;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .entry-name > span:not(.caret):not(.kind) { overflow: hidden; text-overflow: ellipsis; }
+  .entry-authors { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .entry-name .caret {
+    font-size: 10px;
+    color: var(--ink-mute);
+    transition: transform .15s ease;
+    display: inline-block;
+  }
+  tr.entry.open .caret { transform: rotate(90deg); }
+  .entry-authors {
+    font-size: 12.5px;
+    color: var(--ink-mute);
+    margin-top: 1px;
+  }
+
+  .kind {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 2px;
+    border: 1px solid var(--rule-firm);
+    color: var(--ink-mute);
+    white-space: nowrap;
+  }
+  .kind.reference {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
+  .tag {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    border: 1px solid var(--rule-firm);
+    border-radius: 2px;
+    padding: 2px 7px;
+  }
+
+  /* Tracking rate as a span through the corpus, not a generic meter. */
+  .span-cell { display: flex; align-items: center; justify-content: flex-end; gap: 11px; }
+  .span {
+    position: relative;
+    width: 92px;
+    height: 9px;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 1px;
+    overflow: hidden;
+    flex: none;
+  }
+  .span > i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: var(--accent);
+    display: block;
+  }
+  .span.zero > i { background: var(--crit); }
+  .num { font-family: var(--mono); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  .num.dim { color: var(--ink-mute); }
+  .num.lead { color: var(--accent); font-weight: 500; }
+
+  /* ── Expanded detail ──────────────────────────────────────────────────── */
+  tr.detail > td {
+    overflow: hidden;
+    padding: 0 16px 22px 16px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--surface-2);
+    text-align: left;
+  }
+  tr.detail[hidden] { display: none; }
+  .detail-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+    gap: 22px 40px;
+    padding-top: 18px;
+  }
+  @media (max-width: 720px) { .detail-grid { grid-template-columns: 1fr; } }
+  .detail p {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 62ch;
+  }
+  .facts { display: flex; flex-direction: column; gap: 7px; }
+  .fact {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    border-bottom: 1px dotted var(--rule-firm);
+    padding-bottom: 6px;
+  }
+  .fact span:first-child { color: var(--ink-mute); }
+  .fact span:last-child { color: var(--ink-soft); text-align: right; word-break: break-all; }
+  .detail a { color: var(--accent); }
+
+
+  /* ── Detail: tabs, dataset cards, full metric table, plots ────────────── */
+  .dtabs { display: flex; gap: 4px; margin: 20px 0 14px; flex-wrap: wrap; }
+  .dtab {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .07em;
+    text-transform: uppercase; color: var(--ink-mute);
+    background: transparent; border: 1px solid var(--rule);
+    border-radius: 2px; padding: 6px 13px; cursor: pointer;
+  }
+  .dtab:hover { border-color: var(--accent); color: var(--ink); }
+  .dtab[aria-selected="true"] {
+    background: var(--accent); border-color: var(--accent); color: var(--paper);
+  }
+  .dpanel[hidden] { display: none; }
+
+  /* By dataset: which pooling the table shows. */
+  .pool-bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+    margin-bottom: 10px; font-size: 12.5px; color: var(--ink-soft);
+  }
+  .pool-bar .dtab { padding: 4px 10px; }
+
+  /* Piece table: many columns, so the identity columns stay put. */
+  .piece-scroll {
+    max-height: clamp(260px, 46vh, 620px);
+    overflow: auto;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+  }
+  table.pieces { border-collapse: separate; border-spacing: 0; background: var(--surface); font-size: 12.5px; }
+  table.pieces th {
+    position: sticky; top: 0; z-index: 3; background: var(--surface);
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--ink-mute); font-weight: 500;
+    padding: 8px 9px; text-align: right; white-space: nowrap;
+    border-bottom: 1px solid var(--rule-firm); cursor: pointer; user-select: none;
+  }
+  table.pieces th:hover { color: var(--accent); }
+  table.pieces td {
+    padding: 6px 9px; text-align: right; white-space: nowrap;
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+  }
+  table.pieces th.sticky, table.pieces td.sticky {
+    position: sticky; background: var(--surface); text-align: left;
+    font-family: var(--ui);
+  }
+  table.pieces th.sticky { z-index: 4; }
+  table.pieces td.sticky { z-index: 2; }
+  table.pieces .c0 { left: 0; width: 42px; }
+  table.pieces .c1 { left: 42px; min-width: 74px; }
+  table.pieces .c2 { left: 116px; min-width: 190px; border-right: 1px solid var(--rule-firm); }
+  table.pieces tbody tr { cursor: pointer; }
+  table.pieces tbody tr:hover td { background: var(--accent-dim); }
+  table.pieces tbody tr.selected td { background: var(--accent-dim); font-weight: 500; }
+  /* The dataset table reuses the piece table's frame, minus the click. */
+  table.datasets .c0 { width: auto; min-width: 110px; border-right: 1px solid var(--rule-firm); }
+  table.datasets th { cursor: default; }
+  table.datasets th:hover { color: var(--ink-mute); }
+  table.datasets tbody tr.total td { border-top: 1px solid var(--rule-firm); font-weight: 500; }
+  /* The piece table narrowed to one dataset. */
+  .filter-bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+    margin-bottom: 10px; font-size: 12.5px; color: var(--ink-soft);
+  }
+  .filter-bar b { color: var(--ink); }
+  .filter-bar .dtab { padding: 4px 10px; }
+  .verdict-ok { color: var(--accent); }
+  .verdict-lost { color: var(--crit); }
+  .delta-better { color: var(--accent); }
+  .delta-worse { color: var(--crit); }
+
+  .cmp-bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+    margin-bottom: 14px; font-size: 13px; color: var(--ink-soft);
+  }
+  .cmp-bar select {
+    font-family: var(--ui); font-size: 13px; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--rule-firm);
+    border-radius: 2px; padding: 5px 9px;
+  }
+  .swatch { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 6px; }
+
+  .plot-head {
+    display: flex; flex-wrap: wrap; gap: 5px 18px; align-items: baseline;
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-mute);
+    margin-bottom: 8px;
+  }
+  .plot-head b { color: var(--ink); font-weight: 500; }
+  svg.plot {
+    width: 100%; height: auto; background: var(--surface);
+    border: 1px solid var(--rule); border-radius: 3px;
+    display: block; margin-bottom: 12px;
+  }
+  svg.plot text { font-family: var(--mono); font-size: 9px; fill: var(--ink-mute); }
+  svg.plot .axis-label { font-size: 9.5px; fill: var(--ink-soft); }
+  .plot-hint {
+    font-size: 12.5px; color: var(--ink-mute); font-family: var(--display);
+    font-style: italic; max-width: 74ch; margin: 0 0 16px;
+  }
+
+  /* Full metric readout for one piece. */
+  .metric-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 6px 18px; margin-bottom: 14px;
+  }
+  .metric {
+    display: flex; justify-content: space-between; gap: 10px;
+    font-family: var(--mono); font-size: 11.5px;
+    border-bottom: 1px dotted var(--rule-firm); padding-bottom: 4px;
+  }
+  .metric span:first-child { color: var(--ink-mute); }
+  .metric span:last-child { color: var(--ink); }
+  .metric.cmp span:last-child { display: flex; gap: 10px; }
+  .group-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--accent);
+    margin: 16px 0 7px; grid-column: 1 / -1;
+  }
+  /* ── Empty + footer ───────────────────────────────────────────────────── */
+  .empty {
+    padding: 56px 24px;
+    text-align: center;
+    color: var(--ink-mute);
+    font-family: var(--display);
+    font-style: italic;
+    font-size: 16px;
+  }
+  footer {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 22px 40px;
+    padding-top: 8px;
+    border-top: 1px solid var(--rule);
+  }
+  footer section { display: flex; flex-direction: column; gap: 5px; }
+  footer h2 {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0;
+    font-weight: 500;
+  }
+  footer p { margin: 0; font-size: 13px; color: var(--ink-mute); line-height: 1.5; }
+  footer a { color: var(--ink-soft); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <p class="eyebrow">Real-time score following</p>
+    <h1>Matchmaker Benchmark</h1>
+    <p class="lede">
+      How well can a machine follow a live performer through a score? Every entry
+      below was measured on the same frozen set of performances, by the same
+      evaluation code.
+    </p>
+    <div class="staff" role="presentation"></div>
+    <div class="provenance" id="provenance"></div>
+  </header>
+
+  <div class="controls">
+    <div class="chips" id="filters">
+      <button class="chip" data-filter="all" aria-pressed="true">All</button>
+      <button class="chip" data-filter="midi" aria-pressed="false">MIDI</button>
+      <button class="chip" data-filter="audio" aria-pressed="false">Audio</button>
+      <button class="chip" data-filter="submission" aria-pressed="false">Submissions</button>
+      <button class="chip" data-filter="reference" aria-pressed="false">Reference</button>
+    </div>
+    <p class="ranking-note">
+      Ranked by how many pieces a follower stayed with, then by its error on
+      those pieces. Open a row for its per-dataset and per-piece results, and to
+      plot any piece against the ground truth.
+    </p>
+  </div>
+
+  <div class="table-wrap">
+    <table class="board">
+      <colgroup>
+        <col style="width:58px">
+        <col><!-- submission: takes the remaining space -->
+        <col style="width:76px">
+        <col style="width:150px">
+        <col style="width:104px">
+        <col style="width:118px">
+        <col style="width:124px">
+        <col style="width:104px">
+        <col style="width:124px">
+        <col style="width:92px">
+      </colgroup>
+      <thead>
+        <tr>
+          <th data-key="rank" data-dir="asc" scope="col">#<span class="arrow"></span></th>
+          <th data-key="name" data-dir="asc" scope="col">Submission<span class="arrow"></span></th>
+          <th data-key="input_type" data-dir="asc" scope="col">Input<span class="arrow"></span></th>
+          <th data-key="tracking_rate" data-dir="desc" aria-sort="descending" scope="col">Tracked<span class="arrow"></span></th>
+          <th data-key="beat_0.3b" data-dir="desc" scope="col">&le; 0.3 beat<span class="arrow"></span></th>
+          <th data-key="beat_median" data-dir="asc" scope="col">Beat err (med)<span class="arrow"></span></th>
+          <th data-key="beat_mean" data-dir="asc" scope="col">Beat err (mean)<span class="arrow"></span></th>
+          <th data-key="ms_median" data-dir="asc" scope="col">Ms err<span class="arrow"></span></th>
+          <th data-key="beat_median_all" data-dir="asc" scope="col">Beat err · all<span class="arrow"></span></th>
+          <th data-key="rtf" data-dir="asc" scope="col">RTF<span class="arrow"></span></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty" id="empty" hidden></div>
+  </div>
+
+  <footer>
+    <section>
+      <h2>Tracked</h2>
+      <p>
+        A piece counts as tracked unless two or more 30-second segments drift
+        past the tolerance — 0.5 beats for MIDI, 1.0 for audio. A follower that
+        loses the performer produces meaningless errors, so accuracy is only
+        reported over the pieces it held onto.
+      </p>
+    </section>
+    <section>
+      <h2>Why medians read 0.000</h2>
+      <p>
+        On MIDI the ground truth is note onsets and a follower reports score
+        onsets, so more than half of all events land exactly right and the
+        median collapses to zero. <em>Beat err (mean)</em> and
+        <em>&le; 0.3 beat</em> are what separate the methods there.
+      </p>
+    </section>
+    <section>
+      <h2>Beat err · all</h2>
+      <p>
+        The median error over <em>every</em> piece, lost ones included. It keeps
+        a follower from looking flawless by tracking two easy pieces and
+        abandoning the rest.
+      </p>
+    </section>
+    <section>
+      <h2>RTF</h2>
+      <p>
+        Processing time divided by performance duration. Anything at or above
+        1.0 cannot keep up with a live performer, however accurate it is
+        offline.
+      </p>
+    </section>
+    <section>
+      <h2>Per-piece and per-dataset results</h2>
+      <p>
+        Opening a row loads its full record: every pooled metric for each
+        dataset and for the whole fold, a table of all 146 pieces — or of one
+        dataset's, by clicking it — and the alignment of any piece against the
+        ground truth. The plots are drawn here from the raw path coordinates —
+        no images are stored.
+      </p>
+    </section>
+    <section>
+      <h2>Reference rows</h2>
+      <p>
+        Entries marked <span class="kind reference">reference</span> are the
+        methods that ship with matchmaker, run on the same fold by the same
+        code. They are what a new score follower is trying to beat, not
+        competitors.
+      </p>
+    </section>
+    <section>
+      <h2>Submitting</h2>
+      <p>
+        Write one Python file and open a pull request.
+        <a href="https://github.com/pymatchmaker/matchmaker_benchmark/blob/main/docs/submitting.md">How to submit</a> ·
+        <a href="https://github.com/pymatchmaker/matchmaker_benchmark/blob/main/docs/eval-protocol.md">Evaluation protocol</a> ·
+        <a href="leaderboard.csv">Download CSV</a><span id="dataset-downloads"></span>
+      </p>
+    </section>
+  </footer>
+</div>
+
+<!-- Filled with results/leaderboard.json when the page is published as a
+     standalone preview. Left empty in the repository, where the page fetches
+     the real file instead. -->
+<script type="application/json" id="leaderboard-data"></script>
+
+<script>
+"use strict";
+
+// Served two ways: from GitHub Pages, where the workflow copies the leaderboard
+// next to index.html, and straight from a checkout, where it is still in
+// results/. Inlined data, when present, wins over both.
+const SOURCES = ["./", "../results/"];
+const NUMERIC = new Set([
+  "rank", "tracking_rate", "beat_0.3b", "beat_median", "beat_mean",
+  "ms_median", "beat_median_all", "rtf",
+]);
+
+// Metrics where a smaller number is better. Used to colour comparisons; every
+// other metric is a share, where larger is better.
+const LOWER_IS_BETTER = new Set([
+  "beat_mean", "beat_median", "beat_std", "ms_mean", "ms_median", "ms_std",
+  "max_deviation", "n_failed_segments", "rtf", "f_avg_latency", "i_avg_latency",
+]);
+
+const METRIC_GROUPS = [
+  ["Beat error (performance → score)", (m) => m.startsWith("beat_") && !m.endsWith("b")],
+  ["Beat error within tolerance", (m) => m.startsWith("beat_") && m.endsWith("b")],
+  ["Millisecond error (score → performance)", (m) => m.startsWith("ms_") && !m.endsWith("ms")],
+  ["Millisecond error within tolerance", (m) => m.startsWith("ms_") && m.endsWith("ms")],
+  ["Tracking and timing", () => true],
+];
+
+let entries = [];
+let filter = "all";
+let sort = { key: "tracking_rate", dir: "desc" };
+
+const el = (id) => document.getElementById(id);
+
+function escapeHtml(text) {
+  return String(text ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[c]);
+}
+
+function fmt(value, digits) {
+  if (value === null || value === undefined || Number.isNaN(value)) return null;
+  if (typeof value === "boolean") return value ? "yes" : "no";
+  return Number(value).toFixed(digits);
+}
+
+// Shares are stored 0..1; showing them as percentages is what people read.
+function isShare(metric) {
+  return metric.endsWith("b") || metric.endsWith("ms") || metric === "tracking_rate";
+}
+
+function showMetric(metric, value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  if (metric === "n_failed_segments") return String(value);
+  if (isShare(metric)) return (value * 100).toFixed(1) + "%";
+  if (metric.startsWith("ms_")) return Number(value).toFixed(1);
+  return Number(value).toFixed(3);
+}
+
+function metricCell(value, digits) {
+  const text = fmt(value, digits);
+  if (text === null) {
+    return '<span class="num dim" title="not measured — no piece was tracked">&mdash;</span>';
+  }
+  return `<span class="num">${text}</span>`;
+}
+
+// ── Plotting ─────────────────────────────────────────────────────────────────
+// Everything below draws from the raw coordinates in the detail file. No plot
+// images exist anywhere; the alignment path is the artifact and the picture is
+// made here, which is why restyling a plot never means re-running a benchmark.
+
+// A follower reports a position and holds it until the next observation, so its
+// value at an arbitrary time is the last one it emitted — a step lookup, not an
+// interpolation. Interpolating would invent precision the follower never had.
+function beatAt(path, t) {
+  if (!path || !path.length) return null;
+  let lo = 0, hi = path.length - 1;
+  if (t < path[0][0]) return null;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (path[mid][0] <= t) lo = mid; else hi = mid - 1;
+  }
+  return path[lo][1];
+}
+
+// |predicted − true| at every ground-truth onset: where a follower loses the
+// performer, and by how much.
+function errorSeries(piece) {
+  const out = [];
+  for (const [t, trueBeat] of piece.gt || []) {
+    const predicted = beatAt(piece.wp, t);
+    if (predicted !== null) out.push([t, Math.abs(predicted - trueBeat)]);
+  }
+  return out;
+}
+
+function svgAxes(W, H, PAD, xr, yr, xLabel, yLabel, yFormat) {
+  const sx = (v) => PAD.l + ((v - xr[0]) / (xr[1] - xr[0] || 1)) * (W - PAD.l - PAD.r);
+  const sy = (v) => H - PAD.b - ((v - yr[0]) / (yr[1] - yr[0] || 1)) * (H - PAD.t - PAD.b);
+  const ticks = (lo, hi, n) =>
+    Array.from({ length: n + 1 }, (_, i) => lo + ((hi - lo) * i) / n);
+  const grid = [
+    ...ticks(xr[0], xr[1], 6).map((v) =>
+      `<line x1="${sx(v).toFixed(1)}" y1="${PAD.t}" x2="${sx(v).toFixed(1)}" y2="${H - PAD.b}"
+             stroke="var(--rule)" stroke-width="1"/>
+       <text x="${sx(v).toFixed(1)}" y="${H - PAD.b + 13}" text-anchor="middle">${v.toFixed(0)}</text>`),
+    ...ticks(yr[0], yr[1], 4).map((v) =>
+      `<line x1="${PAD.l}" y1="${sy(v).toFixed(1)}" x2="${W - PAD.r}" y2="${sy(v).toFixed(1)}"
+             stroke="var(--rule)" stroke-width="1"/>
+       <text x="${PAD.l - 6}" y="${(sy(v) + 3).toFixed(1)}" text-anchor="end">${yFormat(v)}</text>`),
+  ].join("");
+  const labels = `
+    <text class="axis-label" x="${W / 2}" y="${H - 3}" text-anchor="middle">${escapeHtml(xLabel)}</text>
+    <text class="axis-label" x="12" y="${H / 2}" text-anchor="middle"
+          transform="rotate(-90 12 ${H / 2})">${escapeHtml(yLabel)}</text>`;
+  return { sx, sy, grid, labels };
+}
+
+function polyline(points, sx, sy) {
+  return points
+    .map((p, i) => `${i ? "L" : "M"}${sx(p[0]).toFixed(1)},${sy(p[1]).toFixed(1)}`)
+    .join("");
+}
+
+// Plots are generated at the measured pixel size of their container rather
+// than scaled from a fixed viewBox. A viewBox stretched to a 1900px column
+// makes a 320px-tall plot render over 600px tall, and distorting it instead
+// would stretch the axis labels. Measuring is the only way to stay both
+// undistorted and proportionate on any screen.
+function plotSize(width, ratio, min, max) {
+  const w = Math.max(420, Math.round(width));
+  return { W: w, H: Math.round(Math.min(max, Math.max(min, w / ratio))) };
+}
+
+function plotAlignment(detail, piece, other, otherDetail, width) {
+  const series = [...(piece.gt || []), ...(piece.wp || [])];
+  if (other) series.push(...(other.wp || []));
+  if (!series.length) {
+    return '<p class="plot-hint">No alignment path was recorded for this piece.</p>';
+  }
+  const { W, H } = plotSize(width, 3.6, 190, 330);
+  const PAD = { l: 52, r: 14, t: 14, b: 30 };
+  const xs = series.map((p) => p[0]);
+  const ys = series.map((p) => p[1]);
+  const { sx, sy, grid, labels } = svgAxes(
+    W, H, PAD,
+    [Math.min(...xs), Math.max(...xs)],
+    [Math.min(...ys), Math.max(...ys)],
+    detail.axes.x, detail.axes.y, (v) => v.toFixed(0)
+  );
+
+  const otherPath = other
+    ? `<path d="${polyline(other.wp || [], sx, sy)}" fill="none"
+             stroke="var(--warn)" stroke-width="1.6" stroke-dasharray="5 3"/>`
+    : "";
+
+  return `
+    <div class="plot-head">
+      <b>${escapeHtml(piece.piece_id || "")}</b>
+      <span class="${piece.tracked ? "verdict-ok" : "verdict-lost"}">${piece.tracked ? "tracked" : "lost"}</span>
+      <span><span class="swatch" style="background:var(--crit)"></span>ground truth</span>
+      <span><span class="swatch" style="background:var(--accent)"></span>${escapeHtml(detail.name)}</span>
+      ${other ? `<span><span class="swatch" style="background:var(--warn)"></span>${escapeHtml(otherDetail.name)}</span>` : ""}
+    </div>
+    <svg class="plot" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"
+         preserveAspectRatio="xMidYMid meet" role="img"
+         aria-label="Alignment of ${escapeHtml(piece.piece_id || "")}">
+      ${grid}
+      <path d="${polyline(piece.gt || [], sx, sy)}" fill="none"
+            stroke="var(--crit)" stroke-width="2.6" stroke-opacity=".5"/>
+      <path d="${polyline(piece.wp || [], sx, sy)}" fill="none"
+            stroke="var(--accent)" stroke-width="1.6"/>
+      ${otherPath}
+      ${labels}
+    </svg>`;
+}
+
+function plotError(detail, piece, other, otherDetail, width) {
+  const mine = errorSeries(piece);
+  const theirs = other ? errorSeries(other) : [];
+  if (!mine.length) return "";
+  const all = [...mine, ...theirs];
+  const { W, H } = plotSize(width, 6.4, 120, 190);
+  const PAD = { l: 52, r: 14, t: 14, b: 30 };
+  const xs = all.map((p) => p[0]);
+  const top = Math.max(0.5, ...all.map((p) => p[1]));
+  const { sx, sy, grid, labels } = svgAxes(
+    W, H, PAD, [Math.min(...xs), Math.max(...xs)], [0, top],
+    detail.axes.x, "|beat error|", (v) => v.toFixed(v < 1 ? 2 : 0)
+  );
+  // The tracking verdict is decided against this line: 0.5 beats for MIDI,
+  // 1.0 for audio, as a median over each 30-second segment.
+  const threshold = detail.input_type === "audio" ? 1.0 : 0.5;
+  const rule = threshold <= top
+    ? `<line x1="${PAD.l}" y1="${sy(threshold).toFixed(1)}" x2="${W - PAD.r}"
+             y2="${sy(threshold).toFixed(1)}" stroke="var(--crit)"
+             stroke-width="1" stroke-dasharray="4 3" stroke-opacity=".7"/>
+       <text x="${W - PAD.r - 3}" y="${(sy(threshold) - 5).toFixed(1)}"
+             text-anchor="end" fill="var(--crit)">tracking threshold ${threshold}</text>`
+    : "";
+  return `
+    <svg class="plot" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"
+         preserveAspectRatio="xMidYMid meet" role="img"
+         aria-label="Beat error over time">
+      ${grid}${rule}
+      <path d="${polyline(mine, sx, sy)}" fill="none" stroke="var(--accent)" stroke-width="1.4"/>
+      ${theirs.length ? `<path d="${polyline(theirs, sx, sy)}" fill="none"
+            stroke="var(--warn)" stroke-width="1.4" stroke-dasharray="5 3"/>` : ""}
+      ${labels}
+    </svg>`;
+}
+
+// ── Detail view ──────────────────────────────────────────────────────────────
+const detailCache = new Map();
+
+async function loadDetail(entry) {
+  if (detailCache.has(entry.submission)) return detailCache.get(entry.submission);
+  for (const base of SOURCES) {
+    try {
+      const response = await fetch(base + entry.details);
+      if (response.ok) {
+        const data = await response.json();
+        detailCache.set(entry.submission, data);
+        return data;
+      }
+    } catch (error) { /* try the next location */ }
+  }
+  detailCache.set(entry.submission, null);
+  return null;
+}
+
+// ── By dataset ───────────────────────────────────────────────────────────────
+// Every pooled metric, one row per dataset and one for the whole run. The
+// detail file carries both poolings — over the tracked pieces, which is what
+// the main table reports, and over every piece, lost ones included — and the
+// toggle above the table picks which one is shown.
+
+// The nested summary {beat: {mean, "0.3b", …}, ms: {…}, sparc, rtf} under the
+// flat beat_mean / ms_50ms names the per-piece table uses, in the same order,
+// so the same formatting and better/worse rules apply.
+function flatSummary(summary) {
+  const out = {};
+  for (const group of ["beat", "ms"]) {
+    for (const [key, value] of Object.entries(summary?.[group] || {})) {
+      out[`${group}_${key}`] = value;
+    }
+  }
+  for (const key of ["sparc", "rtf", "f_avg_latency", "i_avg_latency"]) {
+    if (summary && key in summary) out[key] = summary[key];
+  }
+  return out;
+}
+
+function datasetRows(detail, pool) {
+  const rows = Object.entries(detail.datasets || {}).map(([name, block]) => ({ name, block }));
+  if (detail.overall) rows.push({ name: "all datasets", block: detail.overall, total: true });
+  return rows.map(({ name, block, total }) => ({
+    name,
+    total,
+    n_pieces: block.n_pieces,
+    n_tracked: block.n_tracked,
+    metrics: flatSummary(block[`summary_${pool}`]),
+  }));
+}
+
+function trackedText(row) {
+  const pct = Math.round(((row.n_tracked || 0) / (row.n_pieces || 1)) * 100);
+  return `${row.n_tracked}/${row.n_pieces} · ${pct}%`;
+}
+
+function datasetTable(detail, other, pool, active) {
+  const mine = datasetRows(detail, pool);
+  if (!mine.length) {
+    return '<p class="plot-hint">No per-dataset summary is published for this entry.</p>';
+  }
+  const theirs = new Map(other ? datasetRows(other, pool).map((r) => [r.name, r]) : []);
+  const columns = [];
+  for (const row of mine) {
+    for (const m of Object.keys(row.metrics)) if (!columns.includes(m)) columns.push(m);
+  }
+
+  const head = `
+    <tr>
+      <th class="sticky c0">dataset</th>
+      <th>tracked</th>
+      ${columns.map((m) => `<th>${escapeHtml(m.replace(/_/g, " "))}</th>`).join("")}
+    </tr>`;
+
+  const dim = (text) => `<br><span style="color:var(--ink-mute)">${text}</span>`;
+  const body = mine.map((row) => {
+    const cmp = theirs.get(row.name);
+    const cells = columns.map((m) => {
+      const a = row.metrics[m];
+      if (!cmp) return `<td>${showMetric(m, a)}</td>`;
+      const b = cmp.metrics[m];
+      let cls = "";
+      if (typeof a === "number" && typeof b === "number" && a !== b) {
+        cls = (LOWER_IS_BETTER.has(m) ? a < b : a > b) ? "delta-better" : "delta-worse";
+      }
+      return `<td class="${cls}">${showMetric(m, a)}${dim(showMetric(m, b))}</td>`;
+    }).join("");
+    const tracked = `<td>${trackedText(row)}${cmp ? dim(trackedText(cmp)) : ""}</td>`;
+    // A click narrows the piece table to this dataset; the total row widens
+    // it back to every piece.
+    const dataset = row.total ? "" : row.name;
+    const selected = row.total ? active === null : active === row.name;
+    return `
+      <tr data-dataset="${escapeHtml(dataset)}" class="${row.total ? "total" : ""}${selected ? " selected" : ""}">
+        <td class="sticky c0">${escapeHtml(row.name)}</td>
+        ${tracked}${cells}
+      </tr>`;
+  }).join("");
+
+  return `<div class="piece-scroll"><table class="pieces datasets"><thead>${head}</thead><tbody>${body}</tbody></table></div>
+    <p class="plot-hint">Click a dataset to see each of its pieces, and to plot any of them.</p>`;
+}
+
+function datasetPanel(detail, other, otherDetail, pool, active) {
+  const legend = other
+    ? `<p class="plot-hint">Upper value: ${escapeHtml(detail.name)}. Lower: ${escapeHtml(otherDetail.name)}.
+       Green means the upper method is better on that metric.</p>`
+    : "";
+  return `
+    <div class="pool-bar" role="tablist">
+      <span>pooled over</span>
+      <button class="dtab" data-pool="tracked" role="tab" aria-selected="${pool === "tracked"}">tracked pieces</button>
+      <button class="dtab" data-pool="all" role="tab" aria-selected="${pool === "all"}">all pieces</button>
+      <span>${pool === "tracked"
+        ? "— what the main table reports"
+        : "— lost pieces included, so a follower that bails out shows it here"}</span>
+    </div>
+    ${legend}${datasetTable(detail, other, pool, active)}`;
+}
+
+// Every metric, for every piece. Wide on purpose: the identity columns are
+// pinned so the numbers can scroll under them.
+function pieceTable(detail, other, state) {
+  const metrics = detail.metrics || [];
+  const head = `
+    <tr>
+      <th class="sticky c0">#</th>
+      <th class="sticky c1">dataset</th>
+      <th class="sticky c2">piece</th>
+      <th data-sort="tracked">verdict</th>
+      ${metrics.map((m) => `<th data-sort="${m}">${escapeHtml(m.replace(/_/g, " "))}</th>`).join("")}
+    </tr>`;
+
+  const otherByIndex = new Map((other?.pieces || []).map((p) => [p.index, p]));
+  let rows = detail.pieces.filter((p) => state.dataset === null || p.dataset === state.dataset);
+  if (state.sort) {
+    const key = state.sort;
+    rows.sort((a, b) => {
+      const x = a[key], y = b[key];
+      if (typeof x === "boolean" || typeof y === "boolean") return (y ? 1 : 0) - (x ? 1 : 0);
+      const xv = x ?? Infinity, yv = y ?? Infinity;
+      return state.dir === "asc" ? xv - yv : yv - xv;
+    });
+  }
+
+  const body = rows.map((p) => {
+    const cmp = otherByIndex.get(p.index);
+    const cells = metrics.map((m) => {
+      const mine = showMetric(m, p[m]);
+      if (!cmp) return `<td>${mine}</td>`;
+      const a = p[m], b = cmp[m];
+      let cls = "";
+      if (typeof a === "number" && typeof b === "number" && a !== b) {
+        const better = LOWER_IS_BETTER.has(m) ? a < b : a > b;
+        cls = better ? "delta-better" : "delta-worse";
+      }
+      return `<td class="${cls}">${mine}<br><span style="color:var(--ink-mute)">${showMetric(m, cmp?.[m])}</span></td>`;
+    }).join("");
+    const verdict = cmp
+      ? `<td><span class="${p.tracked ? "verdict-ok" : "verdict-lost"}">${p.tracked ? "tracked" : "lost"}</span><br>
+           <span class="${cmp.tracked ? "verdict-ok" : "verdict-lost"}" style="opacity:.65">${cmp.tracked ? "tracked" : "lost"}</span></td>`
+      : `<td class="${p.tracked ? "verdict-ok" : "verdict-lost"}">${p.tracked ? "tracked" : "lost"}</td>`;
+    return `
+      <tr data-index="${p.index}">
+        <td class="sticky c0">${p.index}</td>
+        <td class="sticky c1">${escapeHtml(p.dataset || "")}</td>
+        <td class="sticky c2">${escapeHtml(p.title || p.piece_id || "")}</td>
+        ${verdict}${cells}
+      </tr>`;
+  }).join("");
+
+  return `<div class="piece-scroll"><table class="pieces"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+}
+
+function metricReadout(detail, piece, other, otherDetail) {
+  const metrics = detail.metrics || [];
+  let remaining = metrics.slice();
+  const blocks = [];
+  for (const [label, test] of METRIC_GROUPS) {
+    const group = remaining.filter(test);
+    remaining = remaining.filter((m) => !group.includes(m));
+    if (!group.length) continue;
+    blocks.push(`<div class="group-label">${escapeHtml(label)}</div>`);
+    blocks.push(group.map((m) => {
+      if (!other) {
+        return `<div class="metric"><span>${escapeHtml(m.replace(/_/g, " "))}</span><span>${showMetric(m, piece[m])}</span></div>`;
+      }
+      const a = piece[m], b = other[m];
+      let cls = "";
+      if (typeof a === "number" && typeof b === "number" && a !== b) {
+        cls = (LOWER_IS_BETTER.has(m) ? a < b : a > b) ? "delta-better" : "delta-worse";
+      }
+      return `<div class="metric cmp"><span>${escapeHtml(m.replace(/_/g, " "))}</span>
+        <span><span class="${cls}">${showMetric(m, a)}</span>
+        <span style="color:var(--ink-mute)">${showMetric(m, b)}</span></span></div>`;
+    }).join(""));
+  }
+  const legend = other
+    ? `<p class="plot-hint">Left value: ${escapeHtml(detail.name)}. Right: ${escapeHtml(otherDetail.name)}.
+       Green means the left method is better on that metric.</p>`
+    : "";
+  return legend + `<div class="metric-grid">${blocks.join("")}</div>`;
+}
+
+async function fillDetail(entry, container) {
+  container.innerHTML = '<p class="plot-hint">Loading the full record…</p>';
+  const detail = await loadDetail(entry);
+  if (!detail) {
+    container.innerHTML = '<p class="plot-hint">Per-piece results are not published for this entry.</p>';
+    return;
+  }
+
+  // Only entries on the same input type are comparable: a MIDI and an audio
+  // follower are not solving the same problem.
+  const comparable = entries.filter(
+    (e) => e.input_type === detail.input_type && e.submission !== detail.submission
+  );
+  const state = {
+    tab: "pieces", sort: null, dir: "asc", selected: null, other: null,
+    pool: "tracked",
+    // A dataset name narrows the piece table to that dataset; null is all.
+    dataset: null,
+  };
+
+  container.innerHTML = `
+    <div class="dtabs" role="tablist">
+      <button class="dtab" data-tab="pieces" role="tab" aria-selected="true">All pieces</button>
+      <button class="dtab" data-tab="datasets" role="tab" aria-selected="false">By dataset</button>
+      <button class="dtab" data-tab="compare" role="tab" aria-selected="false">Compare</button>
+    </div>
+    <div class="dpanel" data-panel="pieces"></div>
+    <div class="dpanel" data-panel="datasets" hidden></div>
+    <div class="dpanel" data-panel="compare" hidden>
+      <div class="cmp-bar">
+        <label>Compare <b>${escapeHtml(detail.name)}</b> against
+          <select data-compare>
+            <option value="">— pick a method —</option>
+            ${comparable.map((e) => `<option value="${escapeHtml(e.submission)}">${escapeHtml(e.name)}</option>`).join("")}
+          </select>
+        </label>
+      </div>
+      <div data-compare-body>
+        <p class="plot-hint">
+          Pick a method to see both on the same pieces: every metric side by
+          side, and both alignment paths drawn on one plot.
+        </p>
+      </div>
+    </div>`;
+
+  const panels = {
+    pieces: container.querySelector('[data-panel="pieces"]'),
+    datasets: container.querySelector('[data-panel="datasets"]'),
+    compare: container.querySelector('[data-panel="compare"]'),
+  };
+
+  function renderPieces(host, other, otherDetail) {
+    const shown = detail.pieces.filter((p) => state.dataset === null || p.dataset === state.dataset).length;
+    const filter = state.dataset === null ? "" : `
+      <div class="filter-bar">
+        <span><b>${escapeHtml(state.dataset)}</b> · ${shown} of ${detail.pieces.length} pieces</span>
+        <button class="dtab" data-clear-dataset>show all pieces</button>
+      </div>`;
+    host.innerHTML =
+      filter +
+      pieceTable(detail, other, state) +
+      '<div data-piece-view><p class="plot-hint">Click a piece to draw its alignment against the ground truth.</p></div>';
+    container.querySelector('.dtab[data-tab="pieces"]').textContent =
+      state.dataset === null ? "All pieces" : `Pieces · ${state.dataset}`;
+
+    host.querySelector("[data-clear-dataset]")?.addEventListener("click", () => {
+      state.dataset = null;
+      state.selected = null;
+      renderPieces(host, other, otherDetail);
+      renderDatasets(panels.datasets, other, otherDetail);
+    });
+
+    host.querySelectorAll("table.pieces th[data-sort]").forEach((th) => {
+      th.addEventListener("click", () => {
+        const key = th.dataset.sort;
+        state.dir = state.sort === key && state.dir === "asc" ? "desc" : "asc";
+        state.sort = key;
+        renderPieces(host, other, otherDetail);
+      });
+    });
+
+    const view = host.querySelector("[data-piece-view]");
+    const otherByIndex = new Map((other?.pieces || []).map((p) => [p.index, p]));
+
+    function drawPiece(index, scroll) {
+      const piece = detail.pieces.find((p) => p.index === index);
+      if (!piece) return;
+      const cmp = otherByIndex.get(index) || null;
+      // Measure at draw time: the same piece is redrawn on resize, and the
+      // available width is whatever the window is now.
+      const width = view.clientWidth || host.clientWidth || 900;
+      view.innerHTML =
+        plotAlignment(detail, piece, cmp, otherDetail, width) +
+        plotError(detail, piece, cmp, otherDetail, width) +
+        `<p class="plot-hint">
+           Top: score position against performance time — where the two lines
+           sit together the follower is with the performer. Bottom: the size of
+           the error at every ground-truth onset, against the threshold the
+           tracking verdict uses.
+         </p>` +
+        metricReadout(detail, piece, cmp, otherDetail);
+      if (scroll) view.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+
+    host.querySelectorAll("table.pieces tbody tr").forEach((row) => {
+      row.addEventListener("click", () => {
+        host.querySelectorAll("table.pieces tbody tr")
+          .forEach((r) => r.classList.remove("selected"));
+        row.classList.add("selected");
+        state.selected = Number(row.dataset.index);
+        drawPiece(state.selected, true);
+      });
+    });
+
+    if (state.selected !== null) {
+      const row = host.querySelector(`table.pieces tbody tr[data-index="${state.selected}"]`);
+      if (row) row.classList.add("selected");
+      drawPiece(state.selected, false);
+    }
+    host._redraw = () => {
+      if (state.selected !== null) drawPiece(state.selected, false);
+    };
+  }
+
+  function renderDatasets(host, other, otherDetail) {
+    host.innerHTML = datasetPanel(detail, other, otherDetail, state.pool, state.dataset);
+    host.querySelectorAll("[data-pool]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.pool = button.dataset.pool;
+        renderDatasets(host, other, otherDetail);
+      });
+    });
+    host.querySelectorAll("table.datasets tbody tr[data-dataset]").forEach((row) => {
+      row.addEventListener("click", () => {
+        state.dataset = row.dataset.dataset || null;
+        state.selected = null;
+        renderPieces(panels.pieces, other, otherDetail);
+        renderDatasets(host, other, otherDetail);
+        container.querySelector('.dtab[data-tab="pieces"]').click();
+      });
+    });
+  }
+
+  renderPieces(panels.pieces, null, null);
+  renderDatasets(panels.datasets, null, null);
+
+  container.querySelectorAll(".dtabs .dtab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      state.tab = tab.dataset.tab;
+      container.querySelectorAll(".dtab").forEach((t) =>
+        t.setAttribute("aria-selected", String(t === tab)));
+      Object.entries(panels).forEach(([name, panel]) => {
+        panel.hidden = name !== state.tab;
+      });
+    });
+  });
+
+  const picker = container.querySelector("[data-compare]");
+  const compareBody = container.querySelector("[data-compare-body]");
+  picker.addEventListener("change", async () => {
+    const chosen = entries.find((e) => e.submission === picker.value);
+    if (!chosen) {
+      compareBody.innerHTML = '<p class="plot-hint">Pick a method to compare against.</p>';
+      renderPieces(panels.pieces, null, null);
+      renderDatasets(panels.datasets, null, null);
+      return;
+    }
+    compareBody.innerHTML = '<p class="plot-hint">Loading…</p>';
+    const otherDetail = await loadDetail(chosen);
+    if (!otherDetail) {
+      compareBody.innerHTML = '<p class="plot-hint">That entry has no published per-piece record.</p>';
+      return;
+    }
+    compareBody.innerHTML = `
+      <p class="plot-hint">
+        <span class="swatch" style="background:var(--accent)"></span>${escapeHtml(detail.name)}
+        &nbsp;&nbsp;<span class="swatch" style="background:var(--warn)"></span>${escapeHtml(otherDetail.name)}
+        &mdash; the All pieces and By dataset tables now show both values in
+        every cell, and clicking a piece draws both alignments together.
+      </p>`;
+    renderPieces(panels.pieces, otherDetail, otherDetail);
+    renderDatasets(panels.datasets, otherDetail, otherDetail);
+    container.querySelector('.dtab[data-tab="pieces"]').click();
+  });
+}
+
+// ── Main table ───────────────────────────────────────────────────────────────
+function detailRow(entry) {
+  const facts = [
+    ["pieces tracked", `${entry.n_tracked} of ${entry.n_pieces}`],
+    ["matchmaker method", entry.method || "—"],
+    ["evaluated", (entry.evaluated || "").replace("T", " ").replace("+00:00", " UTC")],
+    ["matchmaker", entry.matchmaker || "—"],
+    ["fold digest", (entry.fold_sha256 || "").slice(0, 16) + "…"],
+  ];
+  return `
+    <tr class="detail" hidden>
+      <td colspan="10">
+        <div class="detail-grid">
+          <p>
+            ${escapeHtml(entry.description)}
+            ${entry.url ? ` <a href="${escapeHtml(entry.url)}">Source &rarr;</a>` : ""}
+          </p>
+          <div class="facts">
+            ${facts.map(([k, v]) => `<div class="fact"><span>${k}</span><span>${escapeHtml(v)}</span></div>`).join("")}
+          </div>
+        </div>
+        <div data-detail-body></div>
+      </td>
+    </tr>`;
+}
+
+function render() {
+  const tbody = el("rows");
+  const empty = el("empty");
+  const shown = entries.filter(
+    (e) => filter === "all" || e.input_type === filter || e.kind === filter
+  );
+
+  shown.sort((a, b) => {
+    const dir = sort.dir === "asc" ? 1 : -1;
+    if (NUMERIC.has(sort.key)) {
+      const x = a[sort.key] ?? Infinity;
+      const y = b[sort.key] ?? Infinity;
+      return (x - y) * dir;
+    }
+    return String(a[sort.key] ?? "").localeCompare(String(b[sort.key] ?? "")) * dir;
+  });
+
+  tbody.innerHTML = shown.map((entry, i) => {
+    const pct = Math.round((entry.tracking_rate || 0) * 100);
+    const within = entry["beat_0.3b"];
+    return `
+      <tr class="entry" data-key="${escapeHtml(entry.submission)}" tabindex="0"
+          role="button" aria-expanded="false">
+        <td><span class="rank">${entry.rank}</span></td>
+        <td>
+          <div class="entry-name">
+            <span class="caret">&#9654;</span>${escapeHtml(entry.name)}
+            ${entry.kind === "reference"
+              ? '<span class="kind reference" title="ships with matchmaker">reference</span>'
+              : ""}
+          </div>
+          <div class="entry-authors">${escapeHtml(entry.authors)}</div>
+        </td>
+        <td><span class="tag">${escapeHtml(entry.input_type)}</span></td>
+        <td>
+          <div class="span-cell">
+            <span class="span${pct === 0 ? " zero" : ""}" role="img"
+                  aria-label="${pct}% of pieces tracked"><i style="width:${pct}%"></i></span>
+            <span class="num${i === 0 && pct > 0 ? " lead" : ""}">${pct}%</span>
+          </div>
+        </td>
+        <td>${within === null || within === undefined
+              ? '<span class="num dim">&mdash;</span>'
+              : `<span class="num">${Math.round(within * 100)}%</span>`}</td>
+        <td>${metricCell(entry.beat_median, 3)}</td>
+        <td>${metricCell(entry.beat_mean, 3)}</td>
+        <td>${metricCell(entry.ms_median, 2)}</td>
+        <td>${metricCell(entry.beat_median_all, 3)}</td>
+        <td>${metricCell(entry.rtf, 4)}</td>
+      </tr>
+      ${detailRow(entry)}`;
+  }).join("");
+
+  empty.hidden = shown.length > 0;
+  if (!shown.length) {
+    empty.textContent = entries.length
+      ? "Nothing matches this filter yet."
+      : "Nothing has been evaluated on the eval fold yet.";
+  }
+  wireRows();
+}
+
+function wireRows() {
+  document.querySelectorAll("tr.entry").forEach((row) => {
+    const toggle = () => {
+      const detail = row.nextElementSibling;
+      const open = !detail.hidden;
+      detail.hidden = open;
+      row.classList.toggle("open", !open);
+      row.setAttribute("aria-expanded", String(!open));
+      if (!open) {
+        const body = detail.querySelector("[data-detail-body]");
+        const entry = entries.find((e) => e.submission === row.dataset.key);
+        if (entry && body && !body.dataset.loaded) {
+          body.dataset.loaded = "1";
+          fillDetail(entry, body);
+        }
+      }
+    };
+    row.addEventListener("click", toggle);
+    row.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        toggle();
+      }
+    });
+  });
+}
+
+document.querySelectorAll("th[data-key]").forEach((th) => {
+  th.addEventListener("click", () => {
+    const key = th.dataset.key;
+    const dir = sort.key === key
+      ? (sort.dir === "asc" ? "desc" : "asc")
+      : (th.dataset.dir || "asc");
+    sort = { key, dir };
+    document.querySelectorAll("th[data-key]").forEach((o) => o.removeAttribute("aria-sort"));
+    th.setAttribute("aria-sort", dir === "asc" ? "ascending" : "descending");
+    render();
+  });
+});
+
+document.querySelectorAll(".chip").forEach((chip) => {
+  chip.addEventListener("click", () => {
+    filter = chip.dataset.filter;
+    document.querySelectorAll(".chip").forEach((o) =>
+      o.setAttribute("aria-pressed", String(o === chip)));
+    render();
+  });
+});
+
+// Redraw open plots when the window changes size, so a plot generated for a
+// narrow window is not left stretched across a wide one.
+let resizeTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    document.querySelectorAll('[data-panel="pieces"]').forEach((host) => {
+      if (typeof host._redraw === "function") host._redraw();
+    });
+  }, 180);
+});
+
+async function loadBoard() {
+  const inline = el("leaderboard-data").textContent.trim();
+  if (inline) return JSON.parse(inline);
+  for (const base of SOURCES) {
+    try {
+      const response = await fetch(base + "leaderboard.json");
+      if (response.ok) return await response.json();
+    } catch (error) { /* try the next location */ }
+  }
+  return null;
+}
+
+loadBoard().then((board) => {
+  if (!board) {
+    const empty = el("empty");
+    empty.hidden = false;
+    empty.textContent = "Could not load leaderboard.json.";
+    return;
+  }
+  entries = board.entries || [];
+  const pieces = entries.length ? entries[0].n_pieces : 0;
+  el("provenance").innerHTML = [
+    ["fold", board.fold],
+    ["pieces", pieces],
+    ["entries", entries.length],
+    ["generated", (board.generated || "").replace("T", " ").replace("+00:00", " UTC")],
+  ].map(([k, v]) => `<span>${k} <b>${escapeHtml(v)}</b></span>`).join("");
+
+  // leaderboard-<dataset>.csv sits next to leaderboard.csv wherever the page
+  // found it; the datasets are whichever the entries were evaluated on.
+  const datasets = [...new Set(entries.flatMap((e) => Object.keys(e.datasets || {})))].sort();
+  el("dataset-downloads").innerHTML = datasets.length
+    ? " · per dataset: " + datasets.map((d) =>
+        `<a href="leaderboard-${encodeURIComponent(d)}.csv">${escapeHtml(d)}</a>`).join(" · ")
+    : "";
+  render();
+});
+</script>
+</body>
+</html>

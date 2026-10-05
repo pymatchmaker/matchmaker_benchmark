@@ -1,0 +1,21 @@
+# Reference entry: the fields every submission must provide.
+name: Constant tempo (baseline)
+authors:
+  - matchmaker maintainers
+affiliation: Johannes Kepler University Linz
+contact: https://github.com/pymatchmaker/matchmaker_benchmark/issues
+input_type: midi
+description: >
+  Open-loop baseline. Ignores the performance and reads the score position off
+  the clock, assuming the notated tempo and a start at the beginning of the
+  score. Defines the no-information floor of the leaderboard.
+url: https://github.com/pymatchmaker/matchmaker_benchmark
+license: Apache-2.0
+
+# How this submission was developed. Be specific: this is what a reproduction
+# run is checked against.
+tuned_on: []
+external_data: none
+
+# Required declaration. See docs/eval-protocol.md.
+eval_fold_untouched: true

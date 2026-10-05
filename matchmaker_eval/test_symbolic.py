@@ -20,8 +20,10 @@ import partitura as pt
 
 from eval import run_evaluation
 from matchmaker import Matchmaker
-from matchmaker.matchmaker import DEFAULT_KWARGS
 from matchmaker.utils.eval import resolve_gt
+from folds import explain_missing_dataset, nested_dataset_root
+from methods import available_methods, default_kwargs, processor_for
+from sweeps import log_summary, sweep_entity, sweep_kwargs, sweep_project
 from utils import (
     TOLERANCES_IN_BEATS,
     SymbolicEvalConfig,
@@ -31,6 +33,9 @@ from utils import (
 )
 from verify_tracking import check_tracking, plot_tracking
 
+from tabulate import tabulate
+import wandb
+
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -39,10 +44,17 @@ sys.setrecursionlimit(10000)
 TRACKING_THRESHOLD = 0.5  # beats
 
 WORKING_DIR = Path(__file__).parent.parent
+#: Resolved through MATCHMAKER_DATA_DIR rather than a hardcoded home
+#: directory. These runners read the CSVs under data/, which address each
+#: corpus in its upstream (nested) shape -- not the flat layout of the
+#: benchmark data repository. See folds.explain_missing_dataset.
+#: The `example` dataset is the one piece committed to this repository under
+#: resources/, so the runners have a smoke test that needs no corpus at all.
 DATASET_DIR = {
-    "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
-    "batik": Path("~/data/batik_plays_mozart").expanduser(),
-    "vienna": Path("~/data/vienna4x22").expanduser(),
+    "local": WORKING_DIR / "resources",
+    "asap": nested_dataset_root("asap"),
+    "batik": nested_dataset_root("batik"),
+    "vienna": nested_dataset_root("vienna"),
 }
 METADATA_PATH = {
     "valid": WORKING_DIR / "data/metadata-validation.csv",
@@ -57,9 +69,31 @@ TEMPO_DEPENDENT_METHODS = ["pfkorz"]
 
 TEMPO_METADATA_PATH = WORKING_DIR / "data/perf_tempo_estimate"
 
+DISPLAY_COLUMNS = [
+    "Index",
+    "Piece",
+    "beat_mean",
+    "beat_median",
+    "beat_0.1b",
+    "beat_0.5b",
+    "beat_1.0b",
+    "ms_mean",
+    "ms_median",
+    "ms_300ms",
+    "ms_1000ms",
+    "sparc",
+    "tracked",
+]
+
+
+def print_summary_table(results: dict):
+    display = {k: results[k] for k in DISPLAY_COLUMNS if k in results}
+    print(tabulate(display, headers="keys", tablefmt="fancy_grid", showindex=True))
+    return results
+
 
 def run_tests_and_eval_by_dataset(
-    dataset_type, method, run_dir=None, save_plots=True
+    dataset_type, method, run_dir=None, save_plots=True, matchmaker_kwargs=None
 ):
     """Run symbolic alignment for all pieces in a dataset."""
     metadata = pd.read_csv(METADATA_PATH[dataset_type])
@@ -80,6 +114,17 @@ def run_tests_and_eval_by_dataset(
         match_path = dataset_dir / row.match
         score_xml = dataset_dir / row.xml_score
         perf_midi = dataset_dir / row.midi_performance
+
+        if i == 1 and not score_xml.exists():
+            # Say once what is missing and how to get it, rather than repeating
+            # a per-piece traceback 146 times.
+            raise SystemExit(
+                "\n"
+                + explain_missing_dataset(
+                    row.dataset if is_valid else dataset_type, score_xml
+                )
+            )
+
         print(f"[{i}/{len(metadata)}] {row.title}")
 
         if method in TEMPO_DEPENDENT_METHODS and not is_valid:
@@ -88,15 +133,21 @@ def run_tests_and_eval_by_dataset(
             tempo_estimate = None
 
         try:
-            # Run alignment via Matchmaker (HMM or event-level OLTW)
-            mm_kwargs = DEFAULT_KWARGS["midi"].get(method, {}).copy()
+            # Run alignment via Matchmaker (HMM or event-level OLTW). The
+            # method's defaults come from matchmaker's spec, so a method added
+            # there is runnable here without a change.
+            mm_kwargs = (
+                dict(matchmaker_kwargs)
+                if matchmaker_kwargs is not None
+                else default_kwargs("midi", method)
+            )
             mm = Matchmaker(
                 score_file=str(score_xml),
                 performance_file=str(perf_midi),
                 input_type="midi",
                 method=method,
                 tempo=tempo_estimate,
-                kwargs=mm_kwargs if mm_kwargs else None,
+                kwargs=mm_kwargs or None,
             )
             list(mm.run(verbose=False))
             wp = mm.score_follower.alignment_path  # (2, T): perf, score
@@ -144,8 +195,22 @@ def run_tests_and_eval_by_dataset(
 
             # Save WP/GT — column order: perf_sec, score_beat
             if run_dir is not None:
-                np.savetxt(run_dir / f"wp_{i}.tsv", wp_T, delimiter="\t", fmt="%.6f", header="perf_sec\tscore_beat", comments="")
-                np.savetxt(run_dir / f"gt_{i}.tsv", gt, delimiter="\t", fmt="%.6f", header="perf_sec\tscore_beat", comments="")
+                np.savetxt(
+                    run_dir / f"wp_{i}.tsv",
+                    wp_T,
+                    delimiter="\t",
+                    fmt="%.6f",
+                    header="perf_sec\tscore_beat",
+                    comments="",
+                )
+                np.savetxt(
+                    run_dir / f"gt_{i}.tsv",
+                    gt,
+                    delimiter="\t",
+                    fmt="%.6f",
+                    header="perf_sec\tscore_beat",
+                    comments="",
+                )
                 with open(run_dir / f"{i}.json", "w") as f:
                     json.dump(nested, f, indent=4, default=float)
                 if save_plots:
@@ -169,12 +234,20 @@ def run_tests_and_eval_by_dataset(
             print(f"  ERROR: {e}")
             continue
 
+    print_summary_table(results)
     return results
 
 
-def main():
+def build_parser() -> argparse.ArgumentParser:
+    """The command line. Method choices come from matchmaker's registry."""
     parser = argparse.ArgumentParser(
-        description="MIDI score following benchmark (mirrors test_audio.py)"
+        description=(
+            "MIDI score following over a metadata CSV. Maintainer tool: it "
+            "needs a local copy of the corpus in its upstream (nested) layout. "
+            "To measure a submission, use run_submission.py --fold valid, "
+            "which reads the benchmark data repository and downloads what it "
+            "needs."
+        )
     )
     parser.add_argument(
         "--dataset",
@@ -186,7 +259,8 @@ def main():
         "--method",
         type=str,
         default="hmm",
-        help="Method (hmm, pthmm, outerhmm, arzt, dixon)",
+        choices=available_methods("midi"),
+        help="MIDI method, from matchmaker's registry",
     )
     parser.add_argument(
         "--no-plots",
@@ -194,22 +268,49 @@ def main():
         help="Skip saving per-piece tracking plots (faster evaluation)",
         default=False,
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--sweep",
+        action="store_true",
+        default=False,
+        help="run as a wandb sweep agent, taking the method's settings from "
+        "the sweep config (see sweep_config/)",
+    )
+    return parser
+
+
+def main(args=None):
+    args = args or build_parser().parse_args()
 
     method = args.method
     dataset = args.dataset
-    processor = DEFAULT_KWARGS.get("midi", {}).get(method, {}).get("processor")
+    matchmaker_kwargs = None
+    if getattr(args, "sweep", False):
+        method = wandb.config.get("method", method)
+        dataset = wandb.config.get("dataset", dataset)
+        matchmaker_kwargs = sweep_kwargs("midi", method, wandb.config)
+
+    # Record the processor the run will actually use: the method's default
+    # from matchmaker's spec, unless the sweep config overrode it.
+    processor = (matchmaker_kwargs or {}).get(
+        "processor", processor_for("midi", method)
+    )
     config = SymbolicEvalConfig(method=method, dataset=dataset, processor=processor)
 
     ts = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
-    run_dir = OUTPUT_DIR / f"test_{ts}_sym_{method}_{dataset}"
+    if getattr(args, "sweep", False):
+        run_dir = OUTPUT_DIR / f"sweep_{ts}_sym_{method}_{wandb.run.id}"
+    else:
+        run_dir = OUTPUT_DIR / f"test_{ts}_sym_{method}_{dataset}"
     run_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Method: {method}, Dataset: {dataset}, Output: {run_dir}")
 
     results = run_tests_and_eval_by_dataset(
-        dataset, method, run_dir=run_dir,
-        save_plots=not args.no_plots,
+        dataset,
+        method,
+        run_dir=run_dir,
+        save_plots=not getattr(args, "sweep", False) and not args.no_plots,
+        matchmaker_kwargs=matchmaker_kwargs,
     )
 
     n_total = len(results["Index"])
@@ -228,6 +329,17 @@ def main():
 
     save_config(config, run_dir)
 
+    if getattr(args, "sweep", False):
+        log_summary(summary_all, summary_tracked)
+
 
 if __name__ == "__main__":
-    main()
+    args = build_parser().parse_args()
+    if args.sweep:
+        with wandb.init(
+            entity=sweep_entity(),
+            project=sweep_project("midi", args.method),
+        ):
+            main(args)
+    else:
+        main(args)

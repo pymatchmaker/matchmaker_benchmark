@@ -1,0 +1,16 @@
+{
+  "fold": "eval",
+  "generated": "2026-09-07T17:31:08+00:00",
+  "ranking": "tracking_rate desc, then beat_median asc",
+  "metrics": {
+    "tracking_rate": "share of pieces followed to the end within tolerance",
+    "beat_median": "median |beat error| (perf->score), pooled over tracked pieces",
+    "ms_median": "median |ms error| (score->perf), pooled over tracked pieces",
+    "beat_median_all": "median |beat error| over every piece, lost ones included",
+    "rtf": "real-time factor: processing time / performance duration",
+    "estimated_bpm": "the follower was given the performance's tempo instead of the score's notated one \u2014 marked * in the table"
+  },
+  "entries": [],
+  "skipped": [],
+  "retracted": []
+}

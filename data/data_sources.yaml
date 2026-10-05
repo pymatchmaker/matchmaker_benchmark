@@ -1,0 +1,87 @@
+# Where the benchmark fetches its data from.
+#
+# Fold CSVs name every file as <dataset>/<path relative to that dataset>.
+# matchmaker_eval/fetch_data.py turns each of those into a URL, downloads it
+# under MATCHMAKER_DATA_DIR, and keeps the same layout. Files already on disk
+# are never re-downloaded, so CI can cache the directory between runs.
+#
+# This exists so that contributors do not have to download anything: the
+# evaluation workflow fetches exactly the pieces it needs.
+
+version: 1
+enabled: true
+
+# ── The data repository ──────────────────────────────────────────────────────
+# These three lines are the whole address. When the repository is renamed or
+# moves to another account, change them here and nothing else.
+#
+# To point at a fork without editing this file — useful for testing — export
+# MATCHMAKER_DATA_OWNER / _REPO / _BRANCH / _LAYOUT / _STORAGE. Any of those
+# also switches fetching on.
+owner: pymatchmaker
+repo: matchmaker-benchmark-data
+branch: main
+
+# Folds can live on separate branches, so a checkout or a clone brings down
+# only what that fold needs. Anything unlisted falls back to `branch:` above.
+#
+# This organises the data; it does not restrict access. On a public repository
+# any branch can be checked out by anyone. Material that must stay genuinely
+# unseen belongs in a separate private repository, not on another branch.
+#
+branches:
+  eval: eval
+  valid: valid
+
+# Where a fold's <dataset>/<path> sits inside that repository. Change this if
+# the repository nests the datasets under a subdirectory, e.g. "data/{dataset}/{path}".
+layout: "{dataset}/{path}"
+
+# How the files are stored:
+#   plain — committed directly, served by raw.githubusercontent.com
+#   api   — the REST contents endpoint. Honours a personal access token where
+#           raw.githubusercontent.com sometimes does not, so this is the
+#           dependable route into a PRIVATE repository. Files up to 100 MB.
+#   lfs   — committed through Git LFS (a different host serves the real bytes;
+#           raw.githubusercontent.com would hand back the pointer text instead)
+#   auto  — try plain, then api, then lfs. Correct in every case, at the cost of
+#           a wasted request or two per file when the first guess is wrong.
+storage: auto
+
+# The NAME of the environment variable holding the access token — never the
+# token itself. A token in this file would be committed to a public repository.
+#
+#   export MATCHMAKER_DATA_TOKEN=github_pat_...      <- the token lives here
+#   token_env: MATCHMAKER_DATA_TOKEN                 <- this file names it
+#
+# In GitHub Actions, pass a secret into that variable. Once the data repository
+# is public, unset it and everything keeps working.
+token_env: MATCHMAKER_DATA_TOKEN
+
+# Escape hatch: set this to bypass owner/repo/branch/layout/storage entirely and
+# fetch from any URL, e.g. a Hugging Face dataset or a release asset. Supports
+# {dataset} and {path}.
+# url_template: "https://huggingface.co/datasets/OWNER/NAME/resolve/main/{dataset}/{path}"
+
+# The data repository ships audio as mp3 while the fold CSVs name the original
+# .wav files. Audio is fetched by trying these containers in order; the first
+# that exists wins, and the local file keeps that extension.
+audio_extensions: [".mp3"]
+#, ".wav"]
+
+# Optional integrity check. If data/checksums/<dataset>.sha256 exists (lines of
+# "<sha256>  <path>"), every fetched file is verified against it.
+verify_checksums: true
+
+# Datasets that are never fetched because they are committed to this repository.
+local_datasets: [local]
+
+# Column of the data repository's manifests holding the performance's estimated
+# tempo in BPM. Read only by make_folds.py, which copies the value into the fold
+# CSVs; a run then takes the tempo from the fold and never looks here. Only
+# followers that declare `estimated_bpm: true` are given it, and the leaderboard
+# marks those rows — see docs/eval-protocol.md.
+#
+# A list is accepted, and the first name a manifest actually has is used, for
+# when a branch is mid-rename.
+estimated_bpm_column: estimated_bpm

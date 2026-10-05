@@ -10,7 +10,8 @@ from partitura.musicanalysis.performance_codec import (
 )
 from typing import List, Tuple
 
-from matchmaker.utils.symbolic import save_wav_fluidsynth
+# partitura owns the fluidsynth renderer; matchmaker dropped its copy.
+from partitura import save_wav_fluidsynth
 
 import matplotlib.pyplot as plt
 
@@ -532,8 +533,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser("Generate synthetic performances")
 
-    parser.add_argument("--filename", "-f", default=None, help="Score in MusicXML format",
-                        )
+    parser.add_argument(
+        "--filename",
+        "-f",
+        default=None,
+        help="Score in MusicXML format",
+    )
     parser.add_argument(
         "--type",
         "-t",

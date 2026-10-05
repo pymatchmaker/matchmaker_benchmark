@@ -1,3 +1,16 @@
 [flake8]
 max-line-length = 88
-per-file-ignores = __init__.py:F401
+# E402: the submission entry points must put the repository root on sys.path
+# before importing matchmaker_eval.*, so their imports cannot all sit at the
+# top. See the comment in run_submission.py.
+per-file-ignores =
+    __init__.py:F401
+    matchmaker_eval/run_submission.py:E402
+    matchmaker_eval/validate_submission.py:E402
+    matchmaker_eval/leaderboard.py:E402
+    matchmaker_eval/make_folds.py:E402
+    matchmaker_eval/fetch_data.py:E402
+    matchmaker_eval/merge_shards.py:E402
+    matchmaker_eval/verify_equivalence.py:E402
+    matchmaker_eval/export_details.py:E402
+    matchmaker_eval/run_references.py:E402

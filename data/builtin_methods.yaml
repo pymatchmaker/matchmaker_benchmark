@@ -1,0 +1,107 @@
+# The methods that ship with matchmaker, described so they can appear on the
+# leaderboard as reference points rather than as submissions.
+#
+# These are what a new score follower is trying to beat. They are evaluated by
+# exactly the same code and on exactly the same fold — see docs/eval-protocol.md
+# — and marked `reference` on the leaderboard so they are not mistaken for
+# community entries.
+#
+#   python matchmaker_eval/run_submission.py --method pthmm --input-type midi
+#
+# Descriptions and attributions follow matchmaker's own README.
+
+midi:
+  pthmm:
+    name: Pitch HMM
+    authors: [matchmaker]
+    description: >
+      Pitch-based hidden Markov model over score states. Matchmaker's default
+      MIDI method.
+  hmm:
+    name: Pitch-IOI HMM
+    authors: [Cancino-Chacón et al. (2023)]
+    description: >
+      Hidden Markov model combining pitch observations with inter-onset
+      intervals and a Kalman tempo model.
+  outerhmm:
+    name: Outer-product HMM
+    authors: ["Nakamura (2014)"]
+    description: >
+      Outer-product HMM score follower, factorising the state space over score
+      position and tempo.
+  arzt:
+    name: OLTW (Arzt)
+    authors: ["Brazier and Widmer (2020)"]
+    description: >
+      On-line time warping over an onset piano roll, aligning event by event.
+  dixon:
+    name: OLTW (Dixon)
+    authors: ["Dixon (2005)"]
+    description: >
+      On-line time warping with a forward path constraint, aligning event by
+      event.
+  pfkorz:
+    name: Particle filter (Korzeniowski)
+    authors: [matchmaker]
+    description: >
+      Sequential Monte Carlo tracking of score position and tempo, on
+      Korzeniowski features.
+    # Given the performance's tempo. Marked on the leaderboard.
+    estimated_bpm: true
+  SL_OLTW:
+    name: Symbolic OLTW (parangonar)
+    authors: [Silvan Peter]
+    description: >
+      On-line time warping over symbolic note events, from the parangonar
+      alignment library (https://github.com/sildater/parangonar). Matches one
+      performed note at a time against the score note array.
+  SLT_OLTW:
+    name: Symbolic tempo OLTW (parangonar)
+    authors: [Silvan Peter]
+    description: >
+      The tempo-tracking variant of parangonar's symbolic on-line time warping,
+      which estimates a local tempo alongside the alignment.
+  OTM:
+    name: Online transformer matcher (parangonar)
+    authors: [Silvan Peter]
+    description: >
+      Transformer-based online note matcher from parangonar, combining a
+      learned model with a symbolic alignment stage.
+  OPTM:
+    name: Online pure transformer matcher (parangonar)
+    authors: [Silvan Peter]
+    description: >
+      Transformer-based online note matcher from parangonar, run without the
+      additional symbolic alignment stage.
+
+audio:
+  arzt:
+    name: OLTW (Arzt)
+    authors: ["Brazier and Widmer (2020)"]
+    description: >
+      On-line time warping against a synthesised rendering of the score, on
+      chroma features.
+  dixon:
+    name: OLTW (Dixon)
+    authors: ["Dixon (2005)"]
+    description: >
+      On-line time warping with a forward path constraint, on log-spectral
+      energy features.
+  outerhmm:
+    name: Outer-product HMM
+    authors: ["Nakamura (2014)"]
+    description: >
+      Outer-product HMM on CQT spectral-flux features.
+  skf:
+    name: Switching Kalman filter
+    authors: ["Jiang and Raphael (2020)"]
+    description: >
+      Switching Kalman filter with hidden tempo, on raw spectrum features.
+  pfkorz:
+    name: Particle filter (Korzeniowski)
+    authors: [matchmaker]
+    description: >
+      Sequential Monte Carlo tracking of score position and tempo, on
+      Korzeniowski features.
+    # Given the performance's tempo. Marked on the leaderboard.
+    estimated_bpm: true
