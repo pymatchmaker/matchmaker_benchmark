@@ -11,7 +11,12 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 from eval import run_offline_alignment, run_score_following
-from folds import explain_missing_dataset, nested_dataset_root
+from folds import (
+    DATA_REPO_DATASETS,
+    data_repo_metadata,
+    explain_missing_dataset,
+    nested_dataset_root,
+)
 from methods import audio_rates, available_methods, default_kwargs
 from sweeps import log_summary, sweep_entity, sweep_kwargs, sweep_project
 from tabulate import tabulate
@@ -94,6 +99,19 @@ def print_summary_table(results: dict):
     return results
 
 
+def load_metadata(dataset_type: str) -> pd.DataFrame:
+    """The pieces of a dataset: the data repository's metadata where it has
+    the dataset (paths absolute, so the joins below leave them unchanged),
+    otherwise the CSV under data/."""
+    if dataset_type in DATA_REPO_DATASETS:
+        return pd.DataFrame(data_repo_metadata(dataset_type))
+    metadata = pd.read_csv(METADATA_PATH[dataset_type], skipinitialspace=True)
+    metadata.columns = metadata.columns.str.strip()
+    str_cols = metadata.select_dtypes(include=["object"]).columns
+    metadata[str_cols] = metadata[str_cols].apply(lambda x: x.str.strip())
+    return metadata
+
+
 def run_tests_and_eval_by_dataset(
     dataset_type: str,
     config: AudioEvalConfig,
@@ -111,10 +129,7 @@ def run_tests_and_eval_by_dataset(
     if not dry_run:
         run_dir.mkdir(parents=True, exist_ok=True)
 
-    metadata = pd.read_csv(METADATA_PATH[dataset_type], skipinitialspace=True)
-    metadata.columns = metadata.columns.str.strip()
-    str_cols = metadata.select_dtypes(include=["object"]).columns
-    metadata[str_cols] = metadata[str_cols].apply(lambda x: x.str.strip())
+    metadata = load_metadata(dataset_type)
     if workers < 1:
         raise ValueError("workers must be positive")
     if indices is not None and (
@@ -135,7 +150,8 @@ def run_tests_and_eval_by_dataset(
                     results[key].extend(values)
         return results
     is_valid_dataset = dataset_type in ("valid", "example")
-    if not is_valid_dataset:
+    from_data_repo = dataset_type in DATA_REPO_DATASETS
+    if not is_valid_dataset and not from_data_repo:
         tempo_metadata_fn = TEMPO_METADATA_PATH / f"{dataset_type}_tempo_estimates.csv"
         tempo_metadata = pd.read_csv(tempo_metadata_fn)
     
@@ -153,10 +169,6 @@ def run_tests_and_eval_by_dataset(
             current_dataset = dataset_type
             dataset_dir = DATASET_DIR[dataset_type]
 
-        use_musical_beat = current_dataset in ["asap", "kraisler"]
-
-        # kraisler annotations are temporarily beat-level TODO: fix to note-level
-        piece_granularity = "beat" if current_dataset == "kraisler" else granularity
 
         # Determine base directory: some datasets (e.g. chorale) have paths
         # relative to a folder column, while others include the full path.
@@ -177,7 +189,9 @@ def run_tests_and_eval_by_dataset(
             # a per-piece traceback for every row.
             raise SystemExit("\n" + explain_missing_dataset(current_dataset, score_xml))
 
-        if config.method in TEMPO_DEPENDENT_METHODS and not is_valid_dataset:
+        if config.method in TEMPO_DEPENDENT_METHODS and from_data_repo:
+            tempo_estimate = float(row.estimated_bpm)
+        elif config.method in TEMPO_DEPENDENT_METHODS and not is_valid_dataset:
             tempo_estimate = tempo_metadata.loc[tempo_metadata["audio_performance_file"] == row.audio_performance, "estimated_bpm"].values[0]
         else:
             tempo_estimate = None
@@ -212,21 +226,19 @@ def run_tests_and_eval_by_dataset(
                     perf_audio,
                     match_file,
                     config,
-                    use_musical_beat,
                     perf_annotations=perf_annotations,
-                    granularity=piece_granularity,
+                    granularity=granularity,
                 )
             else:
                 result = run_score_following(
                     score_xml,
                     perf_audio,
                     config,
-                    use_musical_beat,
                     dry_run=dry_run,
                     save_dir=run_dir,
                     run_name=f"{i}",
                     match_file=match_file,
-                    granularity=piece_granularity,
+                    granularity=granularity,
                     matchmaker_kwargs=matchmaker_kwargs,
                     save_plots=save_plots,
                     gt=piece_gt,
@@ -316,7 +328,7 @@ def main(args):
         )
 
         expected = len(args.indices) if args.indices is not None else len(
-            pd.read_csv(METADATA_PATH[config.dataset])
+            load_metadata(config.dataset)
         )
         completed = len(results.get("Index", []))
         with (run_dir / "completion.json").open("w") as f:

@@ -125,9 +125,6 @@ FOLD_COLUMNS = [
 #: only a run that asks for the tempo is affected, and that one fails loudly.
 REQUIRED_FOLD_COLUMNS = [c for c in FOLD_COLUMNS if c != "estimated_bpm"]
 
-#: Datasets whose beat annotations are in musical (notated) beats.
-MUSICAL_BEAT_DATASETS = {"asap"}
-
 #: The fold the leaderboard publishes. Runs on any other fold are development
 #: output and are kept somewhere else, so they can never overwrite a published
 #: record.
@@ -177,10 +174,6 @@ class Piece:
     @property
     def match_path(self) -> Path:
         return self.root / self.match
-
-    @property
-    def musical_beat(self) -> bool:
-        return self.dataset in MUSICAL_BEAT_DATASETS
 
     def performance_path(self, input_type: str) -> Path:
         """Resolve the performance file, accepting any known audio container.
@@ -306,6 +299,46 @@ def shard_of(pieces: List[Piece], shard: int, num_shards: int) -> List[Piece]:
     if not 0 <= shard < num_shards:
         raise FoldError(f"shard must be in [0, {num_shards}), got {shard}.")
     return pieces[shard::num_shards]
+
+
+#: Datasets whose pieces the metadata runners (test_audio.py,
+#: test_symbolic.py) take from the benchmark data repository's own metadata
+#: (``<dataset>/metadata-<dataset>.csv``), so every runner reads the same
+#: score, performance (mp3 for audio), ground truth and tempo.
+DATA_REPO_DATASETS = ("asap", "batik", "vienna", "chorale", "kraisler", "urmp", "winterreise")
+
+#: data-repository metadata column -> column name the metadata runners use
+_DATA_REPO_COLUMNS = {
+    "score": "xml_score",
+    "audio": "audio_performance",
+    "midi": "midi_performance",
+    "match": "match",
+    "annotations": "performance_annotations",
+    "estimated_bpm": "estimated_bpm",
+}
+
+
+def data_repo_metadata(dataset: str) -> List[dict]:
+    """Rows of the data repository's metadata for ``dataset``, paths absolute.
+
+    Each row has ``title`` (the performance file's stem) and the runner column
+    names of ``_DATA_REPO_COLUMNS`` that the dataset's metadata provides.
+    """
+    path = DATA_ROOT / dataset / f"metadata-{dataset}.csv"
+    if not path.exists():
+        raise FoldError(f"No data-repository metadata at {path}; set MATCHMAKER_DATA_DIR.")
+    rows = []
+    with open(path, newline="") as f:
+        for raw in csv.DictReader(f):
+            row = {}
+            for column, name in _DATA_REPO_COLUMNS.items():
+                value = (raw.get(column) or "").strip()
+                if not value:
+                    continue
+                row[name] = value if column == "estimated_bpm" else str(DATA_ROOT / value)
+            row["title"] = Path(raw["audio"].strip()).stem
+            rows.append(row)
+    return rows
 
 
 def nested_dataset_root(dataset: str) -> Path:

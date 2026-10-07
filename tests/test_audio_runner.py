@@ -4,23 +4,24 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+import folds
 import test_audio as runner
 from utils import AudioEvalConfig
 
 
 @pytest.fixture
 def metadata(tmp_path, monkeypatch):
-    path = tmp_path / "metadata.csv"
+    # asap is read from the data repository's metadata (paths relative to it)
+    (tmp_path / "asap").mkdir()
     pd.DataFrame([
-        dict(title=f"piece-{i}", xml_score=f"{i}.musicxml",
-             audio_performance=f"{i}.wav", match=f"{i}.match")
+        dict(audio=f"asap/{i}.mp3", score=f"asap/{i}.musicxml",
+             match=f"asap/{i}.match", estimated_bpm=100)
         for i in range(1, 4)
-    ]).to_csv(path, index=False)
+    ]).to_csv(tmp_path / "asap" / "metadata-asap.csv", index=False)
     # the runner stops early when the first score is missing (a missing corpus)
     for i in range(1, 4):
-        (tmp_path / f"{i}.musicxml").touch()
-    monkeypatch.setitem(runner.METADATA_PATH, "asap", path)
-    monkeypatch.setitem(runner.DATASET_DIR, "asap", tmp_path)
+        (tmp_path / "asap" / f"{i}.musicxml").touch()
+    monkeypatch.setattr(folds, "DATA_ROOT", tmp_path)
     return tmp_path
 
 

@@ -65,7 +65,6 @@ def run_evaluation(
     mm: Matchmaker,
     gt: Union[str, Path, np.ndarray] = None,
     tolerances: Optional[list] = None,
-    musical_beat: bool = False,
     debug: bool = False,
     save_dir: Optional[Path] = None,
     run_name: Optional[str] = None,
@@ -245,7 +244,6 @@ def run_score_following(
     score_path: Path,
     perf_path: Union[Path, str],
     config: AudioEvalConfig,
-    use_musical_beat: bool = False,
     *,
     input_type: str = "audio",
     dry_run: bool = False,
@@ -302,7 +300,6 @@ def run_score_following(
         mm,
         gt=gt_pairs,
         tolerances=TOLERANCES_IN_BEATS,
-        musical_beat=use_musical_beat,
         domain="score",
         debug=save_dir is not None and not dry_run,
         make_plot=save_plots,
@@ -328,7 +325,7 @@ def run_score_following(
             gt_for_check = gt_pairs
         else:
             score_annots_for_gt = mm.build_score_annotations(
-                level=granularity, musical_beat=use_musical_beat, return_type="beats"
+                level=granularity, return_type="beats"
             )
             min_len = min(len(score_annots_for_gt), len(perf_annotations))
             gt_for_check = np.column_stack(
@@ -377,7 +374,6 @@ def run_offline_alignment(
     perf_path,
     match_file,
     config,
-    use_musical_beat,
     perf_annotations=None,
     granularity="note",
 ):
@@ -424,10 +420,10 @@ def run_offline_alignment(
     wp = wp_raw[::-1].T
 
     score_annots = mm.build_score_annotations(
-        level=granularity, musical_beat=use_musical_beat, return_type="seconds"
+        level=granularity, return_type="seconds"
     )
     score_beats = mm.build_score_annotations(
-        level=granularity, musical_beat=use_musical_beat, return_type="beats"
+        level=granularity, return_type="beats"
     )
     na = mm.score_part.note_array()
     start_beat = max(0, int(np.ceil(np.unique(na["onset_beat"]).min())))
@@ -439,7 +435,7 @@ def run_offline_alignment(
         perf_annots = perf_annotations[intro_offset:]
     elif match_file is not None:
         score_onset_beats = mm.build_score_annotations(
-            level=granularity, musical_beat=use_musical_beat, return_type="beats"
+            level=granularity, return_type="beats"
         )
         perf_annots = parse_match_file_for_note_onsets(
             match_file, level=granularity, score_onset_beats=score_onset_beats
