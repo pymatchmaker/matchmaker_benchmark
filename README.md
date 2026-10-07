@@ -99,8 +99,9 @@ change to what it measures arrives as a reviewable diff.
 | Fold | Pieces | Data branch | Use |
 | --- | ---: | --- | --- |
 | `example` | 1 | committed in `resources/` | smoke tests; no download |
-| `valid` | 20 | [`experiment`](https://github.com/pymatchmaker/matchmaker-benchmark-data/tree/experiment) | development and sweeps |
-| `eval` | 146 | [`benchmark`](https://github.com/pymatchmaker/matchmaker-benchmark-data/tree/benchmark) | the leaderboard, and nothing else |
+| `valid` | 20 | [`valid`](https://github.com/pymatchmaker/matchmaker-benchmark-data/tree/valid) | development and sweeps |
+| `eval` | 146 | [`eval`](https://github.com/pymatchmaker/matchmaker-benchmark-data/tree/eval) | the leaderboard, and nothing else |
+| `beyond_piano` | 343 | [`eval`](https://github.com/pymatchmaker/matchmaker-benchmark-data/tree/eval) | audio-only test corpora (ChoraleBricks, KRAISLER, URMP, Winterreise); not on the leaderboard |
 
 No performance appears in both `valid` and `eval`; CI checks it on every pull
 request (`make_folds.py --check`).
@@ -118,9 +119,9 @@ checkout of the branch a fold reads needs no further step. This is what CI does
 — one shallow clone, no file-by-file downloads:
 
 ```bash
-git clone --depth 1 --branch benchmark \
-    https://github.com/pymatchmaker/matchmaker-benchmark-data.git ~/benchmark-data
-export MATCHMAKER_DATA_DIR=~/benchmark-data
+git clone --depth 1 --branch eval \
+    https://github.com/pymatchmaker/matchmaker-benchmark-data.git ~/benchmark-data/eval
+export MATCHMAKER_DATA_DIR=~/benchmark-data/eval
 
 # confirm the fold is complete before running anything
 python matchmaker_eval/fetch_data.py --verify --fold eval --input-type audio
@@ -133,7 +134,7 @@ fold reads, so you never have to look it up.
 you want, `fetch_data.py` downloads only the files a run touches:
 
 ```bash
-# only the 20 validation performances, from the `experiment` branch
+# only the 20 validation performances, from the `valid` branch
 python matchmaker_eval/fetch_data.py --fold valid --input-type midi
 
 # check the configuration without downloading a corpus

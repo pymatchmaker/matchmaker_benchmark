@@ -138,7 +138,7 @@ each dataset folder, or a single manifest at the repository root:
 asap/metadata-asap.csv      audio,score,midi,match
                             audio/Bach_….mp3          <- dataset-relative
 
-metadata-experiment.csv     dataset,audio,midi,score,match
+metadata-valid.csv          dataset,audio,midi,score,match
                             batik,batik/audio/….mp3   <- root-relative
 ```
 
