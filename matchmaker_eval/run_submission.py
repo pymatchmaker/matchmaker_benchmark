@@ -256,14 +256,18 @@ def run_piece(
     if wp is None or wp.size == 0:
         raise SubmissionError("the follower produced an empty alignment path")
 
-    perf_sec, score_beat = resolve_gt(piece.match_path, mm.score_part.note_array())
+    # For MIDI input, GT times come from the MIDI file the follower streams.
+    perf_sec, score_beat = resolve_gt(
+        piece.match_path,
+        mm.score_part.note_array(),
+        performance=str(piece.performance_path(input_type)) if input_type == "midi" else None,
+    )
     gt = np.column_stack([perf_sec, score_beat])
 
     nested = run_evaluation(
         mm,
         gt=gt,
         tolerances=TOLERANCES_IN_BEATS,
-        musical_beat=piece.musical_beat,
         domain="score",
         debug=True,
         save_dir=run_dir,
