@@ -10,8 +10,8 @@ one performance time:
 A score onset takes the median time of its paired notes. Notes the score marks
 as tremolo are used only when nothing else sounds at that onset: their repeated
 strokes are paired with the wrong repetition in places. A time is then kept only
-if it lies within a quarter of a score beat of the manual beat annotation
-(``annotation_csv/<k>_beats.csv``), and the remaining inversions are removed by
+if it lies within a quarter of the annotated beat interval of the manual beat
+annotation (``annotation_csv/<k>_beats.csv``), and the remaining inversions are removed by
 keeping the longest increasing subsequence. The three mixes of a piece share one
 file. Writes ``<out-dir>/<k>.tsv`` (perf_sec, score_beat)::
 
@@ -36,7 +36,8 @@ from preprocess_urmp import match_by_pitch  # noqa: E402
 #: Beat-annotation units tried against the score beat, and their offsets.
 BEAT_SCALES = (0.5, 1, 2, 3, 1 / 3)
 BEAT_OFFSETS = np.arange(-6, 6.01, 0.25)
-#: Largest distance from the beat annotation, in score beats.
+#: Largest distance from the beat annotation, as a fraction of the annotated beat
+#: interval (piece 08 annotates dotted quarters while its score beat is the eighth).
 TOLERANCE_BEATS = 0.25
 
 
@@ -130,7 +131,7 @@ def piece_gt(root: Path, k: str):
     inside = (index >= 0) & (index <= len(beat_times) - 1)
     reference = np.interp(index, grid, beat_times)
     interval = np.interp(index, grid[:-1] + 0.5, np.diff(beat_times))
-    close = np.abs(times - reference) <= TOLERANCE_BEATS * interval / scale
+    close = np.abs(times - reference) <= TOLERANCE_BEATS * interval
     keep = ~inside | close
 
     beats, times = beats[keep], times[keep]
