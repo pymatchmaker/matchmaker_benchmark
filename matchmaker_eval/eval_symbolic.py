@@ -81,11 +81,13 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
+from folds import DATA_ROOT, nested_dataset_root
+
 DATASET_DIR = {
-    "validation": Path(os.path.expanduser("~/datasets")),
-    "asap": Path(os.path.expanduser("~/datasets/asap-dataset-matchmaker")),
-    "batik": Path(os.path.expanduser("~/datasets/batik_plays_mozart")),
-    "vienna": Path(os.path.expanduser("~/datasets/vienna4x22")),
+    "validation": DATA_ROOT,
+    "asap": nested_dataset_root("asap"),
+    "batik": nested_dataset_root("batik"),
+    "vienna": nested_dataset_root("vienna"),
 }
 METADATA_PATH = {
     "validation": "../matchmaker_benchmark/data/metadata-validation.csv",

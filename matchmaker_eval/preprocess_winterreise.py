@@ -22,6 +22,7 @@ sys.setrecursionlimit(10000)
 import numpy as np
 import pandas as pd
 import partitura as pt
+from folds import DATA_ROOT
 from utils import source_annotation
 
 
@@ -140,7 +141,7 @@ def process_piece(score_xml_path: Path, note_csv_path: Path) -> tuple:
 def main():
     parser = argparse.ArgumentParser(description="Preprocess Winterreise annotations")
     parser.add_argument(
-        "--data-dir", type=Path, default=Path("~/data/winterreise").expanduser()
+        "--data-dir", type=Path, default=DATA_ROOT / "winterreise"
     )
     parser.add_argument(
         "--output-dir", type=Path, default=Path(__file__).parent / "winterreise_aligned"

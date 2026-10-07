@@ -9,19 +9,22 @@ warnings.filterwarnings("ignore", category=UserWarning)
 import partitura as pt
 from partitura.score import merge_parts
 
+from folds import DATA_ROOT, nested_dataset_root
+
 WORKING_DIR = Path(__file__).parent.parent
 #: The `example` dataset is the one piece committed to this repository under
 #: resources/, so the runners have a smoke test that needs no corpus at all.
 DATASET_DIR = {
     "local": WORKING_DIR / "resources",
-    "asap": Path("~/data/asap-dataset-matchmaker").expanduser(),
-    "batik": Path("~/data/batik_plays_mozart").expanduser(),
-    "vienna": Path("~/data/vienna4x22").expanduser(),
-    "kraisler": Path("~/data/KRAISLER").expanduser(),
-    "chorale": Path("~/data/chorale-bricks").expanduser(),
-    "urmp": Path("~/data/URMP").expanduser(),
-    "winterreise": Path("~/data/winterreise").expanduser(),
-    "zeilinger": Path("~/data/Zeilinger_data").expanduser(),
+    "asap": nested_dataset_root("asap"),
+    "batik": nested_dataset_root("batik"),
+    "vienna": nested_dataset_root("vienna"),
+    # upstream copies under MATCHMAKER_DATA_DIR, by their original names
+    "kraisler": DATA_ROOT / "KRAISLER",
+    "chorale": DATA_ROOT / "chorale-bricks",
+    "urmp": DATA_ROOT / "URMP",
+    "winterreise": DATA_ROOT / "winterreise",
+    "zeilinger": DATA_ROOT / "Zeilinger_data",
 }
 METADATA_PATH = {
     "valid": WORKING_DIR / "data/metadata-validation.csv",

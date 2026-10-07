@@ -15,7 +15,7 @@ annotation (``annotation_csv/<k>_beats.csv``), and the remaining inversions are 
 keeping the longest increasing subsequence. The three mixes of a piece share one
 file. Writes ``<out-dir>/<k>.tsv`` (perf_sec, score_beat)::
 
-    python matchmaker_eval/build_kraisler_gt.py --kraisler-dir ~/data/KRAISLER \\
+    python matchmaker_eval/build_kraisler_gt.py --kraisler-dir $MATCHMAKER_DATA_DIR/KRAISLER \\
         --out-dir <data repo>/kraisler/annotations
 """
 
@@ -31,6 +31,7 @@ import partitura as pt
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from folds import DATA_ROOT  # noqa: E402
 from preprocess_urmp import match_by_pitch  # noqa: E402
 
 #: Beat-annotation units tried against the score beat, and their offsets.
@@ -146,7 +147,7 @@ def piece_gt(root: Path, k: str):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("--kraisler-dir", type=Path, default=Path("~/data/KRAISLER").expanduser())
+    parser.add_argument("--kraisler-dir", type=Path, default=DATA_ROOT / "KRAISLER")
     parser.add_argument("--out-dir", type=Path, required=True)
     args = parser.parse_args()
     args.out_dir.mkdir(parents=True, exist_ok=True)

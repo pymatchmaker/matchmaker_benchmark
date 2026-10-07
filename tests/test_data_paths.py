@@ -164,3 +164,51 @@ class TestMetadataRunnerPaths:
             )
             assert done.returncode == 0, done.stderr
             assert "--fold valid" in done.stdout
+
+
+class TestNoHardcodedDataDirectories:
+    """Every data path goes through MATCHMAKER_DATA_DIR.
+
+    Results stop being reproducible the moment a script reads a directory that
+    only exists on one machine. The evaluation path resolves through
+    ``folds.DATA_ROOT`` and the fold CSVs; the one-off preprocessing and
+    analysis scripts default to a directory under that same root and take a
+    CLI argument to point elsewhere.
+    """
+
+    import re
+
+    PATTERN = re.compile(
+        r"~/(data|datasets|dataset|workspace)\b|/Users/|/Volumes/|/home/[a-z_][\w-]*/"
+    )
+
+    #: The single place the default data root is defined (and documented),
+    #: and the submission validator's pattern that looks for such paths.
+    ALLOWED = {
+        "matchmaker_eval/folds.py": (
+            'DATA_ROOT = Path(os.environ.get("MATCHMAKER_DATA_DIR", "~/data")).expanduser()',
+            "export MATCHMAKER_DATA_DIR=~/data",
+        ),
+        "matchmaker_eval/validate_submission.py": (r"MATCHMAKER_DATA_DIR|~/data|os\.environ",),
+    }
+
+    def _offending_lines(self, paths):
+        for path in paths:
+            rel = path.relative_to(REPO_ROOT).as_posix()
+            allowed = self.ALLOWED.get(rel, ())
+            for n, line in enumerate(path.read_text().splitlines(), 1):
+                if self.PATTERN.search(line) and not any(a in line for a in allowed):
+                    yield f"{rel}:{n}: {line.strip()}"
+
+    def test_the_python_sources_name_no_machine_path(self):
+        sources = sorted((REPO_ROOT / "matchmaker_eval").rglob("*.py"))
+        assert sources
+        offending = list(self._offending_lines(sources))
+        assert not offending, "hardcoded data directories:\n" + "\n".join(offending)
+
+    def test_the_workflows_and_config_name_no_machine_path(self):
+        files = sorted((REPO_ROOT / ".github" / "workflows").glob("*.yml"))
+        files += sorted((REPO_ROOT / "data").glob("*.yaml"))
+        assert files
+        offending = list(self._offending_lines(files))
+        assert not offending, "hardcoded data directories:\n" + "\n".join(offending)
