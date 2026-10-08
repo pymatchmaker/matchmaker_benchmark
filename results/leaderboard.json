@@ -1,6 +1,6 @@
 {
   "fold": "eval",
-  "generated": "2026-10-08T13:49:44+00:00",
+  "generated": "2026-10-08T19:08:01+00:00",
   "ranking": "tracking_rate desc, then beat_median asc",
   "metrics": {
     "tracking_rate": "share of pieces followed to the end within tolerance",
@@ -11,6 +11,93 @@
     "estimated_bpm": "the follower was given the performance's tempo instead of the score's notated one \u2014 marked * in the table"
   },
   "entries": [
+    {
+      "submission": "pthmm-midi",
+      "kind": "reference",
+      "method": "pthmm",
+      "estimated_bpm": false,
+      "name": "Pitch HMM",
+      "authors": "matchmaker",
+      "affiliation": "",
+      "url": "https://github.com/pymatchmaker/matchmaker",
+      "description": "Pitch-based hidden Markov model over score states. Matchmaker's default MIDI method.",
+      "input_type": "midi",
+      "tracking_rate": 0.911,
+      "beat_median": 0.0,
+      "beat_mean": 0.1928,
+      "beat_0.3b": 0.8376,
+      "beat_0.5b": 0.9385,
+      "beat_1.0b": 0.9822,
+      "ms_median": 0.0041,
+      "ms_300ms": 0.9381,
+      "beat_median_all": 0.0,
+      "ms_median_all": 0.0041,
+      "sparc": -42.66,
+      "rtf": 0.0379,
+      "n_pieces": 146,
+      "n_tracked": 133,
+      "n_failed": 0,
+      "evaluated": "2026-10-08T19:05:28+00:00",
+      "fold": "eval",
+      "fold_sha256": "ce46502f791f8034b4ea3a7be585661ef2b61480a39a6a037821e8cc10d8d8e5",
+      "matchmaker": "0.3.0",
+      "benchmark_commit": "1b8b3bf8c85e127d86d15e743d08ce6428b35832",
+      "details": "details/pthmm-midi.json",
+      "datasets": {
+        "asap": {
+          "tracking_rate": 0.875,
+          "beat_median": 0.0,
+          "beat_mean": 0.1506,
+          "beat_0.3b": 0.9096,
+          "beat_0.5b": 0.967,
+          "beat_1.0b": 0.9909,
+          "ms_median": 0.2543,
+          "ms_300ms": 0.9783,
+          "beat_median_all": 0.0,
+          "ms_median_all": 0.2543,
+          "sparc": -30.33,
+          "rtf": 0.0775,
+          "n_pieces": 32,
+          "n_tracked": 28,
+          "n_failed": 0
+        },
+        "batik": {
+          "tracking_rate": 0.9333,
+          "beat_median": 0.0,
+          "beat_mean": 0.1745,
+          "beat_0.3b": 0.8211,
+          "beat_0.5b": 0.9609,
+          "beat_1.0b": 0.9914,
+          "ms_median": 0.0041,
+          "ms_300ms": 0.9683,
+          "beat_median_all": 0.0,
+          "ms_median_all": 0.0041,
+          "sparc": -62.83,
+          "rtf": 0.0944,
+          "n_pieces": 30,
+          "n_tracked": 28,
+          "n_failed": 0
+        },
+        "vienna": {
+          "tracking_rate": 0.9167,
+          "beat_median": 0.0,
+          "beat_mean": 0.3809,
+          "beat_0.3b": 0.7054,
+          "beat_0.5b": 0.7717,
+          "beat_1.0b": 0.9222,
+          "ms_median": 0.0013,
+          "ms_300ms": 0.7084,
+          "beat_median_all": 0.0,
+          "ms_median_all": 0.0015,
+          "sparc": -39.8,
+          "rtf": 0.0029,
+          "n_pieces": 84,
+          "n_tracked": 77,
+          "n_failed": 0
+        }
+      },
+      "rank": 1
+    },
     {
       "submission": "example-pitch-matcher",
       "kind": "submission",
@@ -96,7 +183,7 @@
           "n_failed": 0
         }
       },
-      "rank": 1
+      "rank": 2
     }
   ],
   "skipped": [],
