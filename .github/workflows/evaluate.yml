@@ -163,7 +163,13 @@ jobs:
               else:
                   dirs = []
               for d in dirs:
-                  input_type = yaml.safe_load(open(f"{d}/metadata.yaml"))["input_type"]
+                  metadata_path = f"{d}/metadata.yaml"
+                  if not os.path.exists(metadata_path):
+                      # A directory can show up as "changed" because a pull
+                      # request deleted it -- nothing to evaluate there.
+                      print(f"{d} no longer exists, skipping")
+                      continue
+                  input_type = yaml.safe_load(open(metadata_path))["input_type"]
                   entry = d.split("/")[-1]
                   entries.append(entry)
                   jobs += [
