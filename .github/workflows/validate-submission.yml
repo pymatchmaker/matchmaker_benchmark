@@ -69,33 +69,27 @@ jobs:
           echo "dirs=${dirs}" >> "$GITHUB_OUTPUT"
           echo "Submissions touched: ${dirs:-none}"
 
-      - name: Decide whether this is a submission pull request
-        id: kind
-        # A contributor's submission pull request touches submissions/ and
-        # nothing else. One that also changes the benchmark itself is a
-        # maintainer's, and the one-per-pull-request rule below is not about
-        # those -- the pull request that introduces the submission mechanism
-        # necessarily brings its baselines and worked example with it.
+      - name: A pull request into `submissions` may touch only one submission
+        # Contributor submissions target `submissions` (see docs/submitting.md),
+        # never `main` directly, so this is the gate that keeps a contributor's
+        # pull request confined to their own submissions/<name>/ directory --
+        # no pipeline changes, no workflow changes, no other submitter's
+        # directory. Benchmark changes are a maintainer's pull request into
+        # `main`, which this check does not apply to.
+        if: github.base_ref == 'submissions'
         run: |
           other=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" \
-                  | grep -vE '^submissions/' | head -n1)
+                  | grep -vE '^submissions/[^_][^/]*/' | head -n1)
           if [ -n "$other" ]; then
-            echo "maintainer=true" >> "$GITHUB_OUTPUT"
-            echo "Changes ${other} as well, so this is not a submission pull request."
-          else
-            echo "maintainer=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Pull requests into submissions may only add or change files inside one submissions/<name>/ directory. This one also touches '${other}' -- benchmark, workflow or docs changes belong in a pull request into main."
+            exit 1
           fi
-
-      - name: Reject changes to more than one submission
-        # One submission per pull request keeps review and attribution simple,
-        # and keeps a rejected submission from blocking an accepted one. Every
-        # submission is still validated below either way; this only limits how
-        # many a contributor may bring at once.
-        if: steps.changed.outputs.dirs != '' && steps.kind.outputs.maintainer != 'true'
-        run: |
           count=$(echo "${{ steps.changed.outputs.dirs }}" | wc -w)
-          if [ "$count" -gt 1 ]; then
-            echo "::error::This pull request changes $count submissions. Please open one pull request per submission."
+          if [ "$count" -eq 0 ]; then
+            echo "::error::This pull request does not add or change a submissions/<name>/ directory."
+            exit 1
+          elif [ "$count" -gt 1 ]; then
+            echo "::error::This pull request touches $count submissions. Please open one pull request per submission."
             exit 1
           fi
 

@@ -7,32 +7,35 @@
 # data/data_sources.yaml; the plan job reads it there so the address is written
 # down once (`fetch_data.py --source`).
 #
-# This workflow splits the fold across parallel jobs; each job checks out the
-# data, runs its shard of the submission and uploads its results. A final job
-# merges the shards, rebuilds the leaderboard and commits it.
-#
-# The checkout is the fast path, not the only one: if it does not carry
-# everything the fold names, fetch_data.py fills the gap file by file and the
-# shard refuses to start until a second check passes.
-#
 # This is the only workflow that writes to the repository, and it runs only on
-# the branches listed below — on code a maintainer has already reviewed and
-# merged.
+# `submissions` — on code a maintainer has already reviewed and merged there.
 #
 # Two branches, on purpose:
 #
-#   submissions  a staging branch. Evaluation runs and results/ is committed
-#                here, but `pages.yml` does not publish from it — so a run can
-#                be inspected, rerun or withdrawn before anyone sees it.
-#   main         merging `submissions` into it publishes the leaderboard.
+#   submissions  a contributor's pull request lands here first. validate-
+#                submission.yml smoke-tests it on one piece before merge; that
+#                merge is what this workflow watches for. It diffs
+#                `submissions/` against its own previous commit, evaluates
+#                every submission that is new or has changed since — skipping
+#                ones that are unchanged and already evaluated — and commits
+#                the result here. Nothing is published from this branch.
+#   main         merging `submissions` into it just carries the already-
+#                computed results over; nothing is re-evaluated. That merge
+#                is what publishes (see pages.yml), so it is also the moment
+#                to read `results/leaderboard.json` on `submissions` first and
+#                decide whether this batch is ready to go live.
 #
-# So the safe order is: merge a submission into `submissions`, let this workflow
-# evaluate it, check results/leaderboard.json, and only then merge to `main`.
-# To withdraw a result after the fact, see matchmaker_eval/retract.py.
+# So review has to happen before merging a submission's pull request into
+# `submissions` (see docs/maintaining.md#reviewing-a-submission): that merge
+# is what starts this workflow, which is the first time the submitted code
+# actually runs against the real datasets. To withdraw a result after the
+# fact, see matchmaker_eval/retract.py.
 #
 # Sharding is what makes this fit: a job on a GitHub runner is capped at 6
 # hours, and audio evaluation over 146 pieces does not fit in one. Shards are
-# round-robin, so the merged numbers are identical to an unsharded run.
+# round-robin, so the merged numbers are identical to an unsharded run. A push
+# that brings several new or changed submissions fans out over all of them at
+# once — one (submission x shard) matrix, mirroring evaluate-references.yml.
 #
 # It also works unchanged on a self-hosted runner that already holds the data:
 # set the repository variable MATCHMAKER_DATA_DIR to that copy and the checkout
@@ -41,15 +44,13 @@ name: Evaluate submissions
 
 on:
   push:
-    # `submissions` only, deliberately. Evaluation commits results, and results
-    # on `main` publish (see pages.yml) -- so evaluating there would put a run
-    # on the public page without anyone having looked at it. `branches:` cannot
-    # take a variable, so the staging branch is named here.
+    # `submissions` only, deliberately — see the branch note above. Evaluating
+    # on `main` too would re-run everything a merge to `main` brings with it;
+    # `main` only ever receives already-computed results. `branches:` cannot
+    # take a variable, so the branch is named here.
     branches: [submissions]
     paths:
       - "submissions/**"
-      - "matchmaker_eval/**"
-      - "data/folds/**"
   workflow_dispatch:
     inputs:
       submission:
@@ -90,10 +91,9 @@ jobs:
   plan:
     runs-on: ubuntu-latest
     outputs:
-      submission: ${{ steps.plan.outputs.submission }}
-      target: ${{ steps.plan.outputs.target }}
-      input_type: ${{ steps.plan.outputs.input_type }}
-      shards: ${{ steps.plan.outputs.shards }}
+      jobs: ${{ steps.plan.outputs.jobs }}
+      count: ${{ steps.plan.outputs.count }}
+      entries: ${{ steps.plan.outputs.entries }}
       num_shards: ${{ steps.plan.outputs.num_shards }}
       data_repo: ${{ steps.source.outputs.data_repo }}
       data_branch: ${{ steps.source.outputs.branch }}
@@ -108,47 +108,82 @@ jobs:
 
       - name: Decide what to evaluate
         id: plan
+        # A manual `method` dispatch is a single reference row. A manual
+        # `submission` dispatch is that one directory, changed or not --
+        # useful for a forced rerun after a pipeline fix. Otherwise (a push to
+        # `submissions`, i.e. a submission's pull request just got merged)
+        # every submissions/<name>/ directory touched since the previous
+        # commit on `submissions` is new or changed, and anything not in that
+        # diff is already evaluated and skipped.
         run: |
           pip install --quiet pyyaml
-          method="${{ github.event.inputs.method }}"
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, subprocess
 
-          if [ -n "$method" ]; then
-            # A built-in method, evaluated as a leaderboard reference row.
-            # References have no submission directory, so the input type is
-            # given rather than read from metadata.yaml.
-            dir=""
-            target="--method ${method} --input-type ${{ github.event.inputs.input_type }}"
-            input_type="${{ github.event.inputs.input_type }}"
-            label="reference ${method}"
-          else
-            if [ -n "${{ github.event.inputs.submission }}" ]; then
-              dir="${{ github.event.inputs.submission }}"
-            else
-              dir=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" \
-                    | grep -E '^submissions/[^_][^/]*/' \
-                    | cut -d/ -f1,2 | sort -u | head -n1)
-            fi
-            if [ -z "$dir" ]; then
-              echo "Nothing to evaluate."
-              echo "submission=" >> "$GITHUB_OUTPUT"
-              echo "target=" >> "$GITHUB_OUTPUT"
-              echo "input_type=" >> "$GITHUB_OUTPUT"
-              echo "shards=[]" >> "$GITHUB_OUTPUT"
-              echo "num_shards=0" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            target="$dir"
-            input_type=$(python -c "import yaml,sys; print(yaml.safe_load(open(sys.argv[1]))['input_type'])" "$dir/metadata.yaml")
-            label="$dir"
-          fi
+          import yaml
 
-          n="${{ github.event.inputs.shards || '8' }}"
-          echo "submission=${dir}" >> "$GITHUB_OUTPUT"
-          echo "target=${target}" >> "$GITHUB_OUTPUT"
-          echo "input_type=${input_type}" >> "$GITHUB_OUTPUT"
-          echo "num_shards=${n}" >> "$GITHUB_OUTPUT"
-          echo "shards=$(python -c "import json,sys; print(json.dumps(list(range(int(sys.argv[1])))))" "$n")" >> "$GITHUB_OUTPUT"
-          echo "Evaluating ${label} (${input_type}) on ${FOLD} in $n shards"
+          n = int(os.environ["SHARDS"])
+          method = os.environ.get("METHOD") or ""
+          submission = os.environ.get("SUBMISSION") or ""
+
+          def changed_submissions(before, after):
+              if not before or before == "0" * 40:
+                  return []
+              diff = subprocess.run(
+                  ["git", "diff", "--name-only", before, after],
+                  capture_output=True, text=True, check=True,
+              ).stdout
+              found = set()
+              for line in diff.splitlines():
+                  parts = line.split("/")
+                  if len(parts) >= 3 and parts[0] == "submissions" and not parts[1].startswith("_"):
+                      found.add(f"submissions/{parts[1]}")
+              return sorted(found)
+
+          entries = []
+          jobs = []
+          if method:
+              input_type = os.environ["INPUT_TYPE"]
+              entry = f"{method}-{input_type}"
+              entries.append(entry)
+              jobs += [
+                  {
+                      "target": f"--method {method} --input-type {input_type}",
+                      "entry": entry,
+                      "input_type": input_type,
+                      "shard": s,
+                  }
+                  for s in range(n)
+              ]
+          else:
+              if submission:
+                  dirs = [submission]
+              elif os.environ["EVENT_NAME"] == "push":
+                  dirs = changed_submissions(os.environ.get("BEFORE"), os.environ.get("AFTER"))
+              else:
+                  dirs = []
+              for d in dirs:
+                  input_type = yaml.safe_load(open(f"{d}/metadata.yaml"))["input_type"]
+                  entry = d.split("/")[-1]
+                  entries.append(entry)
+                  jobs += [
+                      {"target": d, "entry": entry, "input_type": input_type, "shard": s}
+                      for s in range(n)
+                  ]
+
+          print(f"jobs={json.dumps(jobs)}")
+          print(f"count={len(jobs)}")
+          print(f"entries={' '.join(entries) or 'none'}")
+          print(f"num_shards={n}")
+          PY
+        env:
+          METHOD: ${{ github.event.inputs.method }}
+          SUBMISSION: ${{ github.event.inputs.submission }}
+          INPUT_TYPE: ${{ github.event.inputs.input_type || 'midi' }}
+          SHARDS: ${{ github.event.inputs.shards || '8' }}
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
 
       - name: Locate this fold's data
         id: source
@@ -163,13 +198,14 @@ jobs:
 
   evaluate:
     needs: plan
-    if: needs.plan.outputs.target != ''
+    if: needs.plan.outputs.count != '0'
     runs-on: ${{ vars.BENCHMARK_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 350
     strategy:
-      fail-fast: false  # one bad shard should not discard the rest
+      fail-fast: false  # one bad shard, or one bad submission, should not discard the rest
+      max-parallel: 12
       matrix:
-        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
+        job: ${{ fromJSON(needs.plan.outputs.jobs) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -192,8 +228,8 @@ jobs:
           # not yet on matchmaker's main. Revert to @main once merged.
           pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@develop"
           pip install pyyaml pydantic-settings
-          if [ -s "${{ needs.plan.outputs.submission }}/requirements.txt" ]; then
-            pip install -r "${{ needs.plan.outputs.submission }}/requirements.txt"
+          if [ -d "${{ matrix.job.target }}" ] && [ -s "${{ matrix.job.target }}/requirements.txt" ]; then
+            pip install -r "${{ matrix.job.target }}/requirements.txt"
           fi
 
       - name: Check out the benchmark data
@@ -232,8 +268,8 @@ jobs:
         run: |
           python matchmaker_eval/fetch_data.py --verify \
             --fold "$FOLD" \
-            --input-type "${{ needs.plan.outputs.input_type }}" \
-            --shard ${{ matrix.shard }} \
+            --input-type "${{ matrix.job.input_type }}" \
+            --shard ${{ matrix.job.shard }} \
             --num-shards ${{ needs.plan.outputs.num_shards }}
 
       - name: Fetch anything the checkout did not provide
@@ -247,8 +283,8 @@ jobs:
           echo "::notice::the checkout was incomplete; fetching the rest"
           python matchmaker_eval/fetch_data.py \
             --fold "$FOLD" \
-            --input-type "${{ needs.plan.outputs.input_type }}" \
-            --shard ${{ matrix.shard }} \
+            --input-type "${{ matrix.job.input_type }}" \
+            --shard ${{ matrix.job.shard }} \
             --num-shards ${{ needs.plan.outputs.num_shards }}
 
       - name: Confirm the data is complete
@@ -258,8 +294,8 @@ jobs:
         run: |
           python matchmaker_eval/fetch_data.py --verify \
             --fold "$FOLD" \
-            --input-type "${{ needs.plan.outputs.input_type }}" \
-            --shard ${{ matrix.shard }} \
+            --input-type "${{ matrix.job.input_type }}" \
+            --shard ${{ matrix.job.shard }} \
             --num-shards ${{ needs.plan.outputs.num_shards }}
 
       - name: Run the shard
@@ -276,21 +312,21 @@ jobs:
           NUMEXPR_NUM_THREADS: "1"
         run: |
           python matchmaker_eval/run_submission.py \
-            ${{ needs.plan.outputs.target }} \
+            ${{ matrix.job.target }} \
             --fold "$FOLD" \
-            --shard ${{ matrix.shard }} \
+            --shard ${{ matrix.job.shard }} \
             --num-shards ${{ needs.plan.outputs.num_shards }} \
-            --output "results/shards/shard-${{ matrix.shard }}"
+            --output "results/shards/current"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: shard-${{ matrix.shard }}
-          path: results/shards/shard-${{ matrix.shard }}
+          name: refshard-${{ matrix.job.entry }}-${{ matrix.job.shard }}
+          path: results/shards/current
           retention-days: 30
 
   merge:
     needs: [plan, evaluate]
-    if: always() && needs.plan.outputs.target != ''
+    if: always() && needs.plan.outputs.count != '0'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -308,11 +344,15 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          pattern: shard-*
-          path: results/shards
+          pattern: refshard-*
+          path: results/refshards
 
-      - name: Merge the shards
-        run: python matchmaker_eval/merge_shards.py results/shards
+      - name: Merge each submission
+        # One run can bring shards for several new or changed submissions;
+        # this regroups them by entry (see refshard-<entry>-<shard> above) and
+        # merges each separately. An entry missing shards stays partial and
+        # off the leaderboard rather than being merged into a bad record.
+        run: python matchmaker_eval/merge_references.py results/refshards
 
       - name: Export the per-piece detail
         # Dataset breakdowns, per-piece rows and the decimated alignment paths
@@ -323,11 +363,11 @@ jobs:
         run: python matchmaker_eval/leaderboard.py
 
       - name: Assemble the site for review
-        # The `submissions` branch does not publish (see pages.yml), so the
-        # only way to see what a run did to the leaderboard would otherwise be
-        # to read JSON. This uploads the real page as an artifact: download it,
-        # `python -m http.server` inside it, and you are looking at what `main`
-        # would publish.
+        # `submissions` does not publish (see pages.yml), so the only way to
+        # see what this run did to the leaderboard would otherwise be to read
+        # JSON. This uploads the real page as an artifact: download it,
+        # `python -m http.server` inside it, and you are looking at what
+        # merging `submissions` into `main` would publish.
         run: python matchmaker_eval/build_site.py _site
 
       - uses: actions/upload-artifact@v4
@@ -345,8 +385,8 @@ jobs:
             echo "Leaderboard unchanged."
             exit 0
           fi
-          git commit -m "benchmark: evaluate ${{ needs.plan.outputs.target }} on the ${{ env.FOLD }} fold
+          git commit -m "benchmark: evaluate ${{ needs.plan.outputs.entries }} on the ${{ env.FOLD }} fold
 
-          Run ${{ github.run_id }}, ${{ needs.plan.outputs.num_shards }} shards."
+          Run ${{ github.run_id }}, ${{ needs.plan.outputs.num_shards }} shards each."
           git pull --rebase --autostash
           git push

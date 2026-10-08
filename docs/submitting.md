@@ -1,22 +1,31 @@
 # Submitting a score follower
 
-The benchmark takes submissions as pull requests. You add one directory, CI
-checks it, a maintainer reviews it, and after merge it is evaluated and appears
-on the leaderboard.
+The benchmark takes submissions as pull requests **against the `submissions`
+branch**, not `main`. You add one directory, CI checks it, and once a
+maintainer reads the code and merges your pull request, that merge itself
+evaluates it — along with any other new or changed submission already waiting
+on `submissions`. A maintainer publishes the result to the live site by
+merging `submissions` into `main` whenever they judge the batch ready.
 
 ```
  you              GitHub                    maintainer          GitHub Actions
   │                 │                            │                    │
-  │  pull request   │                            │                    │
+  │  PR -> submissions                           │                    │
   ├────────────────►│  structure + contract      │                    │
   │                 ├──► smoke test on the ──────┤                    │
   │                 │    committed example       │ reads the code     │
-  │                 │    (no data needed)        │ and merges         │
+  │                 │    (no data needed)        │ and merges into    │
+  │                 │                            │ `submissions`      │
   │                 │                            ├───────────────────►│
   │                 │                            │        fetches its own data,
-  │                 │                            │        runs the eval fold in
+  │                 │                            │        evaluates every new or
+  │                 │                            │        changed submission in
   │                 │                            │        parallel shards,
-  │                 │                            │        commits the leaderboard
+  │                 │                            │        commits the result
+  │                 │                            │        to `submissions`
+  │                 │                            │                    │
+  │                 │     ...whenever ready, the maintainer merges
+  │                 │     `submissions` into `main` to publish...
   │                 │                            │                    │
   └──────────────── leaderboard on GitHub Pages ◄─────────────────────┘
 ```
@@ -155,8 +164,14 @@ public — but the point of the declaration is that you did not.
 
 ## 5. Open the pull request
 
-One submission per pull request; CI rejects a pull request that touches two.
-Fill in the checklist in the template.
+**Open it against the `submissions` branch, not `main`** — GitHub defaults to
+`main`, so change the base branch in the "compare" dropdown before you create
+the pull request.
+
+One submission per pull request, and the pull request may only add or change
+files inside your one `submissions/your-name/` directory — CI rejects anything
+that touches a second submission or anything outside `submissions/`. Fill in
+the checklist in the template.
 
 CI runs on `pull_request`, so it has no repository secrets and a read-only
 token — it cannot write to the leaderboard. If you are a first-time contributor,
@@ -164,24 +179,33 @@ GitHub will hold the workflow until a maintainer approves the run.
 
 ## 6. After merge
 
-The evaluation workflow runs your submission on the eval fold and commits the
-updated leaderboard. It splits the 146 pieces across parallel jobs, each of
-which fetches only its own share of the data, so the whole thing finishes in
-well under an hour even though a single job could not. The merged result is
-identical to an unsharded run.
+Merging your pull request into `submissions` is what evaluates it — along
+with any other submission already on `submissions` that is new or has
+changed since the last time this ran, skipping anything unchanged. It runs on
+the eval fold, in parallel shards, and commits the result to `submissions`.
+
+It splits the 146 pieces across parallel jobs, each of which fetches only its
+own share of the data, so the whole thing finishes in well under an hour even
+though a single job could not. The merged result is identical to an unsharded
+run.
 
 The full per-piece output (alignment paths, per-piece metrics) is attached to
 the workflow run as an artifact for 30 days; the summary record stays in
-`results/submissions/your-name/metrics.json`.
+`results/submissions/your-name/metrics.json` on `submissions`.
 
-The leaderboard is published at
+This does not publish yet. A maintainer reads the result there and decides
+when to merge `submissions` into `main`, which is what actually updates the
+live leaderboard at
 [pymatchmaker.github.io/matchmaker_benchmark](https://pymatchmaker.github.io/matchmaker_benchmark/).
 
 ## Updating a submission
 
-Open a new pull request against the same directory. The evaluation re-runs and
-the leaderboard row is replaced. If the change is substantial enough that it is
-really a different method, submit it under a new name so both can be compared.
+Open a new pull request against the same directory, still based on
+`submissions`. Merging it evaluates your submission again and replaces its
+row on `submissions`; the live leaderboard picks up the change the next time
+`submissions` merges into `main`. If the change is substantial enough that it
+is really a different method, submit it under a new name so both can be
+compared.
 
 ## Common problems
 

@@ -6,9 +6,11 @@ decisions baked into this setup.
 ## Reviewing a submission
 
 CI has already checked structure, metadata and that the follower runs on one
-piece. **Review is the trust boundary**: after merge, the evaluation workflow
-executes the submitted code on a machine that holds the datasets. Nothing
-sandboxes it. Read the code.
+piece. **Review is the trust boundary**: merging a submission's pull request
+into `submissions` is what triggers `evaluate.yml`, which executes the
+submitted code on a machine that holds the datasets, immediately and with no
+further review in between. Nothing sandboxes it. Read the code before you
+merge, not after.
 
 `validate_submission.py` prints `review` lines for things worth a second look —
 network access, subprocesses, `.match` file access, reaching for
@@ -30,7 +32,8 @@ What to check by hand:
   interesting research but will take a long time on 146 pieces. The per-piece
   budget is 15 minutes.
 
-When in doubt, ask in the pull request. Merging is what starts the evaluation.
+When in doubt, ask in the pull request. Merging into `submissions` is what
+starts the evaluation — see "Staging a run before it is published" below.
 
 ## Running the evaluation
 
@@ -297,27 +300,41 @@ differ on their own.
 
 ### Staging a run before it is published
 
-Evaluation runs on two branches; publishing runs on one.
+`submissions` is where evaluation happens; `main` is where it is published.
 
-| branch | evaluates | publishes to the site |
+| branch | runs the full evaluation | publishes to the site |
 | --- | --- | --- |
 | `submissions` | yes | **no** |
-| `main` | yes | yes |
+| `main` | no — just receives the result | yes |
 
-So the safe order for anything you are not sure about is:
+The order is:
 
-1. merge the submission into `submissions`;
-2. `evaluate.yml` runs there and commits `results/` to that branch;
-3. read `results/leaderboard.json`, rerun or withdraw if it looks wrong;
-4. merge `submissions` into `main`, which is what publishes.
+1. review the code, then merge the submission's pull request into
+   `submissions`. It is restricted to that one `submissions/<name>/`
+   directory (see `validate-submission.yml`), and CI has only smoke-tested it
+   on the committed example before this point.
+2. That merge is what `evaluate.yml` watches for. It diffs `submissions/`
+   against its own previous commit and evaluates every directory that is new
+   or has changed since — including any other submission that was already
+   waiting there — skipping ones that are unchanged and already evaluated.
+   This is the first time the submitted code actually runs against the real
+   datasets, which is why review has to happen at step 1: nothing re-reviews
+   a submission between merging it and this run.
+3. It rebuilds the leaderboard and commits `results/` to `submissions`.
+   Nothing is published yet — read `results/leaderboard.json` there (or the
+   `leaderboard-site` artifact for the real page) and rerun or withdraw
+   anything that looks wrong.
+4. When you are satisfied, merge `submissions` into `main`. This is a plain
+   merge of the already-computed `results/` — it does not re-run anything —
+   and the resulting commit is what `pages.yml` publishes.
 
-`pages.yml` is deliberately `main`-only. Nothing on `submissions` reaches the
-site, so a bad run is a branch to fix rather than a page to correct.
+`pages.yml` is deliberately `main`-only and only triggers on a change to
+`results/leaderboard.json`, so nothing reaches the site until step 4 — a bad
+run is a branch to fix rather than a page to correct.
 
-Note that merging `submissions` into `main` usually re-triggers evaluation on
-`main`, because the merge brings the submission and code with it. That is a
-re-verification on the branch that publishes, and it is cheap to let happen; a
-commit that touches only `results/` does not trigger it.
+To re-run something already evaluated — after a pipeline bug fix, say — the
+diff-based skip in step 2 only applies to the automatic trigger. Dispatch
+`evaluate.yml` manually with that submission's name to force it.
 
 ### Withdrawing or replacing a published result
 
