@@ -337,6 +337,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Catch up with anything committed while this run was queued or evaluating
+        # actions/checkout pins to the commit that existed when this run was
+        # dispatched, not now. The `evaluate` concurrency group serializes the
+        # actual pushes, but a run can still sit queued -- or just take a long
+        # time evaluating -- behind another one that lands a commit in the
+        # meantime (evaluate-references.yml shares this group). leaderboard.py
+        # rewrites the whole file rather than appending, so building on a
+        # stale base produces a real content conflict at push time instead of
+        # a clean fast-forward.
+        run: git pull
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
