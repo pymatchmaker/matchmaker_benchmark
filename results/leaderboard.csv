@@ -1,3 +1,17 @@
 rank,submission,kind,name,authors,input_type,tracking_rate,beat_median,beat_mean,beat_0.3b,beat_0.5b,beat_1.0b,ms_median,ms_300ms,beat_median_all,ms_median_all,sparc,rtf,n_pieces,n_tracked,estimated_bpm,evaluated
-1,pthmm-midi,reference,Pitch HMM,matchmaker,midi,0.911,0.0,0.1928,0.8376,0.9385,0.9822,0.0041,0.9381,0.0,0.0041,-42.66,0.0379,146,133,False,2026-10-08T19:05:28+00:00
-2,example-pitch-matcher,submission,Pitch matcher (example),matchmaker maintainers,midi,0.2055,0.125,0.2645,0.7827,0.9025,0.9588,0.0051,0.9016,0.25,0.0102,-46.98,0.0001,146,30,False,2026-10-08T13:47:16+00:00
+1,pthmm-midi,reference,Pitch HMM,matchmaker,midi,0.911,0.0,0.1928,0.8376,0.9385,0.9822,0.0041,0.9381,0.0,0.0041,-42.66,0.0314,146,133,False,2026-10-08T20:29:03+00:00
+2,arzt-midi,reference,OLTW (Arzt),Brazier and Widmer (2020),midi,0.8288,0.0,0.195,0.828,0.9362,0.9829,0.0036,0.9687,0.0,0.0041,-19.12,0.0008,146,121,False,2026-10-08T20:03:56+00:00
+3,hmm-midi,reference,Pitch-IOI HMM,Cancino-Chacón et al. (2023),midi,0.8151,0.0,0.1939,0.8308,0.9368,0.9828,0.0041,0.9499,0.0,0.0041,-31.42,0.0297,146,119,False,2026-10-08T20:10:04+00:00
+4,pfkorz-audio,reference,Particle filter (Korzeniowski),matchmaker,audio,0.7877,0.1314,0.2311,0.7915,0.9171,0.9748,67.7086,0.9464,0.21,79.1789,-27.2,0.3793,146,115,True,2026-10-08T22:01:36+00:00
+5,outerhmm-midi,reference,Outer-product HMM,Nakamura (2014),midi,0.7808,0.0,3.0992,0.7969,0.9116,0.9619,0.0031,0.9617,0.0,0.0036,-216.57,0.0191,146,114,False,2026-10-08T20:12:16+00:00
+6,SLT_OLTW-midi,reference,Symbolic tempo OLTW (parangonar),Silvan Peter,midi,0.7534,0.0,0.1887,0.8347,0.9405,0.9853,0.0031,0.9929,0.0,0.0031,-12.84,0.0294,146,110,False,2026-10-08T19:49:42+00:00
+7,OTM-midi,reference,Online transformer matcher (parangonar),Silvan Peter,midi,0.7466,0.0,0.1826,0.8359,0.9481,0.9885,0.0036,0.9924,0.0,0.0036,-17.37,0.0094,146,109,False,2026-10-08T19:46:30+00:00
+8,OPTM-midi,reference,Online pure transformer matcher (parangonar),Silvan Peter,midi,0.7192,0.0,0.2095,0.8207,0.9373,0.9835,0.0031,0.9828,0.0833,0.0031,-24.8,0.0168,146,105,False,2026-10-08T19:43:11+00:00
+9,arzt-audio,reference,OLTW (Arzt),Brazier and Widmer (2020),audio,0.7123,0.1,0.3536,0.7582,0.8485,0.9316,40.6288,0.8628,0.1333,55.2083,-28.96,0.0508,146,104,False,2026-10-08T20:43:18+00:00
+10,dixon-audio,reference,OLTW (Dixon),Dixon (2005),audio,0.6918,0.1317,0.3936,0.7115,0.822,0.9198,46.0406,0.8745,0.17,50.6219,-164.69,0.1921,146,101,False,2026-10-08T21:20:55+00:00
+11,dixon-midi,reference,OLTW (Dixon),Dixon (2005),midi,0.6712,0.125,0.233,0.8125,0.9263,0.9733,0.0041,0.9447,0.125,0.0041,-29.49,0.0018,146,98,False,2026-10-08T19:58:38+00:00
+12,SL_OLTW-midi,reference,Symbolic OLTW (parangonar),Silvan Peter,midi,0.6233,0.0,0.2078,0.8381,0.9411,0.9829,0.0041,0.9747,0.125,0.0041,-26.49,0.0122,146,91,False,2026-10-08T20:02:51+00:00
+13,skf-audio,reference,Switching Kalman filter,Jiang and Raphael (2020),audio,0.6096,0.1243,0.2476,0.7784,0.8967,0.9656,46.2124,0.9147,0.3708,107.8344,-37.42,0.1687,146,89,False,2026-10-08T22:11:32+00:00
+14,outerhmm-audio,reference,Outer-product HMM,Nakamura (2014),audio,0.5342,0.25,0.4832,0.6294,0.7883,0.912,77.2937,0.7496,0.3334,129.5824,-146.87,0.5611,146,78,False,2026-10-08T21:58:42+00:00
+15,pfkorz-midi,reference,Particle filter (Korzeniowski),matchmaker,midi,0.5274,0.0821,0.2039,0.8456,0.9167,0.9645,34.3758,0.9247,3.9581,661.5631,-22.75,1.0402,146,77,True,2026-10-08T21:15:34+00:00
+16,example-pitch-matcher,submission,Pitch matcher (example),matchmaker maintainers,midi,0.2055,0.125,0.2645,0.7827,0.9025,0.9588,0.0051,0.9016,0.25,0.0102,-46.98,0.0001,146,30,False,2026-10-08T13:47:16+00:00
