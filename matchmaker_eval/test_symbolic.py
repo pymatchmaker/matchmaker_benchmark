@@ -21,7 +21,12 @@ import partitura as pt
 from eval import run_evaluation
 from matchmaker import Matchmaker
 from matchmaker.utils.eval import resolve_gt
-from folds import explain_missing_dataset, nested_dataset_root
+from folds import (
+    DATA_REPO_DATASETS,
+    data_repo_metadata,
+    explain_missing_dataset,
+    nested_dataset_root,
+)
 from methods import available_methods, default_kwargs, processor_for
 from sweeps import log_summary, sweep_entity, sweep_kwargs, sweep_project
 from utils import (
@@ -96,10 +101,16 @@ def run_tests_and_eval_by_dataset(
     dataset_type, method, run_dir=None, save_plots=True, matchmaker_kwargs=None
 ):
     """Run symbolic alignment for all pieces in a dataset."""
-    metadata = pd.read_csv(METADATA_PATH[dataset_type])
     is_valid = dataset_type in ("valid", "example")
+    from_data_repo = dataset_type in DATA_REPO_DATASETS
+    if from_data_repo:
+        # the data repository's metadata; its paths are absolute, so the
+        # joins below leave them unchanged
+        metadata = pd.DataFrame(data_repo_metadata(dataset_type))
+    else:
+        metadata = pd.read_csv(METADATA_PATH[dataset_type])
 
-    if not is_valid:
+    if not is_valid and not from_data_repo:
         tempo_metadata_fn = TEMPO_METADATA_PATH / f"{dataset_type}_tempo_estimates.csv"
         tempo_metadata = pd.read_csv(tempo_metadata_fn)
 
@@ -127,7 +138,9 @@ def run_tests_and_eval_by_dataset(
 
         print(f"[{i}/{len(metadata)}] {row.title}")
 
-        if method in TEMPO_DEPENDENT_METHODS and not is_valid:
+        if method in TEMPO_DEPENDENT_METHODS and from_data_repo:
+            tempo_estimate = float(row.estimated_bpm)
+        elif method in TEMPO_DEPENDENT_METHODS and not is_valid:
             tempo_estimate = tempo_metadata.loc[tempo_metadata["midi_performance_file"] == row.midi_performance, "estimated_bpm"].values[0]
         else:
             tempo_estimate = None
@@ -157,7 +170,10 @@ def run_tests_and_eval_by_dataset(
             wp_perf_sec = mm._wp_perf_to_seconds(wp[0].astype(float))
             wp = np.stack([wp_perf_sec, wp[1].astype(float)])
 
-            ps, sb = resolve_gt(match_path, mm.score_part.note_array())
+            # GT times from the MIDI file the follower streams (see resolve_gt)
+            ps, sb = resolve_gt(
+                match_path, mm.score_part.note_array(), performance=str(perf_midi)
+            )
             gt = np.column_stack([ps, sb])
 
             wp_T = wp.T if wp.shape[0] == 2 else wp
@@ -199,7 +215,7 @@ def run_tests_and_eval_by_dataset(
                     run_dir / f"wp_{i}.tsv",
                     wp_T,
                     delimiter="\t",
-                    fmt="%.6f",
+                    fmt="%.17g",  # full precision: the pooled summary re-reads these
                     header="perf_sec\tscore_beat",
                     comments="",
                 )
@@ -207,7 +223,7 @@ def run_tests_and_eval_by_dataset(
                     run_dir / f"gt_{i}.tsv",
                     gt,
                     delimiter="\t",
-                    fmt="%.6f",
+                    fmt="%.17g",  # full precision: the pooled summary re-reads these
                     header="perf_sec\tscore_beat",
                     comments="",
                 )

@@ -38,6 +38,7 @@ from matchmaker.prob.hmm import (
     compute_ioi_matrix,
     compute_discrete_pitch_profiles,
 )
+from folds import nested_dataset_root
 from utils import save_nparray_to_csv, save_score_following_result
 
 from matchmaker.utils.tempo_models import ReactiveTempoModel, KalmanTempoModel
@@ -797,9 +798,8 @@ def vienna():
 
     match_files = glob.glob(
         os.path.join(
-            "/Users/carlos/Repos/vienna4x22_v100/match",
+            nested_dataset_root("vienna") / "match",
             "*.match",
-            # "/Users/carlos/Repos/batik_plays_mozart_fork/match_adjusted", "*.match"
         )
     )
 
@@ -828,13 +828,8 @@ def get_dataset(dataset: str) -> List[str]:
         asap_pieces = asap_data["midi_performance"].values.tolist()
         asap_pieces_id = [p.split("/")[-1].split(".")[0] for p in asap_pieces]
 
-        # asap_dir = "/Volumes/Rach3M02/asap-dataset/"
-
         match_files = glob.glob(
-            # os.path.join("/Volumes/Rach3M02/asap-dataset/**", "*.match"),
-            os.path.join(
-                os.path.expanduser("~/workspace/asap-dataset"), "**", "*.match"
-            ),
+            os.path.join(nested_dataset_root("asap"), "**", "*.match"),
             recursive=True,
         )
 
@@ -847,20 +842,12 @@ def get_dataset(dataset: str) -> List[str]:
 
     if dataset == "vienna":
         match_files = glob.glob(
-            os.path.join(
-                # "/Users/carlos/Repos/vienna4x22_v100/match",
-                os.path.expanduser("~/workspace/vienna4x22/match"),
-                "*.match",
-            )
+            os.path.join(nested_dataset_root("vienna") / "match", "*.match")
         )
 
     if dataset == "batik":
         match_files = glob.glob(
-            os.path.join(
-                # "/Users/carlos/Repos/batik_plays_mozart_fork/match_adjusted",
-                os.path.expanduser("~/dataset/Batik_Audio/match_adjusted"),
-                "*.match",
-            )
+            os.path.join(nested_dataset_root("batik") / "match_adjusted", "*.match")
         )
 
     match_files.sort()

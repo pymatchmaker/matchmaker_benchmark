@@ -75,48 +75,69 @@ def save_config(config, save_dir):
         yaml.dump(config_dict, f)
 
 
+def spectral_arc_length(
+    speed: np.ndarray,
+    fs: float,
+    padlevel: int = 4,
+    fc: float = 10.0,
+    amp_th: float = 0.05,
+) -> Optional[float]:
+    """SPARC of one speed profile (Balasubramanian et al., 2015).
+
+    The arc length of the normalised magnitude spectrum of the speed, over the
+    band up to ``fc`` whose amplitude is at least ``amp_th`` (the adaptive
+    cut-off), with frequency normalised by that band's width. None when the
+    speed never moves or the band holds fewer than two bins.
+    """
+    speed = np.asarray(speed, dtype=float)
+    if len(speed) < 2 or not np.any(speed):
+        return None
+    n_fft = int(2 ** (np.ceil(np.log2(len(speed))) + padlevel))
+    spectrum = np.abs(np.fft.rfft(speed, n=n_fft))
+    spectrum /= spectrum.max()
+    frequencies = np.fft.rfftfreq(n_fft, d=1.0 / fs)
+    support = np.flatnonzero((frequencies <= fc) & (spectrum >= amp_th))
+    if len(support) < 2:
+        return None
+    band = slice(support[0], support[-1] + 1)
+    frequencies, spectrum = frequencies[band], spectrum[band]
+    span = frequencies[-1] - frequencies[0]
+    return float(-np.hypot(np.diff(frequencies) / span, np.diff(spectrum)).sum())
+
+
 def compute_sparc(
     score_beat: np.ndarray,
     perf_sec: np.ndarray,
     fs: float = 50.0,
-    fc: float = 10.0,
-    padlevel: int = 4,
-) -> float:
-    """Compute Spectral Arc Length (SPARC) for an alignment path."""
+    window_sec: float = 30.0,
+    hop_sec: float = 15.0,
+) -> Optional[float]:
+    """Smoothness of an alignment path: the mean SPARC of its score-position speed.
+
+    The path is resampled at ``fs`` and its speed (beats per second, magnitude)
+    is cut into ``window_sec`` windows every ``hop_sec`` seconds; SPARC is taken
+    per window and averaged, so the value does not grow with the piece's length.
+    None when no window has a defined SPARC (e.g. a follower that never moves).
+    """
     score_beat = np.asarray(score_beat, dtype=float)
     perf_sec = np.asarray(perf_sec, dtype=float)
-
     valid = np.isfinite(score_beat) & np.isfinite(perf_sec)
-    score_beat = score_beat[valid]
-    perf_sec = perf_sec[valid]
-
+    score_beat, perf_sec = score_beat[valid], perf_sec[valid]
     if len(perf_sec) < 2:
-        return 0.0
+        return None
 
-    t_start, t_end = float(perf_sec[0]), float(perf_sec[-1])
-    duration = t_end - t_start
-    if duration <= 0.1:
-        return 0.0
-
-    n_pts = max(int(np.round(duration * fs)), 2)
-    t_uniform = np.linspace(t_start, t_end, n_pts)
-    s_interp = np.interp(t_uniform, perf_sec, score_beat)
-    vel = np.gradient(s_interp, 1.0 / fs)
-
-    nfft = int(2 ** (np.ceil(np.log2(len(vel))) + padlevel))
-    freq = np.fft.rfftfreq(nfft, d=1.0 / fs)
-    mask = freq <= fc
-    freq_filtered = freq[mask]
-
-    Mf = np.abs(np.fft.rfft(vel, n=nfft))[mask]
-    max_mf = Mf.max()
-    if max_mf > 0:
-        Mf = Mf / max_mf
-
-    d_freq = np.diff(freq_filtered) / fc
-    d_mf = np.diff(Mf)
-    arc = np.sum(np.sqrt(d_freq ** 2 + d_mf ** 2))
-    return float(-arc)
+    times = np.arange(perf_sec[0], perf_sec[-1], 1.0 / fs)
+    if len(times) < 2:
+        return None
+    position = np.interp(times, perf_sec, score_beat)
+    speed = np.abs(np.gradient(position, 1.0 / fs))
+    window = min(int(window_sec * fs), len(speed))
+    values = [
+        spectral_arc_length(speed[start:start + window], fs)
+        for start in range(0, len(speed) - window + 1, int(hop_sec * fs))
+    ]
+    defined = [value for value in values if value is not None]
+    return float(np.mean(defined)) if defined else None
 
 
 def compute_event_pooled_summary(
@@ -184,7 +205,8 @@ def compute_event_pooled_summary(
 
         # Compute SPARC for the alignment path
         sparc_val = compute_sparc(wp_t[1], wp_t[0])
-        sparc_values.append(sparc_val)
+        if sparc_val is not None:
+            sparc_values.append(sparc_val)
 
     summary = {}
     n_tracked = sum(1 for t in tracked_flags if t)

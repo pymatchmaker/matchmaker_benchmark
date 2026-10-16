@@ -81,6 +81,12 @@ audio:
     description: >
       On-line time warping against a synthesised rendering of the score, on
       chroma features.
+  arzt_tempo:
+    name: OLTW (Arzt with Tempo)
+    authors: ["Arzt and Widmer (2010)"]
+    description: >
+      On-line time warping against a synthesised rendering of the score that is
+      stretched by a tempo estimated from the backward path, on chroma features.
   dixon:
     name: OLTW (Dixon)
     authors: ["Dixon (2005)"]

@@ -1,4 +1,6 @@
 import argparse
+from concurrent.futures import ProcessPoolExecutor
+from functools import partial
 import json
 import sys
 from collections import defaultdict
@@ -9,7 +11,12 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 from eval import run_offline_alignment, run_score_following
-from folds import explain_missing_dataset, nested_dataset_root
+from folds import (
+    DATA_REPO_DATASETS,
+    data_repo_metadata,
+    explain_missing_dataset,
+    nested_dataset_root,
+)
 from methods import audio_rates, available_methods, default_kwargs
 from sweeps import log_summary, sweep_entity, sweep_kwargs, sweep_project
 from tabulate import tabulate
@@ -40,7 +47,6 @@ DATASET_DIR = {
     "chorale": nested_dataset_root("chorale"),
     "urmp": nested_dataset_root("urmp"),
     "winterreise": nested_dataset_root("winterreise"),
-    "zeilinger": nested_dataset_root("zeilinger"),
 }
 METADATA_PATH = {
     "valid": WORKING_DIR / "data/metadata-validation.csv",
@@ -52,7 +58,6 @@ METADATA_PATH = {
     "chorale": WORKING_DIR / "data/metadata-chorale.csv",
     "urmp": WORKING_DIR / "data/metadata-urmp.csv",
     "winterreise": WORKING_DIR / "data/metadata-winterreise.csv",
-    "zeilinger": WORKING_DIR / "data/metadata-zeilinger-note.csv",
 }
 OUTPUT_DIR = WORKING_DIR / "output"
 TEMPO_DEPENDENT_METHODS = ["pfkorz"]
@@ -92,6 +97,19 @@ def print_summary_table(results: dict):
     return results
 
 
+def load_metadata(dataset_type: str) -> pd.DataFrame:
+    """The pieces of a dataset: the data repository's metadata where it has
+    the dataset (paths absolute, so the joins below leave them unchanged),
+    otherwise the CSV under data/."""
+    if dataset_type in DATA_REPO_DATASETS:
+        return pd.DataFrame(data_repo_metadata(dataset_type))
+    metadata = pd.read_csv(METADATA_PATH[dataset_type], skipinitialspace=True)
+    metadata.columns = metadata.columns.str.strip()
+    str_cols = metadata.select_dtypes(include=["object"]).columns
+    metadata[str_cols] = metadata[str_cols].apply(lambda x: x.str.strip())
+    return metadata
+
+
 def run_tests_and_eval_by_dataset(
     dataset_type: str,
     config: AudioEvalConfig,
@@ -100,6 +118,8 @@ def run_tests_and_eval_by_dataset(
     granularity: str = "note",
     matchmaker_kwargs: Optional[dict] = None,
     save_plots: bool = True,
+    indices: Optional[list] = None,
+    workers: int = 1,
 ):
     if run_dir is None and not dry_run:
         raise ValueError("run_dir must be provided if not dry_run")
@@ -107,17 +127,36 @@ def run_tests_and_eval_by_dataset(
     if not dry_run:
         run_dir.mkdir(parents=True, exist_ok=True)
 
-    metadata = pd.read_csv(METADATA_PATH[dataset_type], skipinitialspace=True)
-    metadata.columns = metadata.columns.str.strip()
-    str_cols = metadata.select_dtypes(include=["object"]).columns
-    metadata[str_cols] = metadata[str_cols].apply(lambda x: x.str.strip())
+    metadata = load_metadata(dataset_type)
+    if workers < 1:
+        raise ValueError("workers must be positive")
+    if indices is not None and (
+        len(set(indices)) != len(indices)
+        or any(i < 1 or i > len(metadata) for i in indices)
+    ):
+        raise ValueError("indices must be distinct one-based metadata rows")
+    if workers > 1:
+        selected = indices if indices is not None else list(range(1, len(metadata) + 1))
+        run_piece = partial(
+            run_tests_and_eval_by_dataset, dataset_type, config, run_dir,
+            dry_run, granularity, matchmaker_kwargs, save_plots,
+        )
+        results = defaultdict(list)
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            for piece in pool.map(run_piece, ([i] for i in selected)):
+                for key, values in piece.items():
+                    results[key].extend(values)
+        return results
     is_valid_dataset = dataset_type in ("valid", "example")
-    if not is_valid_dataset:
+    from_data_repo = dataset_type in DATA_REPO_DATASETS
+    if not is_valid_dataset and not from_data_repo:
         tempo_metadata_fn = TEMPO_METADATA_PATH / f"{dataset_type}_tempo_estimates.csv"
         tempo_metadata = pd.read_csv(tempo_metadata_fn)
     
     results = defaultdict(list)
     for i, row in enumerate(metadata.itertuples(), 1):
+        if indices is not None and i not in indices:
+            continue
         print(row)
         # Handle validation dataset with mixed sources
         if is_valid_dataset:
@@ -128,10 +167,6 @@ def run_tests_and_eval_by_dataset(
             current_dataset = dataset_type
             dataset_dir = DATASET_DIR[dataset_type]
 
-        use_musical_beat = current_dataset in ["asap", "kraisler"]
-
-        # kraisler annotations are temporarily beat-level TODO: fix to note-level
-        piece_granularity = "beat" if current_dataset == "kraisler" else granularity
 
         # Determine base directory: some datasets (e.g. chorale) have paths
         # relative to a folder column, while others include the full path.
@@ -152,7 +187,9 @@ def run_tests_and_eval_by_dataset(
             # a per-piece traceback for every row.
             raise SystemExit("\n" + explain_missing_dataset(current_dataset, score_xml))
 
-        if config.method in TEMPO_DEPENDENT_METHODS and not is_valid_dataset:
+        if config.method in TEMPO_DEPENDENT_METHODS and from_data_repo:
+            tempo_estimate = float(row.estimated_bpm)
+        elif config.method in TEMPO_DEPENDENT_METHODS and not is_valid_dataset:
             tempo_estimate = tempo_metadata.loc[tempo_metadata["audio_performance_file"] == row.audio_performance, "estimated_bpm"].values[0]
         else:
             tempo_estimate = None
@@ -187,21 +224,19 @@ def run_tests_and_eval_by_dataset(
                     perf_audio,
                     match_file,
                     config,
-                    use_musical_beat,
                     perf_annotations=perf_annotations,
-                    granularity=piece_granularity,
+                    granularity=granularity,
                 )
             else:
                 result = run_score_following(
                     score_xml,
                     perf_audio,
                     config,
-                    use_musical_beat,
                     dry_run=dry_run,
                     save_dir=run_dir,
                     run_name=f"{i}",
                     match_file=match_file,
-                    granularity=piece_granularity,
+                    granularity=granularity,
                     matchmaker_kwargs=matchmaker_kwargs,
                     save_plots=save_plots,
                     gt=piece_gt,
@@ -238,7 +273,7 @@ def main(args):
     use_wandb = args.wandb
     granularity = args.granularity or "note"
 
-    matchmaker_kwargs = None
+    matchmaker_kwargs = json.loads(args.kwargs) if args.kwargs else None
 
     if args.sweep:
         method = wandb.config.get("method", method)
@@ -247,11 +282,7 @@ def main(args):
 
     # Report the rates the run will actually use: the method's defaults from
     # matchmaker's spec, overridden by the sweep config when there is one.
-    kw = (
-        matchmaker_kwargs
-        if matchmaker_kwargs is not None
-        else default_kwargs("audio", method)
-    )
+    kw = {**default_kwargs("audio", method), **(matchmaker_kwargs or {})}
     config = AudioEvalConfig(
         method=method,
         dataset=dataset_type,
@@ -267,7 +298,11 @@ def main(args):
             save_dir = OUTPUT_DIR / f"sweep_{config.method}_{ts}_{wandb.run.id}"
         else:
             save_dir = OUTPUT_DIR / f"test_{ts}_aud_{config.method}_{config.dataset}"
+        if args.output_dir:
+            save_dir = Path(args.output_dir)
         save_dir.mkdir(parents=True, exist_ok=True)
+        with (save_dir / "method_kwargs.json").open("w") as f:
+            json.dump({**default_kwargs("audio", method), **(matchmaker_kwargs or {})}, f, indent=2)
 
     run_dir = save_dir if not dry_run else None
     results = run_tests_and_eval_by_dataset(
@@ -278,6 +313,8 @@ def main(args):
         granularity,
         matchmaker_kwargs=matchmaker_kwargs,
         save_plots=not args.sweep and not args.no_plots,
+        indices=args.indices,
+        workers=args.workers,
     )
 
     if not dry_run:
@@ -287,6 +324,18 @@ def main(args):
         save_results_to_csv(
             results, save_path=(run_dir / f"test_results.tsv").as_posix()
         )
+
+        expected = len(args.indices) if args.indices is not None else len(
+            load_metadata(config.dataset)
+        )
+        completed = len(results.get("Index", []))
+        with (run_dir / "completion.json").open("w") as f:
+            json.dump({"expected": expected, "completed": completed,
+                       "complete": completed == expected}, f, indent=2)
+        if completed != expected:
+            raise RuntimeError(
+                f"Incomplete evaluation: {completed}/{expected}; inspect the log"
+            )
 
         # Compute event-wise pooled summary (both all and tracked-only)
         summary_all = compute_event_pooled_summary(results, run_dir, tracked_only=False)
@@ -356,6 +405,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="skip saving per-piece plots (faster evaluation)",
         default=False,
     )
+    parser.add_argument("--workers", type=int, default=1, help="Parallel piece evaluations")
+    parser.add_argument("--indices", type=int, nargs="+", help="One-based metadata rows")
+    parser.add_argument("--kwargs", help="JSON overrides for method defaults")
+    parser.add_argument("--output-dir", help="Explicit result directory")
     return parser
 
 
