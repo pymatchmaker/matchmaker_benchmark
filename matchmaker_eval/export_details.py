@@ -188,6 +188,47 @@ def export(run_dir: Path, include_paths: bool = True) -> dict:
     }
 
 
+#: Per-piece fields built from the run's wp_/gt_ files rather than its metrics.
+PATH_FIELDS = ("wp", "gt")
+
+
+def has_path_files(run_dir: Path) -> bool:
+    """Whether the run's per-piece alignment paths are on this machine.
+
+    Only ``metrics.json`` is committed. The ``wp_``/``gt_`` files exist only
+    where the run itself was evaluated or merged, so a workflow that evaluates
+    one entry finds every other entry here without them.
+    """
+    return any(run_dir.glob("wp_*.tsv")) or any(run_dir.glob("gt_*.tsv"))
+
+
+def carry_over_paths(detail: dict, previous: Path) -> int:
+    """Copy the alignment paths of ``previous`` into ``detail``. Returns how many pieces got them.
+
+    Used when the run's path files are not here: the tables are rebuilt from
+    ``metrics.json`` as usual, and the paths come from the detail file the run
+    itself exported. A piece takes them only when its index and piece id match,
+    so a re-indexed fold never gets another piece's path.
+    """
+    try:
+        pieces = json.loads(previous.read_text()).get("pieces", [])
+    except (OSError, ValueError):
+        return 0
+    by_index = {piece.get("index"): piece for piece in pieces}
+    carried = 0
+    for row in detail["pieces"]:
+        old = by_index.get(row["index"])
+        if old is None or old.get("piece_id") != row.get("piece_id"):
+            continue
+        found = False
+        for field in PATH_FIELDS:
+            if old.get(field):
+                row[field] = old[field]
+                found = True
+        carried += found
+    return carried
+
+
 def remove_orphans(current: set, dry_run: bool = False) -> list:
     """Delete detail files with no corresponding run, and report what went.
 
@@ -234,12 +275,17 @@ def main():
             continue
         detail = export(metrics_path.parent, include_paths=not args.no_paths)
         out = DETAILS_DIR / f"{detail['submission']}.json"
+        # An entry evaluated by another workflow run has no path files here;
+        # rebuilt from metrics.json alone, its detail would lose every plot.
+        note = ""
+        if not args.no_paths and not has_path_files(metrics_path.parent) and out.exists():
+            note = f", paths kept for {carry_over_paths(detail, out)} piece(s)"
         out.write_text(json.dumps(without_nan(detail), separators=(",", ":")) + "\n")
         current.add(out.name)
         size = out.stat().st_size / 1e6
         print(
             f"{detail['submission']:24} {len(detail['pieces']):>3} pieces, "
-            f"{len(detail['datasets'])} dataset(s), {size:.1f} MB"
+            f"{len(detail['datasets'])} dataset(s), {size:.1f} MB{note}"
         )
         written += 1
 
