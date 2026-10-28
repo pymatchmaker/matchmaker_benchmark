@@ -284,6 +284,7 @@
     color: var(--accent);
     background: var(--accent-dim);
   }
+  .kind.tempo { cursor: help; }
   .tag {
     font-family: var(--mono);
     font-size: 10.5px;
@@ -550,7 +551,10 @@
     <p class="ranking-note">
       Ranked by how many pieces a follower stayed with, then by its error on
       those pieces. Open a row for its per-dataset and per-piece results, and to
-      plot any piece against the ground truth.
+      plot any piece against the ground truth. Rows marked
+      <span class="kind tempo">* tempo given</span> were given the
+      performance's estimated tempo rather than only the score's notated one,
+      which is an easier task.
     </p>
   </div>
 
@@ -1281,10 +1285,18 @@ async function fillDetail(entry, container) {
 }
 
 // ── Main table ───────────────────────────────────────────────────────────────
+// An entry given the performance's estimated tempo had an easier task than one
+// that only read the score's notated tempo (docs/eval-protocol.md), so its row
+// says so wherever it is shown.
+const TEMPO_BADGE = '<span class="kind tempo" title="given the performance\'s estimated tempo, not only the score\'s notated one: an easier task">* tempo given</span>';
+
 function detailRow(entry) {
   const facts = [
     ["pieces tracked", `${entry.n_tracked} of ${entry.n_pieces}`],
     ["matchmaker method", entry.method || "—"],
+    ["tempo", entry.estimated_bpm
+      ? "given the performance's estimated tempo"
+      : "score's notated tempo only"],
     ["evaluated", (entry.evaluated || "").replace("T", " ").replace("+00:00", " UTC")],
     ["matchmaker", entry.matchmaker_commit
       ? `${entry.matchmaker} (${entry.matchmaker_commit.slice(0, 8)})`
@@ -1339,6 +1351,7 @@ function render() {
             ${entry.kind === "reference"
               ? '<span class="kind reference" title="ships with matchmaker">reference</span>'
               : ""}
+            ${entry.estimated_bpm ? TEMPO_BADGE : ""}
           </div>
           <div class="entry-authors">${escapeHtml(entry.authors)}</div>
         </td>
