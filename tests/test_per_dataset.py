@@ -221,6 +221,65 @@ class TestTheDetailFile:
         assert "performance_bpm" not in detail["metrics"]
 
 
+class TestADetailFromAnotherRun:
+    """Only metrics.json is committed; the wp_/gt_ files stay on the runner
+    that evaluated the entry. Re-exporting there must not drop its plots."""
+
+    @pytest.fixture
+    def setup(self, tmp_path, monkeypatch, merged):
+        import export_details as E
+
+        monkeypatch.setattr(E, "REPO_ROOT", tmp_path)
+        monkeypatch.setattr(E, "SUBMISSION_RESULTS", tmp_path)
+        monkeypatch.setattr(E, "DETAILS_DIR", tmp_path / "details")
+        monkeypatch.setattr(sys, "argv", ["export_details.py"])
+        assert E.main() == 0
+        return E, tmp_path / "merged", tmp_path / "details" / "demo-midi.json"
+
+    @staticmethod
+    def paths(detail_file):
+        return [(p["wp"], p["gt"]) for p in json.loads(detail_file.read_text())["pieces"]]
+
+    def test_the_paths_are_kept_when_the_path_files_are_not_here(self, setup):
+        E, run, out = setup
+        before = self.paths(out)
+        assert before[0][0] and before[1][1]
+        for path in [*run.glob("wp_*.tsv"), *run.glob("gt_*.tsv")]:
+            path.unlink()
+        assert E.main() == 0
+        assert self.paths(out) == before
+
+    def test_the_tables_are_still_rebuilt_from_the_metrics(self, setup):
+        E, run, out = setup
+        for path in [*run.glob("wp_*.tsv"), *run.glob("gt_*.tsv")]:
+            path.unlink()
+        record = json.loads((run / "metrics.json").read_text())
+        record["pieces"][0]["rtf"] = 0.5
+        (run / "metrics.json").write_text(json.dumps(record))
+        assert E.main() == 0
+        piece = json.loads(out.read_text())["pieces"][0]
+        assert piece["rtf"] == 0.5
+        assert piece["wp"]
+
+    def test_a_piece_with_another_id_does_not_take_the_old_path(self, setup):
+        E, run, out = setup
+        for path in [*run.glob("wp_*.tsv"), *run.glob("gt_*.tsv")]:
+            path.unlink()
+        record = json.loads((run / "metrics.json").read_text())
+        record["pieces"][0]["piece_id"] = "asap/other"
+        (run / "metrics.json").write_text(json.dumps(record))
+        assert E.main() == 0
+        pieces = json.loads(out.read_text())["pieces"]
+        assert pieces[0]["wp"] == [] and pieces[1]["wp"]
+
+    def test_the_path_files_win_when_they_are_here(self, setup):
+        E, run, out = setup
+        write_path(run, "wp_0.tsv", [(a, b + 1.0) for a, b in GT])
+        assert E.main() == 0
+        wp = json.loads(out.read_text())["pieces"][0]["wp"]
+        assert wp[0] == [GT[0][0], GT[0][1] + 1.0]
+
+
 class TestPublishedJsonIsStrict:
     """A browser's response.json() rejects NaN, and with it the whole file."""
 
