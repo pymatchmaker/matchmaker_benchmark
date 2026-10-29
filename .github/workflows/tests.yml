@@ -1,0 +1,48 @@
+# Unit tests for the benchmark code (tests/).
+#
+# Read-only: no secrets, no data download, no writes. Runs on every pull
+# request into main or submissions and on pushes to main.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install system libraries
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fluidsynth libsndfile1
+
+      - name: Install the test environment
+        # Same matchmaker pin as the other workflows (tests/test_workflows.py
+        # checks that they agree). tabulate and wandb are imported by
+        # matchmaker_eval/test_audio.py, which tests/test_audio_runner.py loads.
+        run: |
+          python -m pip install --upgrade pip
+          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.4.0"
+          pip install pyyaml pydantic-settings tabulate wandb pytest
+
+      - name: Run the tests
+        run: python -m pytest tests -q

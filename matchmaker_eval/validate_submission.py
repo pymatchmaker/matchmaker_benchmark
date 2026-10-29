@@ -211,10 +211,10 @@ def run_smoke(directory: Path, report: Report) -> None:
             f"{metrics['failures'][0]['error']}"
         )
         return
-    beat = metrics["summary_all"].get("beat", {})
+    median_b = metrics["summary_all"].get("median_b", float("nan"))
     report.warn(
         "smoke run completed (median beat error "
-        f"{beat.get('median', float('nan')):.2f}b) — this only proves the "
+        f"{median_b:.2f}b) — this only proves the "
         "follower runs"
     )
 
