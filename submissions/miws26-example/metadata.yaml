@@ -1,0 +1,19 @@
+name: MIWS26-example
+authors:
+  - Jiyun Park
+input_type: audio
+description: >
+  Example for MIWS26. On-line time warping (Dixon, 2005) in the Arzt-style
+  variant, written from scratch in plain Python against matchmaker's
+  OnlineAlignment API: live chroma frames are aligned to chroma frames of a
+  synthesised score inside a moving window, with a step-size constraint and no
+  tempo model.
+license: Apache-2.0
+
+# How this submission was developed. Be specific: this is what a reproduction
+# run is checked against.
+tuned_on: [valid]
+external_data: none
+
+# Required declaration. See docs/eval-protocol.md.
+eval_fold_untouched: true
