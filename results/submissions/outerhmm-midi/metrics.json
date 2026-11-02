@@ -6,10 +6,10 @@
   "metadata": {
     "name": "Outer-product HMM",
     "authors": [
-      "Nakamura (2014)"
+      "Nakamura et al. (2014)"
     ],
     "input_type": "midi",
-    "description": "Outer-product HMM score follower, factorising the state space over score position and tempo.",
+    "description": "Outer-product HMM over score chords, with pitch-error probabilities and neighbourhood plus skip transitions. Notes performed within a chord are folded into one observation.",
     "estimated_bpm": false,
     "url": "https://github.com/pymatchmaker/matchmaker",
     "eval_fold_untouched": true,

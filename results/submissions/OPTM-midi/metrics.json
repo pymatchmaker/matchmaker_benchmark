@@ -6,7 +6,7 @@
   "metadata": {
     "name": "Online pure transformer matcher (parangonar)",
     "authors": [
-      "Silvan Peter"
+      "Peter (2023)"
     ],
     "input_type": "midi",
     "description": "Transformer-based online note matcher from parangonar, run without the additional symbolic alignment stage.",
