@@ -6,10 +6,10 @@
   "metadata": {
     "name": "OLTW (Arzt)",
     "authors": [
-      "Brazier and Widmer (2020)"
+      "Arzt, Widmer and Dixon (2008)"
     ],
     "input_type": "audio",
-    "description": "On-line time warping against a synthesised rendering of the score, on chroma features.",
+    "description": "Arzt's extension of Dixon's (2005) on-line time warping, from source code provided by Andreas Arzt. Aligns against a synthesised rendering of the score, on chroma features.",
     "estimated_bpm": false,
     "url": "https://github.com/pymatchmaker/matchmaker",
     "eval_fold_untouched": true,
