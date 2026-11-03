@@ -6,10 +6,10 @@
   "metadata": {
     "name": "Particle filter (Korzeniowski)",
     "authors": [
-      "matchmaker"
+      "matchmaker, based on Korzeniowski et al. (2013)"
     ],
     "input_type": "audio",
-    "description": "Sequential Monte Carlo tracking of score position and tempo, on Korzeniowski features.",
+    "description": "Particle filter over score position, note and local tempo, and rests, on spectral-template, onset and loudness features.",
     "estimated_bpm": true,
     "url": "https://github.com/pymatchmaker/matchmaker",
     "eval_fold_untouched": true,
