@@ -502,6 +502,8 @@
   .earlier ul { margin: 6px 0 0; padding-left: 18px; }
   .earlier code, .provenance code { font-family: var(--mono); }
   .provenance a { color: inherit; text-underline-offset: 2px; }
+  .entry-authors a { color: inherit; text-decoration-style: dotted; text-underline-offset: 2px; }
+  .entry-authors a:hover { color: var(--ink); text-decoration-style: solid; }
   footer {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
@@ -656,7 +658,9 @@
         Entries marked <span class="kind reference">reference</span> are the
         methods that ship with matchmaker, run on the same fold by the same
         code. They are what a new score follower is trying to beat, not
-        competitors.
+        competitors. Each one's citation links to its entry, with the full
+        reference, in the
+        <a href="https://pymatchmaker.github.io/score-following-bibliography/">Score Following Bibliography</a>.
       </p>
     </section>
     <section>
@@ -1323,6 +1327,7 @@ function detailRow(entry) {
           <p>
             ${escapeHtml(entry.description)}
             ${entry.url ? ` <a href="${escapeHtml(entry.url)}">Source &rarr;</a>` : ""}
+            ${entry.citation_url ? ` <a href="${escapeHtml(entry.citation_url)}" target="_blank" rel="noopener">Bibliography entry &rarr;</a>` : ""}
           </p>
           <div class="facts">
             ${facts.map(([k, v]) => `<div class="fact"><span>${k}</span><span>${escapeHtml(v)}</span></div>`).join("")}
@@ -1365,7 +1370,10 @@ function render() {
               : ""}
             ${entry.estimated_bpm ? TEMPO_BADGE : ""}
           </div>
-          <div class="entry-authors">${escapeHtml(entry.authors)}</div>
+          <div class="entry-authors">${entry.citation_url
+            ? `<a href="${escapeHtml(entry.citation_url)}" target="_blank" rel="noopener"
+                  title="Full reference in the Score Following Bibliography">${escapeHtml(entry.authors)}</a>`
+            : escapeHtml(entry.authors)}</div>
         </td>
         <td><span class="tag">${escapeHtml(entry.input_type)}</span></td>
         <td>
@@ -1413,8 +1421,13 @@ function wireRows() {
         }
       }
     };
-    row.addEventListener("click", toggle);
+    // The citation link inside the row goes to the bibliography; only a
+    // click or key press elsewhere on the row opens its details.
+    row.addEventListener("click", (event) => {
+      if (!event.target.closest("a")) toggle();
+    });
     row.addEventListener("keydown", (event) => {
+      if (event.target.closest("a")) return;
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         toggle();

@@ -49,11 +49,16 @@ from matchmaker.utils.eval import TOLERANCES_IN_BEATS
 from matchmaker_eval.folds import LEADERBOARD_FOLD, REPO_ROOT
 from matchmaker_eval.provenance import SHARED_COMPONENTS
 from matchmaker_eval.retract import read_retractions
+from matchmaker_eval.submission import read_descriptions
 
 RESULTS_DIR = REPO_ROOT / "results"
 SUBMISSION_RESULTS = RESULTS_DIR / "submissions"
 LEADERBOARD_JSON = RESULTS_DIR / "leaderboard.json"
 LEADERBOARD_CSV = RESULTS_DIR / "leaderboard.csv"
+
+#: A reference's citation links to its entry here, by the ``bib`` key that
+#: data/builtin_methods.yaml gives each method.
+BIBLIOGRAPHY_URL = "https://pymatchmaker.github.io/score-following-bibliography/"
 
 
 def dataset_paths(dataset: str) -> tuple:
@@ -91,6 +96,7 @@ IDENTITY_COLUMNS = (
     "authors",
     "affiliation",
     "url",
+    "citation_url",
     "description",
     "input_type",
 )
@@ -137,6 +143,20 @@ def metric_columns(record: dict) -> dict:
     }
 
 
+def citation_url(metrics: dict) -> str:
+    """The bibliography entry a reference's citation links to, or "".
+
+    Read from data/builtin_methods.yaml when the board is built rather than
+    from the run's metadata, so correcting a key needs no re-run and no edit
+    to the stored results.
+    """
+    if metrics.get("kind") != "reference":
+        return ""
+    described = read_descriptions().get(metrics["input_type"]) or {}
+    key = (described.get(metrics.get("method")) or {}).get("bib")
+    return f"{BIBLIOGRAPHY_URL}#{key}" if key else ""
+
+
 def row_from_metrics(metrics: dict) -> dict:
     """Flatten one metrics.json into a leaderboard row."""
     metadata = metrics.get("metadata", {})
@@ -159,6 +179,7 @@ def row_from_metrics(metrics: dict) -> dict:
         "authors": ", ".join(str(a) for a in authors),
         "affiliation": metadata.get("affiliation", ""),
         "url": metadata.get("url", ""),
+        "citation_url": citation_url(metrics),
         "description": metadata.get("description", "").strip(),
         "input_type": metrics["input_type"],
         **metric_columns(metrics),

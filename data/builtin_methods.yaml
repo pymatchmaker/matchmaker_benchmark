@@ -9,23 +9,30 @@
 #   python matchmaker_eval/run_submission.py --method pthmm --input-type midi
 #
 # Descriptions and attributions follow matchmaker's own README.
+#
+# `bib` is the entry's key in the Score Following Bibliography
+# (https://pymatchmaker.github.io/score-following-bibliography/). The
+# leaderboard links each reference's citation to that entry.
 
 midi:
   pthmm:
     name: Pitch HMM
     authors: [matchmaker]
+    bib: Park2025Matchmaker
     description: >
       Pitch-based hidden Markov model over score states. Matchmaker's default
       MIDI method.
   hmm:
     name: Pitch-IOI HMM
     authors: [Cancino-Chacón et al. (2023)]
+    bib: CancinoChacon2023Accompanion
     description: >
       Hidden Markov model combining pitch observations with inter-onset
       intervals and a Kalman tempo model.
   outerhmm:
     name: Outer-product HMM
     authors: ["Nakamura et al. (2014)"]
+    bib: Nakamura2014Outer
     description: >
       Outer-product HMM over score chords, with pitch-error probabilities and
       neighbourhood plus skip transitions. Notes performed within a chord are
@@ -33,6 +40,7 @@ midi:
   arzt:
     name: OLTW (Arzt)
     authors: ["Arzt et al. (2008)"]
+    bib: Arzt2008Automatic
     description: >
       Arzt's extension of Dixon's (2005) on-line time warping, reimplemented by
       the matchmaker team for MIDI input. Aligns an onset piano roll event by
@@ -40,12 +48,14 @@ midi:
   dixon:
     name: OLTW (Dixon)
     authors: ["Dixon (2005)"]
+    bib: Dixon2005Live
     description: >
       On-line time warping with a forward path constraint, aligning event by
       event.
   pfkorz:
     name: Particle filter (Korzeniowski)
     authors: ["Korzeniowski et al. (2013)"]
+    bib: Korzeniowski2013Tracking
     description: >
       The matchmaker team's particle filter, based on Korzeniowski et al.
       (2013) and extended to MIDI input. Tracks score position, note and local
@@ -55,6 +65,7 @@ midi:
   SL_OLTW:
     name: Symbolic OLTW (parangonar)
     authors: ["Peter et al. (2025)"]
+    bib: Peter2025Pairing
     description: >
       On-line time warping over symbolic note events, from the parangonar
       alignment library (https://github.com/sildater/parangonar). Matches one
@@ -62,18 +73,21 @@ midi:
   SLT_OLTW:
     name: Symbolic tempo OLTW (parangonar)
     authors: ["Peter et al. (2025)"]
+    bib: Peter2025Pairing
     description: >
       The tempo-tracking variant of parangonar's symbolic on-line time warping,
       which estimates a local tempo alongside the alignment.
   OTM:
     name: Online transformer matcher (parangonar)
     authors: ["Peter (2023)"]
+    bib: Peter2023Online
     description: >
       Transformer-based online note matcher from parangonar, combining a
       learned model with a symbolic alignment stage.
   OPTM:
     name: Online pure transformer matcher (parangonar)
     authors: ["Peter (2023)"]
+    bib: Peter2023Online
     description: >
       Transformer-based online note matcher from parangonar, run without the
       additional symbolic alignment stage.
@@ -82,6 +96,7 @@ audio:
   arzt:
     name: OLTW (Arzt)
     authors: ["Arzt et al. (2008)"]
+    bib: Arzt2008Automatic
     description: >
       Arzt's extension of Dixon's (2005) on-line time warping, from source code
       provided by Andreas Arzt. Aligns against a synthesised rendering of the
@@ -89,18 +104,21 @@ audio:
   arzt_tempo:
     name: OLTW (Arzt with Tempo)
     authors: ["Arzt and Widmer (2010)"]
+    bib: Arzt2010Simple
     description: >
       On-line time warping against a synthesised rendering of the score that is
       stretched by a tempo estimated from the backward path, on chroma features.
   dixon:
     name: OLTW (Dixon)
     authors: ["Dixon (2005)"]
+    bib: Dixon2005Live
     description: >
       On-line time warping with a forward path constraint, on log-spectral
       energy features.
   outerhmm:
     name: Two-level HMM
     authors: ["Nakamura et al. (2016)"]
+    bib: Nakamura2016Real
     description: >
       Two-level HMM over score chords, each with a sounding and a pause state,
       on CQT spectral-flux features. The repeat and skip transitions of the
@@ -108,11 +126,13 @@ audio:
   skf:
     name: Switching Kalman filter
     authors: ["Jiang and Raphael (2020)"]
+    bib: Jiang2020Score
     description: >
       Switching Kalman filter with hidden tempo, on raw spectrum features.
   pfkorz:
     name: Particle filter (Korzeniowski)
     authors: ["Korzeniowski et al. (2013)"]
+    bib: Korzeniowski2013Tracking
     description: >
       The matchmaker team's particle filter, based on Korzeniowski et al.
       (2013). Tracks score position, note and local tempo, and rests, on

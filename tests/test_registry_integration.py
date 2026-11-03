@@ -6,6 +6,7 @@ repositories drift apart, which is the failure mode the old hardcoded tables
 made silent.
 """
 
+import re
 import warnings
 from pathlib import Path
 
@@ -117,7 +118,17 @@ class TestBuiltinDescriptions:
         "url",
         "affiliation",
         "estimated_bpm",
+        # The entry's key in the Score Following Bibliography.
+        "bib",
     }
+
+    @pytest.mark.parametrize("input_type", INPUT_TYPES)
+    def test_every_described_method_names_its_bibliography_entry(self, input_type):
+        for method, entry in (read_descriptions().get(input_type) or {}).items():
+            assert re.fullmatch(r"[A-Z][A-Za-z-]+\d{4}[A-Z][A-Za-z]*", entry.get("bib") or ""), (
+                f"{input_type}/{method} needs a `bib` key like Dixon2005Live in "
+                f"{BUILTIN_METHODS_PATH.name}"
+            )
 
     def test_descriptions_carry_no_configuration(self):
         for input_type, entries in read_descriptions().items():
