@@ -45,10 +45,11 @@ midi:
       event.
   pfkorz:
     name: Particle filter (Korzeniowski)
-    authors: [matchmaker]
+    authors: ["matchmaker, based on Korzeniowski et al. (2013)"]
     description: >
-      Sequential Monte Carlo tracking of score position and tempo, on
-      Korzeniowski features.
+      Particle filter over score position, note and local tempo, and rests,
+      on pitch observations. Extends the audio model of Korzeniowski et al.
+      (2013) to MIDI input.
     # Given the performance's tempo. Marked on the leaderboard.
     estimated_bpm: true
   SL_OLTW:
@@ -111,9 +112,9 @@ audio:
       Switching Kalman filter with hidden tempo, on raw spectrum features.
   pfkorz:
     name: Particle filter (Korzeniowski)
-    authors: [matchmaker]
+    authors: ["matchmaker, based on Korzeniowski et al. (2013)"]
     description: >
-      Sequential Monte Carlo tracking of score position and tempo, on
-      Korzeniowski features.
+      Particle filter over score position, note and local tempo, and rests,
+      on spectral-template, onset and loudness features.
     # Given the performance's tempo. Marked on the leaderboard.
     estimated_bpm: true
