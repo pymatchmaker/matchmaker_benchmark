@@ -35,17 +35,14 @@ midi:
     authors: ["Nakamura et al. (2014)"]
     bib: Nakamura2014Outer
     description: >
-      Outer-product HMM over score chords, with pitch-error probabilities and
-      neighbourhood plus skip transitions. Notes performed within a chord are
-      folded into one observation.
+      Outer-product HMM score follower, factorising the state space over score
+      position and tempo.
   arzt:
     name: OLTW (Arzt)
     authors: ["Arzt et al. (2008)"]
     bib: Arzt2008Automatic
     description: >
-      Arzt's extension of Dixon's (2005) on-line time warping, reimplemented by
-      the matchmaker team for MIDI input. Aligns an onset piano roll event by
-      event.
+      On-line time warping over an onset piano roll, aligning event by event.
   dixon:
     name: OLTW (Dixon)
     authors: ["Dixon (2005)"]
@@ -99,9 +96,8 @@ audio:
     authors: ["Arzt et al. (2008)"]
     bib: Arzt2008Automatic
     description: >
-      Arzt's extension of Dixon's (2005) on-line time warping, from source code
-      provided by Andreas Arzt. Aligns against a synthesised rendering of the
-      score, on chroma features.
+      On-line time warping against a synthesised rendering of the score, on
+      chroma features.
   arzt_tempo:
     name: OLTW (Arzt with Tempo)
     authors: ["Arzt and Widmer (2010)"]
@@ -121,9 +117,7 @@ audio:
     authors: ["Nakamura et al. (2016)"]
     bib: Nakamura2016Real
     description: >
-      Two-level HMM over score chords, each with a sounding and a pause state,
-      on CQT spectral-flux features. The repeat and skip transitions of the
-      paper are off (s_j = 0).
+      Outer-product HMM on CQT spectral-flux features.
   skf:
     name: Switching Kalman filter
     authors: ["Jiang and Raphael (2020)"]
