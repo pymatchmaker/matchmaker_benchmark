@@ -6,7 +6,7 @@
   "metadata": {
     "name": "Symbolic OLTW (parangonar)",
     "authors": [
-      "Peter, Hu and Widmer (2025)"
+      "Peter et al. (2025)"
     ],
     "input_type": "midi",
     "description": "On-line time warping over symbolic note events, from the parangonar alignment library (https://github.com/sildater/parangonar). Matches one performed note at a time against the score note array.",

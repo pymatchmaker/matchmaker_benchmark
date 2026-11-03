@@ -6,7 +6,7 @@
   "metadata": {
     "name": "OLTW (Arzt)",
     "authors": [
-      "Arzt, Widmer and Dixon (2008)"
+      "Arzt et al. (2008)"
     ],
     "input_type": "midi",
     "description": "Arzt's extension of Dixon's (2005) on-line time warping, reimplemented by the matchmaker team for MIDI input. Aligns an onset piano roll event by event.",
