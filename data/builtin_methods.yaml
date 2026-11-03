@@ -17,11 +17,12 @@
 midi:
   pthmm:
     name: Pitch HMM
-    authors: [matchmaker]
-    bib: Park2025Matchmaker
+    authors: ["Cancino-Chacón et al. (2023)"]
+    bib: CancinoChacon2023Accompanion
     description: >
-      Pitch-based hidden Markov model over score states. Matchmaker's default
-      MIDI method.
+      Pitch-only variant of the ACCompanion's HMM, without its
+      inter-onset-interval term: score onsets and inserted states between them,
+      with Bernoulli pitch observations. Matchmaker's default MIDI method.
   hmm:
     name: Pitch-IOI HMM
     authors: [Cancino-Chacón et al. (2023)]
@@ -116,7 +117,7 @@ audio:
       On-line time warping with a forward path constraint, on log-spectral
       energy features.
   outerhmm:
-    name: Two-level HMM
+    name: Outer-product HMM
     authors: ["Nakamura et al. (2016)"]
     bib: Nakamura2016Real
     description: >
