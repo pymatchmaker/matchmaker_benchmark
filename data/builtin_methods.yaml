@@ -45,11 +45,11 @@ midi:
       event.
   pfkorz:
     name: Particle filter (Korzeniowski)
-    authors: ["matchmaker, based on Korzeniowski et al. (2013)"]
+    authors: ["Korzeniowski et al. (2013)"]
     description: >
-      Particle filter over score position, note and local tempo, and rests,
-      on pitch observations. Extends the audio model of Korzeniowski et al.
-      (2013) to MIDI input.
+      The matchmaker team's particle filter, based on Korzeniowski et al.
+      (2013) and extended to MIDI input. Tracks score position, note and local
+      tempo, and rests, on pitch observations.
     # Given the performance's tempo. Marked on the leaderboard.
     estimated_bpm: true
   SL_OLTW:
@@ -112,9 +112,10 @@ audio:
       Switching Kalman filter with hidden tempo, on raw spectrum features.
   pfkorz:
     name: Particle filter (Korzeniowski)
-    authors: ["matchmaker, based on Korzeniowski et al. (2013)"]
+    authors: ["Korzeniowski et al. (2013)"]
     description: >
-      Particle filter over score position, note and local tempo, and rests,
-      on spectral-template, onset and loudness features.
+      The matchmaker team's particle filter, based on Korzeniowski et al.
+      (2013). Tracks score position, note and local tempo, and rests, on
+      spectral-template, onset and loudness features.
     # Given the performance's tempo. Marked on the leaderboard.
     estimated_bpm: true

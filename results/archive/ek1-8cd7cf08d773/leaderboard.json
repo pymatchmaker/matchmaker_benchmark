@@ -1,6 +1,6 @@
 {
   "fold": "eval",
-  "generated": "2026-11-03T14:16:31+00:00",
+  "generated": "2026-11-03T16:56:08+00:00",
   "input_type": "audio",
   "evaluation_key": "ek1-8cd7cf08d773",
   "evaluation_conditions": {
@@ -35,10 +35,10 @@
       "method": "pfkorz",
       "estimated_bpm": true,
       "name": "Particle filter (Korzeniowski)",
-      "authors": "matchmaker, based on Korzeniowski et al. (2013)",
+      "authors": "Korzeniowski et al. (2013)",
       "affiliation": "",
       "url": "https://github.com/pymatchmaker/matchmaker",
-      "description": "Particle filter over score position, note and local tempo, and rests, on spectral-template, onset and loudness features.",
+      "description": "The matchmaker team's particle filter, based on Korzeniowski et al. (2013). Tracks score position, note and local tempo, and rests, on spectral-template, onset and loudness features.",
       "input_type": "audio",
       "tracking_rate": 0.8562,
       "mean_b": 0.2151,
