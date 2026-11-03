@@ -6,10 +6,10 @@
   "metadata": {
     "name": "Particle filter (Korzeniowski)",
     "authors": [
-      "matchmaker, based on Korzeniowski et al. (2013)"
+      "Korzeniowski et al. (2013)"
     ],
     "input_type": "midi",
-    "description": "Particle filter over score position, note and local tempo, and rests, on pitch observations. Extends the audio model of Korzeniowski et al. (2013) to MIDI input.",
+    "description": "The matchmaker team's particle filter, based on Korzeniowski et al. (2013) and extended to MIDI input. Tracks score position, note and local tempo, and rests, on pitch observations.",
     "estimated_bpm": true,
     "url": "https://github.com/pymatchmaker/matchmaker",
     "eval_fold_untouched": true,
