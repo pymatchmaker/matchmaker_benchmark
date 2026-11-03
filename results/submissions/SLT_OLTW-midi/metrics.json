@@ -6,7 +6,7 @@
   "metadata": {
     "name": "Symbolic tempo OLTW (parangonar)",
     "authors": [
-      "Peter, Hu and Widmer (2025)"
+      "Peter et al. (2025)"
     ],
     "input_type": "midi",
     "description": "The tempo-tracking variant of parangonar's symbolic on-line time warping, which estimates a local tempo alongside the alignment.",
