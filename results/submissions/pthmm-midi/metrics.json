@@ -6,10 +6,10 @@
   "metadata": {
     "name": "Pitch HMM",
     "authors": [
-      "matchmaker"
+      "Cancino-Chacón et al. (2023)"
     ],
     "input_type": "midi",
-    "description": "Pitch-based hidden Markov model over score states. Matchmaker's default MIDI method.",
+    "description": "Pitch-only variant of the ACCompanion's HMM, without its inter-onset-interval term: score onsets and inserted states between them, with Bernoulli pitch observations. Matchmaker's default MIDI method.",
     "estimated_bpm": false,
     "url": "https://github.com/pymatchmaker/matchmaker",
     "eval_fold_untouched": true,

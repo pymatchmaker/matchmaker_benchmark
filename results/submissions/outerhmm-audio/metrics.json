@@ -4,12 +4,12 @@
   "kind": "reference",
   "estimated_bpm": false,
   "metadata": {
-    "name": "Two-level HMM",
+    "name": "Outer-product HMM",
     "authors": [
       "Nakamura et al. (2016)"
     ],
     "input_type": "audio",
-    "description": "Two-level HMM over score chords, each with a sounding and a pause state, on CQT spectral-flux features. The repeat and skip transitions of the paper are off (s_j = 0).",
+    "description": "Outer-product HMM on CQT spectral-flux features.",
     "estimated_bpm": false,
     "url": "https://github.com/pymatchmaker/matchmaker",
     "eval_fold_untouched": true,
