@@ -238,7 +238,7 @@ class TestADetailFromAnotherRun:
 
     @staticmethod
     def paths(detail_file):
-        return [(p["wp"], p["gt"]) for p in json.loads(detail_file.read_text())["pieces"]]
+        return [(p["wp"], p["gt"], p["err"]) for p in json.loads(detail_file.read_text())["pieces"]]
 
     def test_the_paths_are_kept_when_the_path_files_are_not_here(self, setup):
         E, run, out = setup
@@ -278,6 +278,52 @@ class TestADetailFromAnotherRun:
         assert E.main() == 0
         wp = json.loads(out.read_text())["pieces"][0]["wp"]
         assert wp[0] == [GT[0][0], GT[0][1] + 1.0]
+
+
+class TestTheErrorSeries:
+    """The page plots |beat error| from ``err``, which the exporter computes
+    from the full paths; rebuilt from the decimated ones it shows a lag."""
+
+    def test_it_is_the_error_at_every_onset(self, tmp_path, merged):
+        import export_details as E
+
+        pieces = E.export(tmp_path / "merged")["pieces"]
+        assert [t for t, _ in pieces[0]["err"]] == [t for t, _ in GT]
+        assert {e for _, e in pieces[0]["err"]} == {0.0}
+        assert {e for _, e in pieces[1]["err"]} == {0.2}
+        assert pieces[2]["err"] == []
+
+    def test_the_follower_holds_its_last_position(self):
+        import numpy as np
+        import export_details as E
+
+        wp = np.array([[0.0, 0.0], [1.0, 4.0]])
+        gt = np.array([[0.5, 2.0], [1.0, 4.0]])
+        assert E.error_series(wp, gt).tolist() == [[0.5, 2.0], [1.0, 0.0]]
+
+    def test_decimation_keeps_a_single_spike(self):
+        import numpy as np
+        import export_details as E
+
+        series = np.column_stack([np.arange(10_000) / 100, np.zeros(10_000)])
+        series[4321, 1] = 3.0
+        kept = E.decimate_peaks(series)
+        assert len(kept) == E.PATH_POINTS
+        assert [43.21, 3.0] in kept
+
+    def test_decimated_paths_would_show_a_lag_the_series_does_not(self, tmp_path):
+        """A perfect follower, reporting far more often than the ground truth
+        has onsets: the full-path series is zero, a stride read is not."""
+        import numpy as np
+        import export_details as E
+
+        times = np.arange(10_000) / 100
+        wp = np.column_stack([times, 2 * times])
+        gt = wp[37::50]
+        assert E.error_series(wp, gt)[:, 1].max() == pytest.approx(0.0, abs=1e-9)
+        sparse = np.array(E.decimate(wp))
+        held = sparse[np.searchsorted(sparse[:, 0], gt[:, 0], side="right") - 1, 1]
+        assert np.abs(held - gt[:, 1]).max() > 0.5
 
 
 class TestPublishedJsonIsStrict:

@@ -8,7 +8,9 @@ Writes one file per evaluated entry to ``results/details/<entry>.json``:
   ``metrics.json`` — every metric, not just the columns the main table shows;
 * one row per piece, with its metrics and its tracking verdict;
 * the alignment path and the ground truth for every piece, decimated to a fixed
-  budget of points.
+  budget of points;
+* the beat error at every ground-truth onset, computed from the full paths the
+  way the evaluation scores them, decimated so the largest errors survive.
 
 The leaderboard page loads a detail file only when someone opens that row, and
 draws the alignment plots in the browser from these coordinates. No images are
@@ -34,6 +36,7 @@ import argparse
 import json
 
 import numpy as np
+from matchmaker.utils.eval import transfer_positions
 
 from matchmaker_eval.folds import LEADERBOARD_FOLD, REPO_ROOT
 from matchmaker_eval.leaderboard import ACCURACY_COLUMNS, without_nan
@@ -104,6 +107,37 @@ def decimate(points: np.ndarray, budget: int = PATH_POINTS) -> list:
     return np.round(points.astype(float), PRECISION).tolist()
 
 
+def decimate_peaks(points: np.ndarray, budget: int = PATH_POINTS) -> list:
+    """Reduce an error series to at most ``budget`` points, keeping each slot's worst.
+
+    A uniform stride would drop a one-onset spike as often as not; taking the
+    largest error per slot keeps every spike a plot could show.
+    """
+    if len(points) == 0:
+        return []
+    if len(points) > budget:
+        slots = np.array_split(np.arange(len(points)), budget)
+        points = points[[slot[np.argmax(points[slot, 1])] for slot in slots]]
+    return np.round(points.astype(float), PRECISION).tolist()
+
+
+def error_series(wp: np.ndarray, gt: np.ndarray) -> np.ndarray:
+    """(perf_sec, |beat error|) at every ground-truth onset, from the full paths.
+
+    The follower's position at an onset is read with the same lookup the
+    evaluation uses, so the series is what the beat metrics were computed from.
+    The page cannot rebuild it from the decimated paths: their points fall at
+    different times, and a lookup between them reads a stale position.
+    """
+    if len(wp) == 0 or len(gt) == 0:
+        return np.empty((0, 2))
+    finite = np.isfinite(gt[:, 0]) & np.isfinite(gt[:, 1])
+    times, expected = gt[finite, 0], gt[finite, 1]
+    predicted = transfer_positions(wp[:, :2].T, times, 1, domain="score")
+    valid = np.isfinite(predicted)
+    return np.column_stack([times[valid], np.abs(predicted[valid] - expected[valid])])
+
+
 def read_path(path: Path) -> np.ndarray:
     if not path.exists():
         return np.empty((0, 2))
@@ -153,8 +187,11 @@ def export(run_dir: Path, include_paths: bool = True) -> dict:
 
         if include_paths:
             # Columns are (perf_sec, score_beat) in both files.
-            row["wp"] = decimate(read_path(run_dir / f"wp_{index}.tsv"))
-            row["gt"] = decimate(read_path(run_dir / f"gt_{index}.tsv"))
+            wp = read_path(run_dir / f"wp_{index}.tsv")
+            gt = read_path(run_dir / f"gt_{index}.tsv")
+            row["wp"] = decimate(wp)
+            row["gt"] = decimate(gt)
+            row["err"] = decimate_peaks(error_series(wp, gt))
         detail_pieces.append(row)
 
     return {
@@ -189,7 +226,7 @@ def export(run_dir: Path, include_paths: bool = True) -> dict:
 
 
 #: Per-piece fields built from the run's wp_/gt_ files rather than its metrics.
-PATH_FIELDS = ("wp", "gt")
+PATH_FIELDS = ("wp", "gt", "err")
 
 
 def has_path_files(run_dir: Path) -> bool:

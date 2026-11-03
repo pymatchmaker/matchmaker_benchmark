@@ -745,23 +745,29 @@ function metricCell(value, digits) {
 // images exist anywhere; the alignment path is the artifact and the picture is
 // made here, which is why restyling a plot never means re-running a benchmark.
 
-// A follower reports a position and holds it until the next observation, so its
-// value at an arbitrary time is the last one it emitted — a step lookup, not an
-// interpolation. Interpolating would invent precision the follower never had.
+// The decimated path's position at time t, read off the straight line between
+// its neighbouring points. Only a fallback: on the full path a follower holds
+// its last position, but the decimated points fall at other times than the
+// ground truth's, and holding between them reads a stale position — a lag the
+// follower never had.
 function beatAt(path, t) {
-  if (!path || !path.length) return null;
+  if (!path || !path.length || t < path[0][0]) return null;
   let lo = 0, hi = path.length - 1;
-  if (t < path[0][0]) return null;
   while (lo < hi) {
     const mid = (lo + hi + 1) >> 1;
     if (path[mid][0] <= t) lo = mid; else hi = mid - 1;
   }
-  return path[lo][1];
+  const [t0, b0] = path[lo];
+  if (lo === path.length - 1 || path[lo + 1][0] === t0) return b0;
+  const [t1, b1] = path[lo + 1];
+  return b0 + ((b1 - b0) * (t - t0)) / (t1 - t0);
 }
 
 // |predicted − true| at every ground-truth onset: where a follower loses the
-// performer, and by how much.
+// performer, and by how much. The detail file carries it as computed from the
+// full paths (`err`); older files lack it, and get an approximation instead.
 function errorSeries(piece) {
+  if (piece.err && piece.err.length) return piece.err;
   const out = [];
   for (const [t, trueBeat] of piece.gt || []) {
     const predicted = beatAt(piece.wp, t);
@@ -862,7 +868,7 @@ function plotError(detail, piece, other, otherDetail, width) {
   const top = Math.max(0.5, ...all.map((p) => p[1]));
   const { sx, sy, grid, labels } = svgAxes(
     W, H, PAD, [Math.min(...xs), Math.max(...xs)], [0, top],
-    detail.axes.x, "|beat error|", (v) => v.toFixed(v < 1 ? 2 : 0)
+    detail.axes.x, "|beat error|", (v) => v.toFixed(v < 1 ? 2 : v < 10 ? 1 : 0)
   );
   // The tracking verdict is decided against this line: 0.5 beats for MIDI,
   // 1.0 for audio, as a median over each 30-second segment.
@@ -874,11 +880,17 @@ function plotError(detail, piece, other, otherDetail, width) {
        <text x="${W - PAD.r - 3}" y="${(sy(threshold) - 5).toFixed(1)}"
              text-anchor="end" fill="var(--crit)">tracking threshold ${threshold}</text>`
     : "";
+  // Without `err` the series is rebuilt from the decimated paths: close, but
+  // a hold followed by a jump can still show as a spike the metrics never saw.
+  const approximate = [piece, other].some((p) => p && !(p.err && p.err.length));
+  const note = approximate
+    ? `<text x="${PAD.l + 4}" y="${PAD.t + 10}" fill="var(--ink-mute)">approximate: drawn from the decimated paths</text>`
+    : "";
   return `
     <svg class="plot" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"
          preserveAspectRatio="xMidYMid meet" role="img"
          aria-label="Beat error over time">
-      ${grid}${rule}
+      ${grid}${rule}${note}
       <path d="${polyline(mine, sx, sy)}" fill="none" stroke="var(--accent)" stroke-width="1.4"/>
       ${theirs.length ? `<path d="${polyline(theirs, sx, sy)}" fill="none"
             stroke="var(--warn)" stroke-width="1.4" stroke-dasharray="5 3"/>` : ""}
