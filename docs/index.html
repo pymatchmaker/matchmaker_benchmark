@@ -600,8 +600,11 @@
       <p>
         The performance is walked in 30-second windows, one starting at every
         annotated onset. A piece counts as tracked unless the median beat error
-        in any window exceeds the tolerance — 0.5 beats for MIDI, 1.0 for
-        audio. A follower that loses the performer produces meaningless errors,
+        in any window exceeds the tolerance — 0.1 musical beat for MIDI, 1.0 for
+        audio. In compound meter, three denominator-note units form one musical
+        beat. The reference meter is applied at each onset, including changes
+        within a piece. Position-error summaries retain denominator-note units.
+        A follower that loses the performer produces meaningless errors,
         so accuracy is only reported over the pieces it held onto.
       </p>
     </section>
@@ -869,21 +872,23 @@ function plotError(detail, piece, other, otherDetail, width) {
   const { W, H } = plotSize(width, 6.4, 120, 190);
   const PAD = { l: 52, r: 14, t: 14, b: 30 };
   const xs = all.map((p) => p[0]);
-  const top = Math.max(0.5, ...all.map((p) => p[1]));
+  // Full-path export retains every meter transition. Historical details use
+  // the earlier denominator-note thresholds until evaluated under the new rule.
+  const nativeThreshold = detail.input_type === "audio" ? 1.0 : 0.5;
+  const tolerance = piece.tr_tolerance || (piece.tracking_criterion ? [] :
+    [[Math.min(...xs), nativeThreshold], [Math.max(...xs), nativeThreshold]]);
+  const top = Math.max(0.5, ...all.map((p) => p[1]), ...tolerance.map((p) => p[1]));
   const { sx, sy, grid, labels } = svgAxes(
     W, H, PAD, [Math.min(...xs), Math.max(...xs)], [0, top],
-    detail.axes.x, "|beat error|", (v) => v.toFixed(v < 1 ? 2 : v < 10 ? 1 : 0)
+    detail.axes.x, "|error| (denominator-note beats)", (v) => v.toFixed(v < 1 ? 2 : v < 10 ? 1 : 0)
   );
-  // The tracking verdict is decided against this line: 0.5 beats for MIDI,
-  // 1.0 for audio, as a median over each 30-second segment.
-  const threshold = detail.input_type === "audio" ? 1.0 : 0.5;
-  const rule = threshold <= top
-    ? `<line x1="${PAD.l}" y1="${sy(threshold).toFixed(1)}" x2="${W - PAD.r}"
-             y2="${sy(threshold).toFixed(1)}" stroke="var(--crit)"
-             stroke-width="1" stroke-dasharray="4 3" stroke-opacity=".7"/>
-       <text x="${W - PAD.r - 3}" y="${(sy(threshold) - 5).toFixed(1)}"
-             text-anchor="end" fill="var(--crit)">tracking threshold ${threshold}</text>`
-    : "";
+  const tolerancePath = tolerance.map(([t, v], i) => i
+    ? `H${sx(t).toFixed(1)}V${sy(v).toFixed(1)}`
+    : `M${sx(t).toFixed(1)},${sy(v).toFixed(1)}`).join(" ");
+  const rule = tolerance.length ? `<path d="${tolerancePath}" fill="none"
+    stroke="var(--crit)" stroke-width="1" stroke-dasharray="4 3" stroke-opacity=".7"/>
+    <text x="${W - PAD.r - 3}" y="${PAD.t + 10}" text-anchor="end"
+      fill="var(--crit)">TR tolerance before window median</text>` : "";
   // Without `err` the series is rebuilt from the decimated paths: close, but
   // a hold followed by a jump can still show as a spike the metrics never saw.
   const approximate = [piece, other].some((p) => p && !(p.err && p.err.length));

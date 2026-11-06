@@ -41,6 +41,7 @@ SCHEME = "ek1"
 
 #: Benchmark modules whose every line can move a score. Hashed whole.
 SCORING_MODULES = (
+    "matchmaker_eval/beat_units.py",
     "matchmaker_eval/eval.py",
     "matchmaker_eval/utils.py",
     "matchmaker_eval/verify_tracking.py",

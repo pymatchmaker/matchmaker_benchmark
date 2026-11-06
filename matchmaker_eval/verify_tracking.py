@@ -1,12 +1,15 @@
 """
 Check if a tracker followed the score throughout a piece.
 
-Evaluates in the score domain, in beat unit. At every annotated onset it
+Evaluates in the score domain. At every annotated onset it
 looks up the last score position emitted at or before that time, then computes
 the median absolute beat error in a forward window starting at each unique
 annotated performance onset. The window slides onset-wise until one first
 reaches the final annotation. A piece fails when any window median exceeds the
-selected beat tolerance.
+selected beat tolerance. Benchmark callers supply ``beat_factors`` from the
+reference score: errors are divided by three in compound-meter passages and
+by one elsewhere, before the window median is taken. Omitting the factors is
+an explicit legacy denominator-note calculation.
 
 Input:
   wp.tsv   Warping path (tab-separated)
@@ -20,7 +23,12 @@ Usage:
 """
 
 import argparse
+import sys
 from pathlib import Path
+
+# Also support the documented direct-script invocation with --meter.
+if str(Path(__file__).resolve().parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -66,6 +74,8 @@ def check_tracking(
     gt: np.ndarray,
     segment_duration: float = SEGMENT_DURATION,
     threshold: float = BEAT_ERROR_THRESHOLD,
+    *,
+    beat_factors: np.ndarray = None,
 ) -> dict:
     """
     Check tracking quality using an onset-wise sliding-window median.
@@ -80,14 +90,29 @@ def check_tracking(
     gt : (M, 2) array — col 0: perf time (seconds), col 1: score position (beats)
     segment_duration : float — window duration W in seconds (default: 30)
     threshold : float — maximum median absolute beat error theta (default: 1.0)
+    beat_factors : (M,) array, optional
+        Denominator notes per musical beat at each GT score position. The
+        benchmark supplies this even for simple meter; without it, errors
+        remain in denominator-note units.
 
     Returns
     -------
     dict with: windows, mean_onsets_per_window, worst_window, max_deviation,
     tracked, reason
     """
+    if not np.isfinite(threshold) or threshold < 0:
+        raise ValueError("threshold must be finite and non-negative")
+    if beat_factors is not None:
+        beat_factors = np.asarray(beat_factors, dtype=float)
+        if (beat_factors.shape != (len(gt),) or not np.all(np.isfinite(beat_factors))
+                or np.any(beat_factors <= 0)):
+            raise ValueError("beat_factors must contain one positive finite factor per GT onset")
+    unit = "musical_beat" if beat_factors is not None else "denominator_note"
+    criterion = {"error_unit": unit, "threshold": float(threshold),
+                 "window_duration": float(segment_duration)}
     if wp.size == 0 or gt.size == 0:
         return {
+            **criterion,
             "windows": [],
             "n_windows": 0,
             "mean_onsets_per_window": 0.0,
@@ -123,6 +148,8 @@ def check_tracking(
 
     errors_all = np.abs(predicted_score - gt_score)  # beats
     errors_all[~valid] = np.inf  # no causal estimate at an annotation
+    if beat_factors is not None:
+        errors_all = errors_all / beat_factors
 
     windows = _onset_wise_window_profile(
         gt_perf, errors_all, segment_duration, threshold
@@ -148,6 +175,7 @@ def check_tracking(
         )
 
     return {
+        **criterion,
         "windows": windows,
         "n_windows": len(windows),
         "mean_onsets_per_window": float(
@@ -182,6 +210,8 @@ def plot_tracking(
     save_path: Path = None,
     segment_duration: float = SEGMENT_DURATION,
     threshold: float = BEAT_ERROR_THRESHOLD,
+    *,
+    beat_factors: np.ndarray = None,
 ):
     """Plot the alignment path and onset-wise window median-error profile."""
     result = check_tracking(
@@ -189,6 +219,7 @@ def plot_tracking(
         gt,
         segment_duration=segment_duration,
         threshold=threshold,
+        beat_factors=beat_factors,
     )
     windows = result["windows"]
     worst_window = result["worst_window"]
@@ -251,7 +282,7 @@ def plot_tracking(
         color="green" if tracked else "red",
         fontweight="bold",
     )
-    ax1.set_ylabel("Score position")
+    ax1.set_ylabel("Score position (denominator-note beats)")
     ax1.set_xlabel("Performance time (s)")
     ax1.legend(loc="upper left")
 
@@ -263,7 +294,8 @@ def plot_tracking(
         threshold, color="red", ls="--", lw=1.5, label=f"threshold={threshold:.1f}b"
     )
     ax2.axhline(0, color="black", lw=0.5)
-    ax2.set_ylabel("Sliding median |beat error|")
+    beat_label = "musical beats" if beat_factors is not None else "denominator-note beats"
+    ax2.set_ylabel(f"Sliding median error ({beat_label})")
     yl = max(threshold * 2, max_dev * 1.3) if max_dev > 0 else threshold * 2
     ax2.set_ylim(0, yl)
     ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.1f}b"))
@@ -333,6 +365,10 @@ def main():
     parser.add_argument("--wp", type=Path, required=True, help="Warping path TSV")
     parser.add_argument("--gt", type=Path, required=True, help="Ground truth TSV")
     parser.add_argument(
+        "--meter", type=Path, default=None,
+        help="Saved meter_<index>.json from the benchmark; applies musical-beat TR",
+    )
+    parser.add_argument(
         "--save", type=Path, default=None, help="Save plot to file (default: show)"
     )
     parser.add_argument(
@@ -349,14 +385,20 @@ def main():
     )
     args = parser.parse_args()
 
-    wp = np.loadtxt(args.wp, delimiter="\t", skiprows=1)
-    gt = np.loadtxt(args.gt, delimiter="\t", skiprows=1)
+    wp = np.loadtxt(args.wp, delimiter="\t", skiprows=1, ndmin=2)
+    gt = np.loadtxt(args.gt, delimiter="\t", skiprows=1, ndmin=2)
+    factors = None
+    if args.meter is not None:
+        import json
+        from matchmaker_eval.beat_units import musical_beat_factors
+        factors = musical_beat_factors(gt[:, 1], json.loads(args.meter.read_text()))
 
     result = check_tracking(
         wp,
         gt,
         segment_duration=args.window_duration,
         threshold=args.threshold,
+        beat_factors=factors,
     )
     title = _auto_title(args.wp)
 
@@ -386,6 +428,7 @@ def main():
         save_path=args.save,
         segment_duration=args.window_duration,
         threshold=args.threshold,
+        beat_factors=factors,
     )
 
 

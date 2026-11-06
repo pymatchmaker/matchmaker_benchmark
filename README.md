@@ -202,9 +202,13 @@ contract.
   from the first annotated performance onset through the first window that
   reaches the final onset. A window's statistic is the median absolute beat
   error, and a piece fails when any evaluated window exceeds the modality
-  threshold — 1.0 beat for audio, 0.5 for MIDI.
+  threshold — 1.0 musical beat for audio, 0.1 for MIDI. A musical beat groups
+  three denominator-note units in compound meter (6/8, 9/8, 12/8, 6/4, etc.)
+  and one elsewhere. The reference score's time signature is looked up at
+  each annotated onset, including changes within a piece and a window.
 - **Precision metric**: beat error (performance → score), pooled over the
-  pieces that method actually tracked.
+  pieces that method actually tracked. These error summaries and tolerance
+  accuracies retain denominator-note beat units.
 - **Secondary precision metric**: ms error (score → performance), same pooling.
 - **Aggregation**: precision metrics are event-pooled across tracked pieces.
 - **Ranking**: tracking rate first, then median beat error.

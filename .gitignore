@@ -208,3 +208,6 @@ _site/
 
 # Per-method output from run_references.py
 results/logs/
+
+# Complete per-run CI artifacts, separate from committed leaderboard rows.
+results/ci/
