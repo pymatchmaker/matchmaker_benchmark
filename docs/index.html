@@ -569,7 +569,7 @@
       <button class="chip" data-filter="reference" aria-pressed="false">Reference</button>
     </div>
     <p class="ranking-note">
-      Ranked by how many pieces a follower stayed with, then by its error on
+      Sorted by how many pieces a follower stayed with, then by its error on
       those pieces. Open a row for its per-dataset and per-piece results, and to
       plot any piece against the ground truth. Rows marked
       <span class="kind tempo">* tempo given</span> were given the
@@ -1344,8 +1344,6 @@ function detailRow(entry) {
         <div class="detail-grid">
           <p>
             ${escapeHtml(entry.description)}
-            ${entry.url ? ` <a href="${escapeHtml(entry.url)}">Source &rarr;</a>` : ""}
-            ${entry.citation_url ? ` <a href="${escapeHtml(entry.citation_url)}" target="_blank" rel="noopener">Bibliography entry &rarr;</a>` : ""}
           </p>
           <div class="facts">
             ${facts.map(([k, v]) => `<div class="fact"><span>${k}</span><span>${escapeHtml(v)}</span></div>`).join("")}
