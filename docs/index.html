@@ -150,7 +150,7 @@
     justify-content: space-between;
     gap: 14px;
   }
-  .chips { display: flex; gap: 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip {
     font-family: var(--ui);
     font-size: 13px;
@@ -190,11 +190,14 @@
      the summary columns. Without it the nested 30-column piece table reports a
      huge intrinsic width up through its <td>, and the columns above drift
      apart to accommodate it. With it, the colgroup below decides the widths
-     and the nested table scrolls inside its own container. */
+     and the nested table scrolls inside its own container.
+     min-width is the fixed columns (950px) plus room for the submission
+     column, which gets what is left: below it, narrow screens scroll the
+     table sideways instead of squeezing that column to nothing. */
   table.board {
     border-collapse: collapse;
     width: 100%;
-    min-width: 940px;
+    min-width: 1150px;
     table-layout: fixed;
   }
 
@@ -249,17 +252,21 @@
     font-weight: 600;
     font-size: 15px;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     min-width: 0;
   }
   .entry-name > span:not(.caret):not(.kind) { overflow: hidden; text-overflow: ellipsis; }
   .entry-authors { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* The caret travels with the name, so a name that wraps onto two lines
+     does not leave its caret alone on the line above. */
   .entry-name .caret {
     font-size: 10px;
     color: var(--ink-mute);
     transition: transform .15s ease;
     display: inline-block;
+    margin-right: 8px;
   }
   tr.entry.open .caret { transform: rotate(90deg); }
   .entry-authors {
@@ -1364,7 +1371,7 @@ function render() {
         <td><span class="rank">${entry.rank}</span></td>
         <td>
           <div class="entry-name">
-            <span class="caret">&#9654;</span>${escapeHtml(entry.name)}
+            <span class="entry-title"><span class="caret">&#9654;</span>${escapeHtml(entry.name)}</span>
             ${entry.kind === "reference"
               ? '<span class="kind reference" title="ships with matchmaker">reference</span>'
               : ""}
