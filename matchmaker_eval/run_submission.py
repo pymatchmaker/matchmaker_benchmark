@@ -235,15 +235,18 @@ def run_piece(
     """
     tempo = piece.performance_tempo if estimated_bpm else None
 
-    mm = Matchmaker(
-        score_file=str(piece.score_path),
-        performance_file=str(piece.performance_path(input_type)),
-        input_type=input_type,
-        method=method,
-        wait=False,
-        unfold_score=True,
-        tempo=tempo,
-    )
+    from matchmaker_eval.score_input import prepared_score_path
+
+    with prepared_score_path(piece.score_path) as (score_path, voice_remapping):
+        mm = Matchmaker(
+            score_file=str(score_path),
+            performance_file=str(piece.performance_path(input_type)),
+            input_type=input_type,
+            method=method,
+            wait=False,
+            unfold_score=True,
+            tempo=tempo,
+        )
     check_follower(mm.score_follower)
     list(mm.run(verbose=False))
 
@@ -306,6 +309,8 @@ def run_piece(
     # entry never asked and when it asked and the fold had none — the run
     # summary separates the two, since only the second is worth reporting.
     metrics["used_estimated_bpm"] = tempo is not None
+    if voice_remapping:
+        metrics["score_voice_id_remapping"] = voice_remapping
 
     with open(run_dir / f"{index}.json", "w") as f:
         json.dump(metrics, f, indent=4, default=float)

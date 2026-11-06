@@ -64,6 +64,7 @@ PRECISION = 2
 #: provenance, not a measurement. It is published beside the identity fields.
 PIECE_IDENTITY = (
     "tracking_criterion",
+    "score_voice_id_remapping",
     "index",
     "piece_id",
     "dataset",
@@ -185,6 +186,8 @@ def export(run_dir: Path, include_paths: bool = True) -> dict:
             row[key] = piece[key]
         if "tracking_criterion" in piece:
             row["tracking_criterion"] = piece["tracking_criterion"]
+        if "score_voice_id_remapping" in piece:
+            row["score_voice_id_remapping"] = piece["score_voice_id_remapping"]
         if piece.get("error"):
             row["error"] = piece["error"]
 

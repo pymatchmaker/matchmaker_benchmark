@@ -11,6 +11,8 @@ def test_meter_and_criterion_survive_shard_merge_and_detail_export(tmp_path):
     criterion = {'error_unit':'musical_beat','threshold':.1,'window_duration':30.}
     record = shard_record(1,fold_size=1)
     record['pieces'][0]['tracking_criterion']=criterion
+    voice_remapping = [{'part':'P2','voice_ids':{'140142961047633':5}}]
+    record['pieces'][0]['score_voice_id_remapping']=voice_remapping
     root = write_shards(tmp_path/'shards',[record])
     shard = root/'shard-0'
     meter = {
@@ -33,6 +35,8 @@ def test_meter_and_criterion_survive_shard_merge_and_detail_export(tmp_path):
     details = export(out)
     row = details['pieces'][0]
     assert 'tracking_criterion' not in details['metrics']
+    assert 'score_voice_id_remapping' not in details['metrics']
+    assert row['score_voice_id_remapping'] == voice_remapping
     assert row['tracking_criterion']==criterion and row['meter']==meter
     assert np.allclose(row['tr_tolerance'], [[0.,.3],[2.,.1],[4.,.3],[5.,.3]])
     assert np.allclose(np.array(row['err'])[:,1],0.)

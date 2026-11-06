@@ -43,6 +43,7 @@ SCHEME = "ek1"
 SCORING_MODULES = (
     "matchmaker_eval/beat_units.py",
     "matchmaker_eval/eval.py",
+    "matchmaker_eval/score_input.py",
     "matchmaker_eval/utils.py",
     "matchmaker_eval/verify_tracking.py",
 )

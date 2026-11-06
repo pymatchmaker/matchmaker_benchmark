@@ -18,6 +18,13 @@ Both folds read the `eval` branch of `pymatchmaker/matchmaker-benchmark-data`,
 as configured in `data/data_sources.yaml`. Each shard checks all required score,
 performance, and ground-truth files before running.
 
+The runner preserves the source files. If an XML score contains integer voice
+identifiers outside Partitura's 32-bit range, it assigns unique small identifiers
+in a temporary score copy before loading it. This preserves voice membership,
+notes, and timing, and prevents NumPy 2 from rejecting oversized export labels.
+Affected piece records include `score_voice_id_remapping`; the normalization
+code is included in the evaluation key.
+
 ## Downloading results
 
 Once the merge finishes, download **benchmark-results-eval** or
