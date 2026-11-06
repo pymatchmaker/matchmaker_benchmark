@@ -80,8 +80,8 @@ permissions:
   contents: write
 
 concurrency:
-  # One evaluation at a time: two would race on results/leaderboard.json.
-  group: evaluate
+  # Share the references workflow's lock for the same branch and fold.
+  group: evaluate-${{ github.ref }}-${{ github.event.inputs.fold || 'eval' }}
   cancel-in-progress: false
 
 env:

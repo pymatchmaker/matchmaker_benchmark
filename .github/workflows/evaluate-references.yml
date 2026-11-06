@@ -48,9 +48,9 @@ permissions:
   contents: write
 
 concurrency:
-  # Shares evaluate.yml's group: both commit results/, and two at once would
-  # race on the leaderboard.
-  group: evaluate
+  # Serialize publishers on the same branch and fold. Auxiliary folds only
+  # upload artifacts, so they can run alongside the piano evaluation.
+  group: evaluate-${{ github.ref }}-${{ github.event.inputs.fold || 'eval' }}
   cancel-in-progress: false
 
 env:
