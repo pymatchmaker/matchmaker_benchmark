@@ -189,13 +189,13 @@
      huge intrinsic width up through its <td>, and the columns above drift
      apart to accommodate it. With it, the colgroup below decides the widths
      and the nested table scrolls inside its own container.
-     min-width is the fixed columns (936px) plus room for the submission
+     min-width is the fixed columns (952px) plus room for the submission
      column, which gets what is left: below it, narrow screens scroll the
      table sideways instead of squeezing that column to nothing. */
   table.board {
     border-collapse: collapse;
     width: 100%;
-    min-width: 1176px;
+    min-width: 1192px;
     table-layout: fixed;
   }
 
@@ -231,26 +231,24 @@
     vertical-align: middle;
   }
   table.board > tbody td:first-child, table.board > tbody td:nth-child(2) { text-align: left; }
-  table.board > tbody td:first-child { white-space: nowrap; }
   tbody tr.entry { cursor: pointer; transition: background .12s ease; }
   tbody tr.entry:hover { background: var(--surface-2); }
   tbody tr.entry:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
   /* The tracker's own key (method name or submission folder): an identifier,
-     not a place in a ranking. */
+     not a place in a ranking. A long key wraps at its - and _ rather than
+     being cut off; the caret stays beside it. */
   .tracker-id {
     font-family: var(--mono);
     font-size: 12px;
     font-weight: 500;
+    line-height: 1.4;
     color: var(--ink-soft);
     background: var(--surface-2);
     border-radius: 4px;
     padding: 3px 6px;
     display: inline-block;
     max-width: calc(100% - 20px);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
     vertical-align: middle;
   }
 
@@ -271,7 +269,9 @@
   .entry-cite { white-space: nowrap; }
   .entry-badges { display: inline-flex; gap: 6px; }
   .entry-badges:empty { display: none; }
-  @media (max-width: 1420px) { .entry-badges { flex-basis: 100%; } }
+  /* All rows fit beside the citation from about 1430px; the margin covers
+     fonts that render a little wider on other systems. */
+  @media (max-width: 1459px) { .entry-badges { flex-basis: 100%; } }
   /* Beside the tracker key, so names line up with their citations. */
   .caret {
     font-size: 9px;
@@ -581,7 +581,7 @@
   <div class="table-wrap">
     <table class="board">
       <colgroup>
-        <col style="width:124px">
+        <col style="width:140px">
         <col><!-- submission: takes the remaining space -->
         <col style="width:72px">
         <col style="width:150px">
@@ -1379,7 +1379,7 @@ function render() {
     return `
       <tr class="entry" data-key="${escapeHtml(entry.submission)}" tabindex="0"
           role="button" aria-expanded="false">
-        <td><span class="tracker-id" title="${escapeHtml(entry.submission)}">${escapeHtml(entry.tracker_id)}</span><span class="caret">&#9654;</span></td>
+        <td><span class="tracker-id" title="${escapeHtml(entry.submission)}">${escapeHtml(entry.tracker_id).replace(/([-_])/g, "$1<wbr>")}</span><span class="caret">&#9654;</span></td>
         <td>
           <div class="entry-name"><span class="entry-title">${escapeHtml(entry.name)}</span></div>
           <div class="entry-authors"><span class="entry-cite">${entry.citation_url
