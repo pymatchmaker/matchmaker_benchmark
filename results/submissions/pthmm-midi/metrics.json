@@ -6,7 +6,7 @@
   "metadata": {
     "name": "Pitch HMM",
     "authors": [
-      "Cancino-Chacón et al. (2023)"
+      "Cancino-Chac\u00f3n et al. (2023)"
     ],
     "input_type": "midi",
     "description": "Pitch-only variant of the ACCompanion's HMM, without its inter-onset-interval term: score onsets and inserted states between them, with Bernoulli pitch observations. Matchmaker's default MIDI method.",
@@ -20,14 +20,14 @@
   "fold_sha256": "dc4f602ac271adf04c47f517808b07b45ea6fbe2c155f4942624fd5cb3302028",
   "input_type": "midi",
   "environment": {
-    "python": "3.12.15",
-    "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.43",
+    "python": "3.12.16",
+    "platform": "Linux-7.0.0-1019-azure-x86_64-with-glibc2.43",
     "matchmaker": "0.4.0",
-    "matchmaker_commit": "6d73fb717036d60a1cfd6431fbddb4de6705d5c1",
-    "matchmaker_ref": "v0.4.0",
-    "benchmark_commit": "077a64ebd78127ce5292a81299a0a1358ec00316"
+    "matchmaker_commit": "678366b034edc7cb10e3cf71bb1755b1a679e6c1",
+    "matchmaker_ref": "678366b034edc7cb10e3cf71bb1755b1a679e6c1",
+    "benchmark_commit": "b9f021545b10e058338efd2f9dbd27fa5eee8929"
   },
-  "timestamp": "2026-10-27T21:19:48+00:00",
+  "timestamp": "2026-11-06T22:51:34+00:00",
   "n_pieces": 146,
   "fold_size": 146,
   "partial": false,
@@ -47,13 +47,13 @@
   "n_failed": 0,
   "failures": [],
   "evaluation": {
-    "key": "ek1-f76b5839a23c",
+    "key": "ek1-f8781912a13a",
     "components": {
       "scheme": "ek1",
       "fold_sha256": "dc4f602ac271adf04c47f517808b07b45ea6fbe2c155f4942624fd5cb3302028",
       "data_sha256": "33e9bad2ba35bc8bf3ec66c5b0d93f99f95ba7e6b1e4236f66ed0606f31eb4f0",
-      "scoring_sha256": "b7fd3f2c33531cb936e489acd7fb63ebc6116ae6abd1d5ebf31bcc160b32354f",
-      "matchmaker_sha256": "dbf04bba7e0c0cda41468791206225ac696172873a3f045a1b670c434c73ef66",
+      "scoring_sha256": "1f1a57ded93f6f65a2c1a79092d895cdbe167bc37473018cdb321c01a6e7c750",
+      "matchmaker_sha256": "076a05d3de4b5d1024ecc026b341f375e826114489ad62aac1b7c767e24a5116",
       "partitura": "1.9.0"
     }
   },
@@ -69,9 +69,9 @@
     "accuracy_2b": 0.9956,
     "skewness": 24.8718,
     "kurtosis": 1180.7944,
-    "smoothness": -32.1318,
+    "smoothness": -34.8197,
     "tracking_rate": 1.0,
-    "rtf": 0.0247,
+    "rtf": 0.0264,
     "piece_count": 146,
     "tracked_count": 146,
     "selected_count": 146
@@ -88,9 +88,9 @@
     "accuracy_2b": 0.9956,
     "skewness": 24.8718,
     "kurtosis": 1180.7944,
-    "smoothness": -32.1318,
+    "smoothness": -34.8197,
     "tracking_rate": 1.0,
-    "rtf": 0.0247,
+    "rtf": 0.0264,
     "piece_count": 146,
     "tracked_count": 146,
     "selected_count": 146
@@ -112,9 +112,9 @@
         "accuracy_2b": 0.9985,
         "skewness": 9.1609,
         "kurtosis": 300.0799,
-        "smoothness": -20.2466,
+        "smoothness": -21.9149,
         "tracking_rate": 1.0,
-        "rtf": 0.0525,
+        "rtf": 0.0548,
         "piece_count": 32,
         "tracked_count": 32,
         "selected_count": 32
@@ -131,9 +131,9 @@
         "accuracy_2b": 0.9985,
         "skewness": 9.1609,
         "kurtosis": 300.0799,
-        "smoothness": -20.2466,
+        "smoothness": -21.9149,
         "tracking_rate": 1.0,
-        "rtf": 0.0525,
+        "rtf": 0.0548,
         "piece_count": 32,
         "tracked_count": 32,
         "selected_count": 32
@@ -155,9 +155,9 @@
         "accuracy_2b": 0.9973,
         "skewness": 30.035,
         "kurtosis": 1083.1387,
-        "smoothness": -26.0794,
+        "smoothness": -28.2298,
         "tracking_rate": 1.0,
-        "rtf": 0.0586,
+        "rtf": 0.0638,
         "piece_count": 30,
         "tracked_count": 30,
         "selected_count": 30
@@ -174,9 +174,9 @@
         "accuracy_2b": 0.9973,
         "skewness": 30.035,
         "kurtosis": 1083.1387,
-        "smoothness": -26.0794,
+        "smoothness": -28.2298,
         "tracking_rate": 1.0,
-        "rtf": 0.0586,
+        "rtf": 0.0638,
         "piece_count": 30,
         "tracked_count": 30,
         "selected_count": 30
@@ -198,9 +198,9 @@
         "accuracy_2b": 0.9811,
         "skewness": -5.6426,
         "kurtosis": 49.9627,
-        "smoothness": -38.821,
+        "smoothness": -42.0893,
         "tracking_rate": 1.0,
-        "rtf": 0.0021,
+        "rtf": 0.0022,
         "piece_count": 84,
         "tracked_count": 84,
         "selected_count": 84
@@ -217,9 +217,9 @@
         "accuracy_2b": 0.9811,
         "skewness": -5.6426,
         "kurtosis": 49.9627,
-        "smoothness": -38.821,
+        "smoothness": -42.0893,
         "tracking_rate": 1.0,
-        "rtf": 0.0021,
+        "rtf": 0.0022,
         "piece_count": 84,
         "tracked_count": 84,
         "selected_count": 84
@@ -245,11 +245,16 @@
       "accuracy_2b": 0.9981,
       "skewness": -19.446,
       "kurtosis": 404.9013,
-      "smoothness": -20.3558,
-      "rtf": 0.0153,
+      "smoothness": -22.3941,
+      "rtf": 0.0137,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -270,11 +275,16 @@
       "accuracy_2b": 1.0,
       "skewness": 6.0753,
       "kurtosis": 103.6941,
-      "smoothness": -20.8404,
-      "rtf": 0.0044,
+      "smoothness": -22.1846,
+      "rtf": 0.0026,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -295,11 +305,16 @@
       "accuracy_2b": 1.0,
       "skewness": NaN,
       "kurtosis": NaN,
-      "smoothness": -31.1605,
-      "rtf": 0.0038,
+      "smoothness": -33.7535,
+      "rtf": 0.0068,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -320,11 +335,16 @@
       "accuracy_2b": 1.0,
       "skewness": NaN,
       "kurtosis": NaN,
-      "smoothness": -31.5518,
-      "rtf": 0.0017,
+      "smoothness": -34.4572,
+      "rtf": 0.0071,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -345,11 +365,16 @@
       "accuracy_2b": 1.0,
       "skewness": -20.4206,
       "kurtosis": 415.0024,
-      "smoothness": -14.298,
-      "rtf": 0.0392,
+      "smoothness": -15.151,
+      "rtf": 0.0124,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -370,11 +395,16 @@
       "accuracy_2b": 1.0,
       "skewness": NaN,
       "kurtosis": NaN,
-      "smoothness": -20.9613,
-      "rtf": 0.0296,
+      "smoothness": -22.1238,
+      "rtf": 0.0233,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -395,11 +425,16 @@
       "accuracy_2b": 1.0,
       "skewness": NaN,
       "kurtosis": NaN,
-      "smoothness": -18.4799,
-      "rtf": 0.0033,
+      "smoothness": -19.6835,
+      "rtf": 0.0029,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -420,11 +455,16 @@
       "accuracy_2b": 0.9694,
       "skewness": 4.7245,
       "kurtosis": 21.5363,
-      "smoothness": -20.3089,
-      "rtf": 0.0032,
+      "smoothness": -21.1671,
+      "rtf": 0.0085,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -445,11 +485,16 @@
       "accuracy_2b": 1.0,
       "skewness": -8.8889,
       "kurtosis": 77.0123,
-      "smoothness": -19.389,
-      "rtf": 0.0069,
+      "smoothness": -19.6961,
+      "rtf": 0.0068,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -470,11 +515,16 @@
       "accuracy_2b": 1.0,
       "skewness": -8.8889,
       "kurtosis": 77.0123,
-      "smoothness": -21.1273,
-      "rtf": 0.0028,
+      "smoothness": -22.3644,
+      "rtf": 0.0017,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -495,11 +545,16 @@
       "accuracy_2b": 1.0,
       "skewness": NaN,
       "kurtosis": NaN,
-      "smoothness": -18.8449,
-      "rtf": 0.0152,
+      "smoothness": -19.9887,
+      "rtf": 0.0184,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -520,11 +575,16 @@
       "accuracy_2b": 1.0,
       "skewness": -2.7846,
       "kurtosis": 70.6724,
-      "smoothness": -24.0021,
-      "rtf": 0.0247,
+      "smoothness": -25.7104,
+      "rtf": 0.058,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -545,11 +605,16 @@
       "accuracy_2b": 1.0,
       "skewness": -3.1428,
       "kurtosis": 44.1389,
-      "smoothness": -24.1322,
-      "rtf": 0.081,
+      "smoothness": -25.7155,
+      "rtf": 0.0342,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -570,11 +635,16 @@
       "accuracy_2b": 0.9994,
       "skewness": -8.4201,
       "kurtosis": 86.7007,
-      "smoothness": -25.2413,
-      "rtf": 0.0882,
+      "smoothness": -27.0086,
+      "rtf": 0.0805,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -595,11 +665,16 @@
       "accuracy_2b": 1.0,
       "skewness": -6.9258,
       "kurtosis": 78.7312,
-      "smoothness": -26.944,
-      "rtf": 0.0396,
+      "smoothness": -29.4685,
+      "rtf": 0.0398,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -620,11 +695,16 @@
       "accuracy_2b": 1.0,
       "skewness": 2.082,
       "kurtosis": 142.6637,
-      "smoothness": -24.0855,
-      "rtf": 0.0423,
+      "smoothness": -25.7268,
+      "rtf": 0.083,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -645,11 +725,16 @@
       "accuracy_2b": 0.9967,
       "skewness": 3.6409,
       "kurtosis": 240.7963,
-      "smoothness": -17.468,
-      "rtf": 0.1511,
+      "smoothness": -18.9711,
+      "rtf": 0.1479,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -670,11 +755,16 @@
       "accuracy_2b": 0.9977,
       "skewness": 12.1664,
       "kurtosis": 316.5672,
-      "smoothness": -16.094,
-      "rtf": 0.0845,
+      "smoothness": -17.8158,
+      "rtf": 0.0638,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -695,11 +785,16 @@
       "accuracy_2b": 1.0,
       "skewness": -12.332,
       "kurtosis": 263.1934,
-      "smoothness": -32.0213,
-      "rtf": 0.0114,
+      "smoothness": -35.1008,
+      "rtf": 0.0135,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -720,11 +815,16 @@
       "accuracy_2b": 1.0,
       "skewness": -3.1376,
       "kurtosis": 164.0317,
-      "smoothness": -21.2104,
-      "rtf": 0.017,
+      "smoothness": -23.0413,
+      "rtf": 0.0447,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -745,11 +845,16 @@
       "accuracy_2b": 1.0,
       "skewness": -9.6913,
       "kurtosis": 143.8292,
-      "smoothness": -21.7203,
-      "rtf": 0.0685,
+      "smoothness": -24.4164,
+      "rtf": 0.0285,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -770,11 +875,16 @@
       "accuracy_2b": 1.0,
       "skewness": 11.5078,
       "kurtosis": 542.2477,
-      "smoothness": -20.5045,
-      "rtf": 0.0581,
+      "smoothness": -22.2465,
+      "rtf": 0.0481,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -795,11 +905,16 @@
       "accuracy_2b": 1.0,
       "skewness": 19.2069,
       "kurtosis": 415.0336,
-      "smoothness": -14.2006,
-      "rtf": 0.0395,
+      "smoothness": -15.5627,
+      "rtf": 0.0389,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -820,11 +935,16 @@
       "accuracy_2b": 0.9993,
       "skewness": -20.2197,
       "kurtosis": 489.9288,
-      "smoothness": -14.3237,
-      "rtf": 0.0382,
+      "smoothness": -15.6213,
+      "rtf": 0.0799,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -845,11 +965,16 @@
       "accuracy_2b": 0.9992,
       "skewness": -13.8538,
       "kurtosis": 450.8419,
-      "smoothness": -12.2747,
-      "rtf": 0.0899,
+      "smoothness": -13.2855,
+      "rtf": 0.0877,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -870,11 +995,16 @@
       "accuracy_2b": 1.0,
       "skewness": 6.8262,
       "kurtosis": 191.7906,
-      "smoothness": -13.429,
-      "rtf": 0.043,
+      "smoothness": -14.7401,
+      "rtf": 0.0306,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -895,11 +1025,16 @@
       "accuracy_2b": 1.0,
       "skewness": 10.6036,
       "kurtosis": 158.8598,
-      "smoothness": -12.6762,
-      "rtf": 0.0864,
+      "smoothness": -13.9676,
+      "rtf": 0.0913,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -920,11 +1055,16 @@
       "accuracy_2b": 0.999,
       "skewness": -8.1383,
       "kurtosis": 91.1496,
-      "smoothness": -18.2595,
-      "rtf": 0.0604,
+      "smoothness": -20.1062,
+      "rtf": 0.1357,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -945,11 +1085,16 @@
       "accuracy_2b": 0.9985,
       "skewness": -5.3922,
       "kurtosis": 62.5237,
-      "smoothness": -16.0456,
-      "rtf": 0.1758,
+      "smoothness": -17.3485,
+      "rtf": 0.0779,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -970,11 +1115,16 @@
       "accuracy_2b": 1.0,
       "skewness": -25.5539,
       "kurtosis": 651.0015,
-      "smoothness": -23.903,
-      "rtf": 0.0233,
+      "smoothness": -26.2233,
+      "rtf": 0.0129,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -995,11 +1145,16 @@
       "accuracy_2b": 0.9885,
       "skewness": 7.4859,
       "kurtosis": 66.8111,
-      "smoothness": -15.822,
-      "rtf": 0.1219,
+      "smoothness": -17.9016,
+      "rtf": 0.1226,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1020,11 +1175,16 @@
       "accuracy_2b": 0.9993,
       "skewness": -5.3483,
       "kurtosis": 116.0974,
-      "smoothness": -16.2143,
-      "rtf": 0.2086,
+      "smoothness": -18.3358,
+      "rtf": 0.3283,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1045,11 +1205,16 @@
       "accuracy_2b": 1.0,
       "skewness": -2.2596,
       "kurtosis": 13.769,
-      "smoothness": -31.3988,
-      "rtf": 0.0179,
+      "smoothness": -33.6605,
+      "rtf": 0.0176,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1070,11 +1235,16 @@
       "accuracy_2b": 0.9916,
       "skewness": 7.3905,
       "kurtosis": 66.273,
-      "smoothness": -35.2173,
-      "rtf": 0.0043,
+      "smoothness": -38.3343,
+      "rtf": 0.0026,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1095,11 +1265,16 @@
       "accuracy_2b": 1.0,
       "skewness": 0.1309,
       "kurtosis": 33.5634,
-      "smoothness": -22.5869,
-      "rtf": 0.0757,
+      "smoothness": -24.9919,
+      "rtf": 0.0711,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1120,11 +1295,16 @@
       "accuracy_2b": 1.0,
       "skewness": -2.3623,
       "kurtosis": 82.4633,
-      "smoothness": -19.0945,
-      "rtf": 0.0439,
+      "smoothness": -21.7659,
+      "rtf": 0.1001,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1145,11 +1325,16 @@
       "accuracy_2b": 0.998,
       "skewness": -1.6606,
       "kurtosis": 64.0895,
-      "smoothness": -31.5569,
-      "rtf": 0.0216,
+      "smoothness": -34.1828,
+      "rtf": 0.0072,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1170,11 +1355,16 @@
       "accuracy_2b": 0.9688,
       "skewness": 5.9259,
       "kurtosis": 36.1029,
-      "smoothness": -21.7546,
-      "rtf": 0.0698,
+      "smoothness": -23.2819,
+      "rtf": 0.0621,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1195,11 +1385,16 @@
       "accuracy_2b": 0.9991,
       "skewness": -25.4497,
       "kurtosis": 783.6248,
-      "smoothness": -30.0912,
+      "smoothness": -32.329,
       "rtf": 0.0116,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1220,11 +1415,16 @@
       "accuracy_2b": 1.0,
       "skewness": 21.7527,
       "kurtosis": 548.9464,
-      "smoothness": -29.4673,
-      "rtf": 0.0122,
+      "smoothness": -31.4916,
+      "rtf": 0.0263,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1245,11 +1445,16 @@
       "accuracy_2b": 0.9992,
       "skewness": 26.8692,
       "kurtosis": 834.6354,
-      "smoothness": -30.0154,
-      "rtf": 0.0268,
+      "smoothness": -32.0312,
+      "rtf": 0.0265,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1270,11 +1475,16 @@
       "accuracy_2b": 0.9981,
       "skewness": 4.7883,
       "kurtosis": 123.1571,
-      "smoothness": -18.8962,
-      "rtf": 0.0846,
+      "smoothness": -20.944,
+      "rtf": 0.0629,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1295,11 +1505,16 @@
       "accuracy_2b": 1.0,
       "skewness": 1.3465,
       "kurtosis": 39.3002,
-      "smoothness": -27.7647,
-      "rtf": 0.0171,
+      "smoothness": -30.2029,
+      "rtf": 0.0206,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1320,11 +1535,16 @@
       "accuracy_2b": 1.0,
       "skewness": 3.6725,
       "kurtosis": 152.5259,
-      "smoothness": -24.1064,
-      "rtf": 0.1926,
+      "smoothness": -26.0024,
+      "rtf": 0.3151,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1345,11 +1565,16 @@
       "accuracy_2b": 1.0,
       "skewness": 3.4781,
       "kurtosis": 241.6012,
-      "smoothness": -20.955,
-      "rtf": 0.1056,
+      "smoothness": -22.6462,
+      "rtf": 0.047,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1370,11 +1595,16 @@
       "accuracy_2b": 1.0,
       "skewness": -4.1607,
       "kurtosis": 35.6991,
-      "smoothness": -41.4838,
-      "rtf": 0.0106,
+      "smoothness": -44.7722,
+      "rtf": 0.0074,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1395,11 +1625,16 @@
       "accuracy_2b": 1.0,
       "skewness": 8.9467,
       "kurtosis": 221.2022,
-      "smoothness": -18.0668,
+      "smoothness": -19.2041,
       "rtf": 0.0518,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1420,11 +1655,16 @@
       "accuracy_2b": 1.0,
       "skewness": -8.6444,
       "kurtosis": 192.2942,
-      "smoothness": -24.2604,
-      "rtf": 0.1224,
+      "smoothness": -26.2949,
+      "rtf": 0.1773,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1445,11 +1685,16 @@
       "accuracy_2b": 0.9993,
       "skewness": -28.998,
       "kurtosis": 1106.8097,
-      "smoothness": -24.4877,
-      "rtf": 0.0567,
+      "smoothness": -27.039,
+      "rtf": 0.0555,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1470,11 +1715,16 @@
       "accuracy_2b": 0.9992,
       "skewness": -5.603,
       "kurtosis": 61.4644,
-      "smoothness": -20.5782,
-      "rtf": 0.0355,
+      "smoothness": -22.8023,
+      "rtf": 0.0245,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1495,11 +1745,16 @@
       "accuracy_2b": 0.9989,
       "skewness": -1.8055,
       "kurtosis": 75.9806,
-      "smoothness": -23.6907,
-      "rtf": 0.0944,
+      "smoothness": -25.6304,
+      "rtf": 0.0849,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1520,11 +1775,16 @@
       "accuracy_2b": 0.987,
       "skewness": 4.9304,
       "kurtosis": 45.4421,
-      "smoothness": -31.7002,
-      "rtf": 0.0034,
+      "smoothness": -34.0435,
+      "rtf": 0.013,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1545,11 +1805,16 @@
       "accuracy_2b": 1.0,
       "skewness": -5.9102,
       "kurtosis": 100.9971,
-      "smoothness": -19.6292,
-      "rtf": 0.1571,
+      "smoothness": -21.001,
+      "rtf": 0.0763,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1570,11 +1835,16 @@
       "accuracy_2b": 0.9984,
       "skewness": 13.2448,
       "kurtosis": 207.5063,
-      "smoothness": -18.8822,
-      "rtf": 0.1652,
+      "smoothness": -20.3254,
+      "rtf": 0.1685,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1595,11 +1865,16 @@
       "accuracy_2b": 0.9982,
       "skewness": -14.4802,
       "kurtosis": 280.0666,
-      "smoothness": -34.6453,
-      "rtf": 0.0114,
+      "smoothness": -37.6852,
+      "rtf": 0.0111,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1620,11 +1895,16 @@
       "accuracy_2b": 0.9985,
       "skewness": 10.492,
       "kurtosis": 142.6408,
-      "smoothness": -21.9288,
-      "rtf": 0.0505,
+      "smoothness": -23.422,
+      "rtf": 0.0856,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1645,11 +1925,16 @@
       "accuracy_2b": 1.0,
       "skewness": 4.9443,
       "kurtosis": 98.8429,
-      "smoothness": -21.777,
-      "rtf": 0.0864,
+      "smoothness": -23.4492,
+      "rtf": 0.0855,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1670,11 +1955,16 @@
       "accuracy_2b": 0.9992,
       "skewness": -24.5301,
       "kurtosis": 798.8387,
-      "smoothness": -30.7983,
-      "rtf": 0.0133,
+      "smoothness": -33.0703,
+      "rtf": 0.0095,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1695,11 +1985,16 @@
       "accuracy_2b": 0.9608,
       "skewness": 5.892,
       "kurtosis": 35.6939,
-      "smoothness": -26.8026,
+      "smoothness": -29.1156,
       "rtf": 0.0463,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1720,11 +2015,16 @@
       "accuracy_2b": 0.999,
       "skewness": 18.4254,
       "kurtosis": 541.6689,
-      "smoothness": -20.567,
-      "rtf": 0.084,
+      "smoothness": -22.3018,
+      "rtf": 0.1768,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1745,11 +2045,16 @@
       "accuracy_2b": 1.0,
       "skewness": 5.6744,
       "kurtosis": 130.5089,
-      "smoothness": -35.1366,
-      "rtf": 0.0186,
+      "smoothness": -38.0694,
+      "rtf": 0.0063,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1770,11 +2075,16 @@
       "accuracy_2b": 0.9994,
       "skewness": 38.5428,
       "kurtosis": 1572.0813,
-      "smoothness": -25.0412,
-      "rtf": 0.0668,
+      "smoothness": -26.8039,
+      "rtf": 0.0628,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1795,11 +2105,16 @@
       "accuracy_2b": 1.0,
       "skewness": -4.9029,
       "kurtosis": 22.0385,
-      "smoothness": -35.2969,
+      "smoothness": -37.8653,
       "rtf": 0.0012,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1820,11 +2135,16 @@
       "accuracy_2b": 1.0,
       "skewness": -5.7393,
       "kurtosis": 31.4986,
-      "smoothness": -31.67,
-      "rtf": 0.0012,
+      "smoothness": -34.1021,
+      "rtf": 0.0033,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1845,11 +2165,16 @@
       "accuracy_2b": 1.0,
       "skewness": -9.3457,
       "kurtosis": 88.0601,
-      "smoothness": -32.254,
+      "smoothness": -37.9403,
       "rtf": 0.0036,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1870,11 +2195,16 @@
       "accuracy_2b": 1.0,
       "skewness": -7.45,
       "kurtosis": 54.6376,
-      "smoothness": -33.9357,
-      "rtf": 0.0012,
+      "smoothness": -36.1228,
+      "rtf": 0.0008,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1895,11 +2225,16 @@
       "accuracy_2b": 1.0,
       "skewness": -12.6098,
       "kurtosis": 157.0062,
-      "smoothness": -30.6316,
-      "rtf": 0.0022,
+      "smoothness": -33.1228,
+      "rtf": 0.0041,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1920,11 +2255,16 @@
       "accuracy_2b": 1.0,
       "skewness": -6.5212,
       "kurtosis": 42.5068,
-      "smoothness": -35.8661,
-      "rtf": 0.0008,
+      "smoothness": -38.1301,
+      "rtf": 0.0033,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1945,11 +2285,16 @@
       "accuracy_2b": 1.0,
       "skewness": -6.1258,
       "kurtosis": 35.5253,
-      "smoothness": -30.5532,
-      "rtf": 0.0038,
+      "smoothness": -34.1163,
+      "rtf": 0.0009,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1970,11 +2315,16 @@
       "accuracy_2b": 1.0,
       "skewness": -6.5659,
       "kurtosis": 42.0378,
-      "smoothness": -30.8873,
-      "rtf": 0.0036,
+      "smoothness": -33.214,
+      "rtf": 0.0019,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -1995,11 +2345,16 @@
       "accuracy_2b": 1.0,
       "skewness": -9.3457,
       "kurtosis": 88.0601,
-      "smoothness": -35.0022,
+      "smoothness": -40.2752,
       "rtf": 0.0012,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2020,11 +2375,16 @@
       "accuracy_2b": 1.0,
       "skewness": -6.1258,
       "kurtosis": 35.5253,
-      "smoothness": -38.6512,
-      "rtf": 0.0011,
+      "smoothness": -43.1497,
+      "rtf": 0.0031,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2045,11 +2405,16 @@
       "accuracy_2b": 1.0,
       "skewness": -5.4251,
       "kurtosis": 27.4318,
-      "smoothness": -35.2187,
-      "rtf": 0.0034,
+      "smoothness": -37.4115,
+      "rtf": 0.0035,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2070,11 +2435,16 @@
       "accuracy_2b": 1.0,
       "skewness": -5.5662,
       "kurtosis": 30.7246,
-      "smoothness": -31.408,
-      "rtf": 0.0014,
+      "smoothness": -35.5165,
+      "rtf": 0.0009,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2095,11 +2465,16 @@
       "accuracy_2b": 1.0,
       "skewness": -4.4931,
       "kurtosis": 18.188,
-      "smoothness": -34.7013,
-      "rtf": 0.0017,
+      "smoothness": -37.5688,
+      "rtf": 0.0033,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2120,11 +2495,16 @@
       "accuracy_2b": 1.0,
       "skewness": NaN,
       "kurtosis": NaN,
-      "smoothness": -36.0623,
-      "rtf": 0.0008,
+      "smoothness": -38.627,
+      "rtf": 0.0031,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2145,11 +2525,16 @@
       "accuracy_2b": 1.0,
       "skewness": -6.5212,
       "kurtosis": 42.5068,
-      "smoothness": -32.4322,
-      "rtf": 0.0038,
+      "smoothness": -37.6325,
+      "rtf": 0.0009,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2170,11 +2555,16 @@
       "accuracy_2b": 1.0,
       "skewness": -7.6151,
       "kurtosis": 58.4495,
-      "smoothness": -33.921,
-      "rtf": 0.0031,
+      "smoothness": -37.5747,
+      "rtf": 0.0017,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2195,11 +2585,16 @@
       "accuracy_2b": 1.0,
       "skewness": -7.1427,
       "kurtosis": 49.0189,
-      "smoothness": -34.3221,
+      "smoothness": -37.118,
       "rtf": 0.0014,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2220,11 +2615,16 @@
       "accuracy_2b": 1.0,
       "skewness": -8.8325,
       "kurtosis": 76.0125,
-      "smoothness": -32.0262,
-      "rtf": 0.0013,
+      "smoothness": -34.6177,
+      "rtf": 0.0037,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2245,11 +2645,16 @@
       "accuracy_2b": 1.0,
       "skewness": -7.6151,
       "kurtosis": 58.4495,
-      "smoothness": -35.3611,
+      "smoothness": -37.3227,
       "rtf": 0.0032,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2270,11 +2675,16 @@
       "accuracy_2b": 1.0,
       "skewness": -6.5212,
       "kurtosis": 42.5068,
-      "smoothness": -35.5505,
-      "rtf": 0.0012,
+      "smoothness": -37.3856,
+      "rtf": 0.0008,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2295,11 +2705,16 @@
       "accuracy_2b": 1.0,
       "skewness": -7.6151,
       "kurtosis": 58.4495,
-      "smoothness": -33.974,
-      "rtf": 0.0018,
+      "smoothness": -38.631,
+      "rtf": 0.0033,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2320,11 +2735,16 @@
       "accuracy_2b": 0.9158,
       "skewness": -3.2748,
       "kurtosis": 10.9625,
-      "smoothness": -42.5903,
-      "rtf": 0.001,
+      "smoothness": -46.9927,
+      "rtf": 0.0042,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2345,11 +2765,16 @@
       "accuracy_2b": 0.9406,
       "skewness": -3.6161,
       "kurtosis": 14.1773,
-      "smoothness": -44.7959,
-      "rtf": 0.0037,
+      "smoothness": -50.4491,
+      "rtf": 0.0009,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2370,11 +2795,16 @@
       "accuracy_2b": 0.9455,
       "skewness": -2.8403,
       "kurtosis": 7.0878,
-      "smoothness": -40.4008,
-      "rtf": 0.0038,
+      "smoothness": -44.0468,
+      "rtf": 0.002,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2395,11 +2825,16 @@
       "accuracy_2b": 0.9307,
       "skewness": -2.9378,
       "kurtosis": 8.4866,
-      "smoothness": -42.3182,
+      "smoothness": -45.5161,
       "rtf": 0.0015,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2420,11 +2855,16 @@
       "accuracy_2b": 0.9455,
       "skewness": -3.6255,
       "kurtosis": 14.1159,
-      "smoothness": -40.0438,
-      "rtf": 0.0016,
+      "smoothness": -43.6331,
+      "rtf": 0.0047,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2445,11 +2885,16 @@
       "accuracy_2b": 0.9109,
       "skewness": -3.0926,
       "kurtosis": 9.3118,
-      "smoothness": -41.0206,
+      "smoothness": -46.5731,
       "rtf": 0.0041,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2470,11 +2915,16 @@
       "accuracy_2b": 0.9455,
       "skewness": -3.091,
       "kurtosis": 9.5136,
-      "smoothness": -44.2275,
-      "rtf": 0.0015,
+      "smoothness": -47.8356,
+      "rtf": 0.001,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2495,11 +2945,16 @@
       "accuracy_2b": 0.9604,
       "skewness": -4.2395,
       "kurtosis": 19.5224,
-      "smoothness": -41.5348,
-      "rtf": 0.0021,
+      "smoothness": -44.8294,
+      "rtf": 0.0041,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2520,11 +2975,16 @@
       "accuracy_2b": 0.9505,
       "skewness": -3.088,
       "kurtosis": 8.5388,
-      "smoothness": -44.172,
-      "rtf": 0.001,
+      "smoothness": -49.1827,
+      "rtf": 0.0039,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2545,11 +3005,16 @@
       "accuracy_2b": 0.9059,
       "skewness": -3.0906,
       "kurtosis": 9.431,
-      "smoothness": -42.1801,
-      "rtf": 0.004,
+      "smoothness": -46.8795,
+      "rtf": 0.001,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2570,11 +3035,16 @@
       "accuracy_2b": 0.9356,
       "skewness": -2.9512,
       "kurtosis": 7.6849,
-      "smoothness": -46.1352,
-      "rtf": 0.0033,
+      "smoothness": -48.7818,
+      "rtf": 0.0018,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2595,11 +3065,16 @@
       "accuracy_2b": 0.9554,
       "skewness": -3.4718,
       "kurtosis": 12.6016,
-      "smoothness": -43.0502,
+      "smoothness": -45.9365,
       "rtf": 0.0015,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2620,11 +3095,16 @@
       "accuracy_2b": 0.9703,
       "skewness": -3.6307,
       "kurtosis": 13.0042,
-      "smoothness": -41.1029,
-      "rtf": 0.0016,
+      "smoothness": -44.5041,
+      "rtf": 0.0043,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2645,11 +3125,16 @@
       "accuracy_2b": 0.9554,
       "skewness": -2.7625,
       "kurtosis": 6.7853,
-      "smoothness": -43.5177,
+      "smoothness": -47.7301,
       "rtf": 0.0036,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2670,11 +3155,16 @@
       "accuracy_2b": 0.9554,
       "skewness": -3.2567,
       "kurtosis": 11.0203,
-      "smoothness": -41.1907,
-      "rtf": 0.0015,
+      "smoothness": -45.382,
+      "rtf": 0.001,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2695,11 +3185,16 @@
       "accuracy_2b": 0.9554,
       "skewness": -4.3146,
       "kurtosis": 19.2481,
-      "smoothness": -45.0064,
-      "rtf": 0.0019,
+      "smoothness": -48.5776,
+      "rtf": 0.0038,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2720,11 +3215,16 @@
       "accuracy_2b": 0.9356,
       "skewness": -3.4804,
       "kurtosis": 12.752,
-      "smoothness": -44.6316,
-      "rtf": 0.0009,
+      "smoothness": -50.3591,
+      "rtf": 0.0038,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2745,11 +3245,16 @@
       "accuracy_2b": 0.9257,
       "skewness": -3.3141,
       "kurtosis": 11.7416,
-      "smoothness": -41.3151,
-      "rtf": 0.0042,
+      "smoothness": -45.4564,
+      "rtf": 0.001,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2770,11 +3275,16 @@
       "accuracy_2b": 0.9455,
       "skewness": -3.5194,
       "kurtosis": 14.0462,
-      "smoothness": -43.2599,
-      "rtf": 0.0056,
+      "smoothness": -47.0335,
+      "rtf": 0.0021,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2795,11 +3305,16 @@
       "accuracy_2b": 0.9455,
       "skewness": -3.0361,
       "kurtosis": 8.16,
-      "smoothness": -42.6693,
+      "smoothness": -45.9676,
       "rtf": 0.0014,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2820,11 +3335,16 @@
       "accuracy_2b": 0.9646,
       "skewness": -3.0317,
       "kurtosis": 24.4533,
-      "smoothness": -43.3934,
-      "rtf": 0.0014,
+      "smoothness": -47.7802,
+      "rtf": 0.0039,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2845,11 +3365,16 @@
       "accuracy_2b": 1.0,
       "skewness": -4.3928,
       "kurtosis": 17.2971,
-      "smoothness": -42.7529,
-      "rtf": 0.0032,
+      "smoothness": -48.002,
+      "rtf": 0.0031,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2870,11 +3395,16 @@
       "accuracy_2b": 0.9944,
       "skewness": -5.6837,
       "kurtosis": 39.993,
-      "smoothness": -44.2449,
-      "rtf": 0.001,
+      "smoothness": -47.9386,
+      "rtf": 0.0007,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2895,11 +3425,16 @@
       "accuracy_2b": 1.0,
       "skewness": -6.4438,
       "kurtosis": 39.523,
-      "smoothness": -39.8104,
-      "rtf": 0.0018,
+      "smoothness": -42.5443,
+      "rtf": 0.0035,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2920,11 +3455,16 @@
       "accuracy_2b": 1.0,
       "skewness": -13.229,
       "kurtosis": 173.0056,
-      "smoothness": -42.8801,
-      "rtf": 0.0008,
+      "smoothness": -45.5195,
+      "rtf": 0.0034,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2945,11 +3485,16 @@
       "accuracy_2b": 0.9944,
       "skewness": -7.9336,
       "kurtosis": 78.5068,
-      "smoothness": -43.1555,
-      "rtf": 0.0034,
+      "smoothness": -46.124,
+      "rtf": 0.0008,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2970,11 +3515,16 @@
       "accuracy_2b": 1.0,
       "skewness": -9.2742,
       "kurtosis": 84.0114,
-      "smoothness": -41.6502,
-      "rtf": 0.0053,
+      "smoothness": -45.8698,
+      "rtf": 0.0017,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -2995,11 +3545,16 @@
       "accuracy_2b": 1.0,
       "skewness": -4.9091,
       "kurtosis": 23.0502,
-      "smoothness": -40.8347,
+      "smoothness": -44.1681,
       "rtf": 0.0012,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3020,11 +3575,16 @@
       "accuracy_2b": 1.0,
       "skewness": -6.2978,
       "kurtosis": 64.8359,
-      "smoothness": -46.1329,
-      "rtf": 0.0011,
+      "smoothness": -48.3408,
+      "rtf": 0.0031,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3045,11 +3605,16 @@
       "accuracy_2b": 1.0,
       "skewness": -6.4438,
       "kurtosis": 39.523,
-      "smoothness": -44.5612,
+      "smoothness": -47.1088,
       "rtf": 0.0033,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3070,11 +3635,16 @@
       "accuracy_2b": 1.0,
       "skewness": -4.7402,
       "kurtosis": 20.4695,
-      "smoothness": -39.7809,
-      "rtf": 0.0013,
+      "smoothness": -45.0201,
+      "rtf": 0.0008,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3095,11 +3665,16 @@
       "accuracy_2b": 1.0,
       "skewness": -4.7402,
       "kurtosis": 20.4695,
-      "smoothness": -48.5357,
-      "rtf": 0.0014,
+      "smoothness": -51.7189,
+      "rtf": 0.0026,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3120,11 +3695,16 @@
       "accuracy_2b": 0.9888,
       "skewness": -8.0082,
       "kurtosis": 75.772,
-      "smoothness": -44.8989,
-      "rtf": 0.0007,
+      "smoothness": -49.1175,
+      "rtf": 0.003,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3145,11 +3725,16 @@
       "accuracy_2b": 1.0,
       "skewness": -5.7122,
       "kurtosis": 30.6289,
-      "smoothness": -42.6374,
-      "rtf": 0.0032,
+      "smoothness": -45.6126,
+      "rtf": 0.0008,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3170,11 +3755,16 @@
       "accuracy_2b": 0.9888,
       "skewness": -8.4178,
       "kurtosis": 82.8042,
-      "smoothness": -43.9281,
-      "rtf": 0.003,
+      "smoothness": -45.952,
+      "rtf": 0.0016,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3195,11 +3785,16 @@
       "accuracy_2b": 1.0,
       "skewness": -4.1026,
       "kurtosis": 14.831,
-      "smoothness": -43.326,
+      "smoothness": -46.7606,
       "rtf": 0.0011,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3220,11 +3815,16 @@
       "accuracy_2b": 1.0,
       "skewness": -4.7402,
       "kurtosis": 20.4695,
-      "smoothness": -47.6271,
-      "rtf": 0.001,
+      "smoothness": -49.1605,
+      "rtf": 0.0028,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3245,11 +3845,16 @@
       "accuracy_2b": 1.0,
       "skewness": -3.6397,
       "kurtosis": 11.2477,
-      "smoothness": -38.3749,
-      "rtf": 0.0038,
+      "smoothness": -42.8342,
+      "rtf": 0.0037,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3270,11 +3875,16 @@
       "accuracy_2b": 0.9944,
       "skewness": -7.0439,
       "kurtosis": 51.9591,
-      "smoothness": -46.3981,
-      "rtf": 0.001,
+      "smoothness": -48.609,
+      "rtf": 0.0007,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3295,11 +3905,16 @@
       "accuracy_2b": 0.9944,
       "skewness": -6.3472,
       "kurtosis": 53.4873,
-      "smoothness": -45.5439,
-      "rtf": 0.0015,
+      "smoothness": -47.5784,
+      "rtf": 0.003,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3320,11 +3935,16 @@
       "accuracy_2b": 1.0,
       "skewness": -13.229,
       "kurtosis": 173.0056,
-      "smoothness": -44.8167,
-      "rtf": 0.0008,
+      "smoothness": -47.2034,
+      "rtf": 0.0032,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3345,11 +3965,16 @@
       "accuracy_2b": 0.9944,
       "skewness": -10.0254,
       "kurtosis": 111.7819,
-      "smoothness": -44.6896,
-      "rtf": 0.003,
+      "smoothness": -47.4432,
+      "rtf": 0.0008,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3370,11 +3995,16 @@
       "accuracy_2b": 1.0,
       "skewness": -4.3205,
       "kurtosis": 53.0,
-      "smoothness": -33.1532,
-      "rtf": 0.003,
+      "smoothness": -35.6176,
+      "rtf": 0.0015,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3395,11 +4025,16 @@
       "accuracy_2b": 1.0,
       "skewness": -4.5234,
       "kurtosis": 20.2695,
-      "smoothness": -34.1971,
+      "smoothness": -38.1977,
       "rtf": 0.001,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3420,11 +4055,16 @@
       "accuracy_2b": 1.0,
       "skewness": -4.7251,
       "kurtosis": 26.6362,
-      "smoothness": -33.0419,
-      "rtf": 0.001,
+      "smoothness": -34.8857,
+      "rtf": 0.0029,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3445,11 +4085,16 @@
       "accuracy_2b": 1.0,
       "skewness": -7.2814,
       "kurtosis": 51.0182,
-      "smoothness": -36.6297,
-      "rtf": 0.0027,
+      "smoothness": -38.5441,
+      "rtf": 0.0028,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3470,11 +4115,16 @@
       "accuracy_2b": 1.0,
       "skewness": -5.6735,
       "kurtosis": 41.2473,
-      "smoothness": -34.3724,
-      "rtf": 0.0011,
+      "smoothness": -36.5628,
+      "rtf": 0.0007,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3495,11 +4145,16 @@
       "accuracy_2b": 1.0,
       "skewness": 2.7642,
       "kurtosis": 23.6716,
-      "smoothness": -37.7776,
-      "rtf": 0.0014,
+      "smoothness": -42.8118,
+      "rtf": 0.0026,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3520,11 +4175,16 @@
       "accuracy_2b": 1.0,
       "skewness": -1.518,
       "kurtosis": 15.4981,
-      "smoothness": -34.5435,
-      "rtf": 0.0008,
+      "smoothness": -37.7491,
+      "rtf": 0.0032,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3545,11 +4205,16 @@
       "accuracy_2b": 1.0,
       "skewness": -4.9309,
       "kurtosis": 27.9058,
-      "smoothness": -34.9984,
-      "rtf": 0.0031,
+      "smoothness": -36.7021,
+      "rtf": 0.0007,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3570,11 +4235,16 @@
       "accuracy_2b": 1.0,
       "skewness": -5.0037,
       "kurtosis": 23.037,
-      "smoothness": -38.1443,
-      "rtf": 0.0024,
+      "smoothness": -39.4599,
+      "rtf": 0.0012,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3595,11 +4265,16 @@
       "accuracy_2b": 1.0,
       "skewness": -2.2581,
       "kurtosis": 17.015,
-      "smoothness": -32.8168,
+      "smoothness": -34.4441,
       "rtf": 0.0011,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3620,11 +4295,16 @@
       "accuracy_2b": 0.9369,
       "skewness": 4.1218,
       "kurtosis": 16.4907,
-      "smoothness": -40.0245,
-      "rtf": 0.0008,
+      "smoothness": -42.7867,
+      "rtf": 0.0022,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3645,11 +4325,16 @@
       "accuracy_2b": 1.0,
       "skewness": -4.5307,
       "kurtosis": 34.247,
-      "smoothness": -35.1015,
+      "smoothness": -37.5519,
       "rtf": 0.0032,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3670,11 +4355,16 @@
       "accuracy_2b": 1.0,
       "skewness": -3.4436,
       "kurtosis": 16.7105,
-      "smoothness": -36.6398,
-      "rtf": 0.0011,
+      "smoothness": -38.7175,
+      "rtf": 0.0007,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3695,11 +4385,16 @@
       "accuracy_2b": 1.0,
       "skewness": -3.6359,
       "kurtosis": 21.5612,
-      "smoothness": -39.5032,
-      "rtf": 0.0012,
+      "smoothness": -41.2949,
+      "rtf": 0.0024,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3720,11 +4415,16 @@
       "accuracy_2b": 1.0,
       "skewness": -2.396,
       "kurtosis": 24.543,
-      "smoothness": -38.5167,
-      "rtf": 0.0006,
+      "smoothness": -40.8798,
+      "rtf": 0.0028,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3745,11 +4445,16 @@
       "accuracy_2b": 1.0,
       "skewness": -4.9309,
       "kurtosis": 27.9058,
-      "smoothness": -33.4422,
-      "rtf": 0.0031,
+      "smoothness": -36.4603,
+      "rtf": 0.0007,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3770,11 +4475,16 @@
       "accuracy_2b": 1.0,
       "skewness": -4.9309,
       "kurtosis": 27.9058,
-      "smoothness": -27.4093,
-      "rtf": 0.0035,
+      "smoothness": -30.3024,
+      "rtf": 0.0017,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3795,11 +4505,16 @@
       "accuracy_2b": 1.0,
       "skewness": -4.5307,
       "kurtosis": 34.247,
-      "smoothness": -31.6847,
+      "smoothness": -34.4829,
       "rtf": 0.0011,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3820,11 +4535,16 @@
       "accuracy_2b": 1.0,
       "skewness": -3.3225,
       "kurtosis": 10.3002,
-      "smoothness": -37.201,
-      "rtf": 0.0009,
+      "smoothness": -41.7898,
+      "rtf": 0.0025,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3845,11 +4565,16 @@
       "accuracy_2b": 1.0,
       "skewness": -1.0468,
       "kurtosis": 22.7763,
-      "smoothness": -31.0444,
-      "rtf": 0.0033,
+      "smoothness": -34.4966,
+      "rtf": 0.0032,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     },
     {
@@ -3870,11 +4595,16 @@
       "accuracy_2b": 1.0,
       "skewness": -5.0037,
       "kurtosis": 23.037,
-      "smoothness": -35.8612,
-      "rtf": 0.001,
+      "smoothness": -38.2476,
+      "rtf": 0.0006,
       "tracked": true,
       "max_deviation": 0.0,
       "n_failed_segments": 0,
+      "tracking_criterion": {
+        "error_unit": "musical_beat",
+        "threshold": 0.1,
+        "window_duration": 30.0
+      },
       "used_estimated_bpm": false
     }
   ]

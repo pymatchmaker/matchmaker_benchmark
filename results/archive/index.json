@@ -29,6 +29,36 @@
         "matchmaker_sha256": "dbf04bba7e0c0cda41468791206225ac696172873a3f045a1b670c434c73ef66",
         "partitura": "1.9.0"
       }
+    },
+    {
+      "key": "ek1-43b6927fd3ce",
+      "input_type": "audio",
+      "first_published": "2026-11-07T00:19:50+00:00",
+      "last_updated": "2026-11-07T00:19:50+00:00",
+      "n_entries": 6,
+      "conditions": {
+        "scheme": "ek1",
+        "fold_sha256": "dc4f602ac271adf04c47f517808b07b45ea6fbe2c155f4942624fd5cb3302028",
+        "data_sha256": "0517d68f30ce79aa319e5a37e63e85779e71a65c5c0b75c6ab0a1ba2b25aedc2",
+        "scoring_sha256": "1f1a57ded93f6f65a2c1a79092d895cdbe167bc37473018cdb321c01a6e7c750",
+        "matchmaker_sha256": "076a05d3de4b5d1024ecc026b341f375e826114489ad62aac1b7c767e24a5116",
+        "partitura": "1.9.0"
+      }
+    },
+    {
+      "key": "ek1-f8781912a13a",
+      "input_type": "midi",
+      "first_published": "2026-11-07T00:19:50+00:00",
+      "last_updated": "2026-11-07T00:19:50+00:00",
+      "n_entries": 10,
+      "conditions": {
+        "scheme": "ek1",
+        "fold_sha256": "dc4f602ac271adf04c47f517808b07b45ea6fbe2c155f4942624fd5cb3302028",
+        "data_sha256": "33e9bad2ba35bc8bf3ec66c5b0d93f99f95ba7e6b1e4236f66ed0606f31eb4f0",
+        "scoring_sha256": "1f1a57ded93f6f65a2c1a79092d895cdbe167bc37473018cdb321c01a6e7c750",
+        "matchmaker_sha256": "076a05d3de4b5d1024ecc026b341f375e826114489ad62aac1b7c767e24a5116",
+        "partitura": "1.9.0"
+      }
     }
   ]
 }
