@@ -36,7 +36,7 @@ on:
         required: false
         default: ""
       fold:
-        description: "Fold: eval, beyond_piano, or diagnostics"
+        description: "Fold: eval, beyond_piano, diagnostics, or paper_extras"
         required: false
         default: eval
       shards:
@@ -57,6 +57,12 @@ env:
   FOLD: ${{ github.event.inputs.fold || 'eval' }}
 
 jobs:
+  paper_extras:
+    if: github.event.inputs.fold == 'paper_extras'
+    uses: ./.github/workflows/evaluate-paper-extras.yml
+    with:
+      shards: ${{ github.event.inputs.shards || '8' }}
+
   diagnostics:
     if: github.event.inputs.fold == 'diagnostics'
     uses: ./.github/workflows/evaluate-diagnostics.yml
@@ -64,7 +70,7 @@ jobs:
       shards: ${{ github.event.inputs.shards || '4' }}
 
   plan:
-    if: github.event.inputs.fold != 'diagnostics'
+    if: github.event.inputs.fold != 'diagnostics' && github.event.inputs.fold != 'paper_extras'
     runs-on: ubuntu-latest
     outputs:
       jobs: ${{ steps.plan.outputs.jobs }}

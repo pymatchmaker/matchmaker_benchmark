@@ -34,6 +34,7 @@ branches:
   valid: valid
   # test-only beyond-piano corpora, held with the eval data
   beyond_piano: eval
+  dixon_features: eval
 
 # Where a fold's <dataset>/<path> sits inside that repository. Change this if
 # the repository nests the datasets under a subdirectory, e.g. "data/{dataset}/{path}".

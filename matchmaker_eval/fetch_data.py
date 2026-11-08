@@ -113,6 +113,9 @@ def load_config() -> dict:
         value = os.environ.get(variable)
         if value:
             config[key] = value
+            if key == "branch":
+                # An explicit revision override applies to every selected fold.
+                config["branches"] = {}
             # An override of the address implies fetching is wanted, even if the
             # committed config still has it switched off.
             config["enabled"] = True

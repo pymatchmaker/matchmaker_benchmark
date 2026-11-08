@@ -49,3 +49,13 @@ python matchmaker_eval/diagnostics.py run \
 Use the library revision installed by the workflow. Artifacts record both
 library and benchmark commits and the GitHub run ID. A raw-path re-score from
 an old local experiment is not equivalent to a CI execution of a follower.
+
+## Other manuscript reference analyses
+
+Set `fold=paper_extras` (eight shards) to run the offline reference on the
+piano and beyond-piano folds, and the paired LSE/chroma Dixon diagnostic on its
+frozen 92-case subset. `benchmark-results-paper-extras` includes the merged
+results and original shards. The offline pipeline is migrated from the saved
+server script, using its verified synctoolbox 1.3.2 environment, 50 Hz features,
+22,050 Hz onset filterbank and DTW weights [1.5, 1.5, 2.0]. It is not an online
+follower. These results are archived, never inserted into the online leaderboard.
