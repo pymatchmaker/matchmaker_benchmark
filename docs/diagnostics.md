@@ -67,3 +67,13 @@ that working environment. CI installs the two pure-Python toolbox packages
 without their obsolete dependency pins, then runs the example alignment as a
 preflight. The exact installed package list is saved in each artifact. This
 compatibility setup is confined to offline reference jobs.
+
+## Frozen AMT outputs
+
+Set `fold=amt_reference` (four shards) for the 146 piano transcriptions with
+OLTWArzt, PTHMM and SLT_OLTW. The source MIDI is public and pinned by
+`data/amt.json`. CI executes the symbolic followers, not the private AMT model.
+It uses the original audio ground truth and the audio TR tolerance. The saved
+MIDI timestamps are unchanged. New runner timings measure the follower only
+and must not replace end-to-end AMT RTF in the manuscript.
+The artifact is `benchmark-results-amt-reference`.

@@ -36,7 +36,7 @@ on:
         required: false
         default: ""
       fold:
-        description: "Fold: eval, beyond_piano, diagnostics, or paper_extras"
+        description: "Fold: eval, beyond_piano, diagnostics, paper_extras, or amt_reference"
         required: false
         default: eval
       shards:
@@ -57,6 +57,12 @@ env:
   FOLD: ${{ github.event.inputs.fold || 'eval' }}
 
 jobs:
+  amt_reference:
+    if: github.event.inputs.fold == 'amt_reference'
+    uses: ./.github/workflows/evaluate-amt.yml
+    with:
+      shards: ${{ github.event.inputs.shards || '4' }}
+
   paper_extras:
     if: github.event.inputs.fold == 'paper_extras'
     uses: ./.github/workflows/evaluate-paper-extras.yml
@@ -70,7 +76,7 @@ jobs:
       shards: ${{ github.event.inputs.shards || '4' }}
 
   plan:
-    if: github.event.inputs.fold != 'diagnostics' && github.event.inputs.fold != 'paper_extras'
+    if: github.event.inputs.fold != 'diagnostics' && github.event.inputs.fold != 'paper_extras' && github.event.inputs.fold != 'amt_reference'
     runs-on: ubuntu-latest
     outputs:
       jobs: ${{ steps.plan.outputs.jobs }}
