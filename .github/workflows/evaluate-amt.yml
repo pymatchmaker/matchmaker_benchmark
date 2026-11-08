@@ -49,7 +49,7 @@ jobs:
       - run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends fluidsynth libsndfile1 ffmpeg
-          pip install 'pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@678366b034edc7cb10e3cf71bb1755b1a679e6c1' pyyaml pydantic-settings
+          pip install 'pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@0e673e2bfebd86c1e814ed9f5270b926c053a0ae' pyyaml pydantic-settings
       - name: Run symbolic follower on frozen transcription
         run: |
           python matchmaker_eval/run_amt.py --method '${{ matrix.method }}' \
@@ -79,7 +79,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install 'pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@678366b034edc7cb10e3cf71bb1755b1a679e6c1' pyyaml pydantic-settings
+      - run: pip install 'pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@0e673e2bfebd86c1e814ed9f5270b926c053a0ae' pyyaml pydantic-settings
       - uses: actions/download-artifact@v4
         with:
           pattern: amt-*

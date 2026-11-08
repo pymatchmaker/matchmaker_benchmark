@@ -58,7 +58,7 @@ jobs:
           # its sources are part of the evaluation key, so every row of a run
           # must be scored by the same matchmaker. Move every workflow together
           # when the pin changes, and re-run the entries: their keys will change.
-          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@678366b034edc7cb10e3cf71bb1755b1a679e6c1"
+          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@0e673e2bfebd86c1e814ed9f5270b926c053a0ae"
           pip install pyyaml pydantic-settings
 
       - name: Find the submissions touched by this pull request
