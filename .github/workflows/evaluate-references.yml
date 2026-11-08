@@ -66,6 +66,10 @@ env:
   FOLD: ${{ github.event.inputs.fold || 'eval' }}
 
 jobs:
+  ophmm_playthrough:
+    if: github.event.inputs.fold == 'ophmm_playthrough'
+    uses: ./.github/workflows/evaluate-ophmm-playthrough.yml
+
   diagnostic_recovery:
     if: github.event.inputs.fold == 'diagnostic_recovery'
     uses: ./.github/workflows/recover-folded-diagnostics.yml
@@ -96,7 +100,7 @@ jobs:
       shards: ${{ github.event.inputs.shards || '4' }}
 
   plan:
-    if: github.event.inputs.fold != 'diagnostics' && github.event.inputs.fold != 'paper_extras' && github.event.inputs.fold != 'amt_reference' && github.event.inputs.fold != 'annotation_correction' && github.event.inputs.fold != 'diagnostic_recovery'
+    if: github.event.inputs.fold != 'diagnostics' && github.event.inputs.fold != 'paper_extras' && github.event.inputs.fold != 'amt_reference' && github.event.inputs.fold != 'annotation_correction' && github.event.inputs.fold != 'diagnostic_recovery' && github.event.inputs.fold != 'ophmm_playthrough'
     runs-on: ubuntu-latest
     outputs:
       jobs: ${{ steps.plan.outputs.jobs }}
