@@ -36,7 +36,7 @@ on:
         required: false
         default: ""
       fold:
-        description: "Fold to evaluate on"
+        description: "Fold: eval, beyond_piano, or diagnostics"
         required: false
         default: eval
       shards:
@@ -57,7 +57,14 @@ env:
   FOLD: ${{ github.event.inputs.fold || 'eval' }}
 
 jobs:
+  diagnostics:
+    if: github.event.inputs.fold == 'diagnostics'
+    uses: ./.github/workflows/evaluate-diagnostics.yml
+    with:
+      shards: ${{ github.event.inputs.shards || '4' }}
+
   plan:
+    if: github.event.inputs.fold != 'diagnostics'
     runs-on: ubuntu-latest
     outputs:
       jobs: ${{ steps.plan.outputs.jobs }}
