@@ -8,6 +8,8 @@ commit, including the 3 kHz SPARC implementation.
 | --- | --- | --- | --- | --- |
 | All piano references | both | eval | leave empty | 8 |
 | All beyond-piano references | audio | beyond_piano | leave empty | 8 |
+| MIDI OPHMM global-transition comparison | midi | ophmm_playthrough | ignored | fixed at 4 |
+| Manuscript diagnostics | both | diagnostics | ignored | 8 |
 
 The piano fold contains 146 performances with audio and MIDI. The beyond-piano
 fold contains 343 audio inputs: ChoraleBricks (191), KRAISLER (60), SWD (48), and
@@ -58,3 +60,25 @@ python matchmaker_eval/verify_tracking.py \
 
 Use `--threshold 1.0` for audio. The meter map comes from the follower's actual
 unfolded score, so it preserves the score-position system used by the saved paths.
+
+
+## MIDI OPHMM play-through comparison
+
+The `ophmm_playthrough` selection evaluates the same 146-piece piano fold with
+score-wide transitions enabled and disabled. It calls the existing symbolic
+runner and saves both conditions in `ophmm-playthrough-comparison`. It does
+not replace the default reference or publish either condition to the leaderboard.
+
+```sh
+python matchmaker_eval/test_symbolic.py --method outerhmm --fold eval \
+  --global-transition off --no-plots --output results/ophmm-off
+```
+
+Use `on` for the paired comparison. Disabling the option zeros the skip-from
+probabilities before alignment; local transitions and pitch observations are
+unchanged. The setting is saved in `config.yaml`, merged metadata and per-piece
+records. The merge requires 146 completed performances per condition and checks
+that the disabled transition probabilities remained zero.
+
+The [diagnostic suites](diagnostics.md) retain their explicit repeat/skip
+settings. Selecting a play-through setting does not change those experiments.
