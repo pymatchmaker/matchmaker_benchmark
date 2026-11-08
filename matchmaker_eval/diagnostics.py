@@ -31,6 +31,13 @@ CONFIGS = {
 }
 
 
+def json_value(value):
+    """Retain model-class identity when serializing effective settings."""
+    if isinstance(value, type):
+        return f'{value.__module__}.{value.__qualname__}'
+    return float(value)
+
+
 def sha(path):
     h = hashlib.sha256()
     with Path(path).open('rb') as f:
@@ -184,7 +191,7 @@ def run(args):
                 record = run_case(case, config, paths, dest)
             record['input_hashes'] = {k: manifest['files'][case['paths'][k]]['sha256'] for k in keys}
             record['directory'] = dest.name
-            (dest/'result.json').write_text(json.dumps(record, indent=2, default=float)+'\n')
+            (dest/'result.json').write_text(json.dumps(record, indent=2, default=json_value)+'\n')
             result['pieces'].append(record)
             print(args.config, case['id'], record['tracked'], record['mean_b'], flush=True)
         except Exception:
@@ -192,9 +199,9 @@ def run(args):
             (dest/'error.txt').write_text(error)
             result['failures'].append(dict(case_id=case['id'], error=error))
             print(error, flush=True)
-        (args.output/'metrics.json').write_text(json.dumps(result, indent=2, default=float)+'\n')
+        (args.output/'metrics.json').write_text(json.dumps(result, indent=2, default=json_value)+'\n')
     # Empty shards are valid when a suite contains fewer cases than shards.
-    (args.output/'metrics.json').write_text(json.dumps(result, indent=2, default=float)+'\n')
+    (args.output/'metrics.json').write_text(json.dumps(result, indent=2, default=json_value)+'\n')
     if result['failures']:
         raise SystemExit(f'{len(result["failures"])} diagnostic cases failed')
 

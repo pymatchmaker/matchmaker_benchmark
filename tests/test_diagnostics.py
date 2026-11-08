@@ -43,3 +43,17 @@ def test_merge_fails_incomplete_and_preserves_evidence(tmp_path):
     with pytest.raises(SystemExit,match='Incomplete'):
         merge(Namespace(source=source,output=tmp_path/'out',manifest=manifest,shards=4))
     assert not json.loads((tmp_path/'out/summary.json').read_text())['complete']
+
+
+def test_effective_hmm_settings_can_be_saved():
+    import numpy as np
+    from matchmaker.matchmaker import DEFAULT_KWARGS
+    from matchmaker_eval.diagnostics import json_value
+    settings = dict(DEFAULT_KWARGS['midi']['hmm'])
+    record = {'kwargs': settings, 'mean_b': np.float32(0.25)}
+    saved = json.loads(json.dumps(record, default=json_value))
+    assert saved['kwargs']['tempo_model'] == 'matchmaker.utils.tempo_models.KalmanTempoModel'
+    assert saved['kwargs']['piano_range'] is True
+    assert saved['mean_b'] == 0.25
+    # Saving metadata must not replace the model class in the live settings.
+    assert isinstance(settings['tempo_model'], type)
