@@ -53,7 +53,21 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends fluidsynth libsndfile1 ffmpeg
-          pip install 'pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@678366b034edc7cb10e3cf71bb1755b1a679e6c1' pyyaml pydantic-settings 'synctoolbox==1.3.2'
+          pip install 'pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@678366b034edc7cb10e3cf71bb1755b1a679e6c1' pyyaml pydantic-settings
+      - name: Install archived offline numerical environment
+        if: matrix.job.analysis == 'offline'
+        run: |
+          # The original server uses these numerical packages with synctoolbox
+          # 1.3.2, despite its obsolete pandas/numba upper bounds. Its used DTW
+          # and audio functions are smoke-tested below before the full shard.
+          pip install 'numpy==1.26.4' 'scipy==1.14.1' 'pandas==2.2.3' 'librosa==0.10.2' 'numba==0.64.0' ipython pretty_midi music21
+          pip install --no-deps 'synctoolbox==1.3.2' 'libfmp==1.3.0'
+          python matchmaker_eval/run_offline.py --fold example --no-fetch --output results/offline-preflight
+          python - <<'PY'
+          import json
+          r=json.load(open('results/offline-preflight/metrics.json'))
+          assert r['n_failed']==0 and r['n_pieces']==1
+          PY
       - name: Run offline reference
         if: matrix.job.analysis == 'offline'
         run: |

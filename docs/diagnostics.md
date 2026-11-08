@@ -59,3 +59,11 @@ results and original shards. The offline pipeline is migrated from the saved
 server script, using its verified synctoolbox 1.3.2 environment, 50 Hz features,
 22,050 Hz onset filterbank and DTW weights [1.5, 1.5, 2.0]. It is not an online
 follower. These results are archived, never inserted into the online leaderboard.
+
+The archived offline numerical environment uses NumPy 1.26.4, SciPy 1.14.1,
+pandas 2.2.3, librosa 0.10.2, numba 0.64.0 and libfmp 1.3.0, verified on the
+original server. Synctoolbox 1.3.2's old dependency upper bounds do not describe
+that working environment. CI installs the two pure-Python toolbox packages
+without their obsolete dependency pins, then runs the example alignment as a
+preflight. The exact installed package list is saved in each artifact. This
+compatibility setup is confined to offline reference jobs.
