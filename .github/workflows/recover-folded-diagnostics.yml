@@ -27,7 +27,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends fluidsynth libsndfile1 ffmpeg time
-          pip install 'pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@678366b034edc7cb10e3cf71bb1755b1a679e6c1' pyyaml pydantic-settings
+          pip install 'pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@0e673e2bfebd86c1e814ed9f5270b926c053a0ae' pyyaml pydantic-settings
       - name: Run one frozen case
         run: |
           mkdir -p results/diagnostics
