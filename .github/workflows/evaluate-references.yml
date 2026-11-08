@@ -66,6 +66,10 @@ env:
   FOLD: ${{ github.event.inputs.fold || 'eval' }}
 
 jobs:
+  diagnostic_recovery:
+    if: github.event.inputs.fold == 'diagnostic_recovery'
+    uses: ./.github/workflows/recover-folded-diagnostics.yml
+
   annotation_correction:
     if: github.event.inputs.fold == 'annotation_correction'
     uses: ./.github/workflows/reevaluate-diagnostic-annotations.yml
@@ -92,7 +96,7 @@ jobs:
       shards: ${{ github.event.inputs.shards || '4' }}
 
   plan:
-    if: github.event.inputs.fold != 'diagnostics' && github.event.inputs.fold != 'paper_extras' && github.event.inputs.fold != 'amt_reference' && github.event.inputs.fold != 'annotation_correction'
+    if: github.event.inputs.fold != 'diagnostics' && github.event.inputs.fold != 'paper_extras' && github.event.inputs.fold != 'amt_reference' && github.event.inputs.fold != 'annotation_correction' && github.event.inputs.fold != 'diagnostic_recovery'
     runs-on: ubuntu-latest
     outputs:
       jobs: ${{ steps.plan.outputs.jobs }}

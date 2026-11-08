@@ -1,0 +1,46 @@
+name: Recover six folded diagnosis cases
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        case_index: [2, 6, 10, 14, 18, 22]
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install environment
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fluidsynth libsndfile1 ffmpeg time
+          pip install 'pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@678366b034edc7cb10e3cf71bb1755b1a679e6c1' pyyaml pydantic-settings
+      - name: Run one frozen case
+        run: |
+          mkdir -p results/diagnostics
+          free -m > results/diagnostics/runner-memory.txt
+          /usr/bin/time -v -o results/diagnostics/resource-usage.txt \
+            python matchmaker_eval/diagnostics.py run \
+            --config folded_batik-audio-arzt_multi_fold \
+            --shard '${{ matrix.case_index }}' --shards 24 \
+            --output results/diagnostics
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recovered-folded-${{ matrix.case_index }}
+          path: results/diagnostics
+          if-no-files-found: error
+          retention-days: 90
