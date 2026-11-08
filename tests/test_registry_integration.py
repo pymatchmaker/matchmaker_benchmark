@@ -500,3 +500,40 @@ class TestSweepSupport:
             config = _yaml.safe_load(path.read_text())
             assert config.get("entity"), f"{path.name} declares no entity"
             assert config.get("project"), f"{path.name} declares no project"
+
+
+class TestGlobalTransition:
+    @pytest.mark.parametrize("condition", [None, "on", "off"])
+    def test_only_global_factor_changes(self, condition):
+        from types import SimpleNamespace
+        import numpy as np
+        from matchmaker_eval.run_submission import set_global_transition
+        f = SimpleNamespace(S=np.ones(3)/3, r=np.ones(3)/3,
+                            alpha=np.eye(3), b_table=np.arange(9).reshape(3, 3))
+        original = {k: v.copy() for k, v in vars(f).items()}
+        mm = SimpleNamespace(method="outerhmm", input_type="midi", score_follower=f)
+        set_global_transition(mm, condition)
+        for key in ("r", "alpha", "b_table"):
+            np.testing.assert_array_equal(getattr(f, key), original[key])
+        np.testing.assert_array_equal(f.S, np.zeros(3) if condition == "off" else original["S"])
+
+    def test_rejects_other_methods(self):
+        from types import SimpleNamespace
+        from matchmaker_eval.run_submission import set_global_transition
+        with pytest.raises(SubmissionError, match="MIDI outerhmm"):
+            set_global_transition(SimpleNamespace(method="arzt", input_type="midi"), "off")
+
+    def test_symbolic_fold_forwards_condition(self, monkeypatch, tmp_path):
+        import test_symbolic
+        from matchmaker_eval import run_submission
+        captured = {}
+        def evaluate(**kwargs):
+            captured.update(kwargs)
+            return {"n_failed": 0}
+        monkeypatch.setattr(run_submission, "evaluate_submission", evaluate)
+        args = test_symbolic.build_parser().parse_args([
+            "--method", "outerhmm", "--fold", "eval", "--global-transition", "off",
+            "--output", str(tmp_path), "--no-plots", "--shard", "1", "--num-shards", "4"])
+        test_symbolic.main(args)
+        assert captured["global_transition"] == "off"
+        assert captured["shard"] == 1 and captured["num_shards"] == 4

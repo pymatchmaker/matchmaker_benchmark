@@ -68,7 +68,81 @@ env:
 jobs:
   ophmm_playthrough:
     if: github.event.inputs.fold == 'ophmm_playthrough'
-    uses: ./.github/workflows/evaluate-ophmm-playthrough.yml
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        condition: ['on', 'off']
+        shard: [0, 1, 2, 3]
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned environment
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fluidsynth libsndfile1
+          pip install 'pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@0e673e2bfebd86c1e814ed9f5270b926c053a0ae' pyyaml pydantic-settings tabulate wandb pytest
+          python -m pytest tests/test_registry_integration.py -k GlobalTransition -q
+      - name: Evaluate frozen piano fold
+        run: |
+          python matchmaker_eval/test_symbolic.py --method outerhmm --fold eval --no-plots \
+            --global-transition '${{ matrix.condition }}' \
+            --shard '${{ matrix.shard }}' --num-shards 4 --output results/run
+          pip freeze > results/run/environment.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ophmm-${{ matrix.condition }}-${{ matrix.shard }}
+          path: results/run
+          retention-days: 90
+  merge_ophmm_playthrough:
+    needs: ophmm_playthrough
+    if: always() && needs.ophmm_playthrough.result != 'skipped'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@0e673e2bfebd86c1e814ed9f5270b926c053a0ae' pyyaml pydantic-settings
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ophmm-*
+          path: results/shards
+      - name: Merge both conditions and check coverage
+        run: |
+          python - <<'PY'
+          import json,shutil
+          from pathlib import Path
+          from matchmaker_eval.merge_shards import merge
+          out=Path('results/comparison')
+          for condition in ('on','off'):
+              staging=Path('results/staging')/condition
+              for shard in range(4):
+                  src=Path('results/shards')/f'ophmm-{condition}-{shard}'
+                  meta=json.loads((src/'metrics.json').read_text())
+                  assert meta['metadata']['global_transition']==condition
+                  if condition=='off': assert all(x['global_transition_nonzero']==0 for x in meta['pieces'])
+                  shutil.copytree(src,staging/str(shard))
+              result=merge(staging,out/condition)
+              assert not result['partial'] and result['n_failed']==0 and result['n_pieces']==146
+          shutil.copytree('results/shards',out/'raw-shards')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ophmm-playthrough-comparison
+          path: results/comparison
+          retention-days: 90
 
   diagnostic_recovery:
     if: github.event.inputs.fold == 'diagnostic_recovery'

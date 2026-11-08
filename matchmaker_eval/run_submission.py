@@ -213,8 +213,19 @@ def check_follower(follower) -> None:
         )
 
 
+def set_global_transition(mm, setting):
+    """Override only MIDI OPHMM's global transition factor when requested."""
+    if setting is None:
+        return
+    if setting not in ("on", "off") or mm.method != "outerhmm" or mm.input_type != "midi":
+        raise SubmissionError("--global-transition applies only to MIDI outerhmm")
+    if setting == "off":
+        mm.score_follower.S[:] = 0.0
+
+
 def run_piece(
-    method, piece, input_type, index, run_dir, save_plots, estimated_bpm=False
+    method, piece, input_type, index, run_dir, save_plots, estimated_bpm=False,
+    global_transition=None,
 ):
     """Run and score one piece, returning the shared metric fields.
 
@@ -248,6 +259,7 @@ def run_piece(
             tempo=tempo,
         )
     check_follower(mm.score_follower)
+    set_global_transition(mm, global_transition)
     list(mm.run(verbose=False))
 
     wp = mm.score_follower.alignment_path
@@ -308,6 +320,9 @@ def run_piece(
     # Whether this piece actually got a measured tempo. False both when the
     # entry never asked and when it asked and the fold had none — the run
     # summary separates the two, since only the second is worth reporting.
+    if global_transition is not None:
+        metrics["global_transition"] = global_transition
+        metrics["global_transition_nonzero"] = int(np.count_nonzero(mm.score_follower.S))
     metrics["used_estimated_bpm"] = tempo is not None
     if voice_remapping:
         metrics["score_voice_id_remapping"] = voice_remapping
@@ -377,6 +392,7 @@ def evaluate_submission(
     builtin: Optional[str] = None,
     skip_missing: bool = False,
     fetch: bool = True,
+    global_transition: Optional[str] = None,
 ) -> dict:
     """Run a submission — or a built-in method — over a fold or one shard of it.
 
@@ -401,6 +417,12 @@ def evaluate_submission(
         method, registered_input_type, metadata = load_submission(directory)
         input_type = input_type or registered_input_type
         name = directory.name
+
+    if global_transition is not None:
+        if builtin != "outerhmm" or input_type != "midi" or global_transition not in ("on", "off"):
+            raise SubmissionError("--global-transition applies only to MIDI outerhmm")
+        name += "-global-" + global_transition
+        metadata = {**metadata, "global_transition": global_transition}
 
     # Declared by the entry, not chosen here: a follower is given the tempo
     # only if it said it uses one, and the run is labelled accordingly.
@@ -512,6 +534,7 @@ def evaluate_submission(
                     run_dir,
                     save_plots,
                     estimated_bpm=estimated_bpm,
+                    global_transition=global_transition,
                 )
         except Exception as e:
             # One broken piece must not void a whole run: record it as an

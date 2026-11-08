@@ -93,9 +93,12 @@ def print_summary_table(results: dict):
 
 
 def run_tests_and_eval_by_dataset(
-    dataset_type, method, run_dir=None, save_plots=True, matchmaker_kwargs=None
+    dataset_type, method, run_dir=None, save_plots=True, matchmaker_kwargs=None,
+    global_transition=None,
 ):
     """Run symbolic alignment for all pieces in a dataset."""
+    from matchmaker_eval.run_submission import set_global_transition
+
     is_valid = dataset_type in ("valid", "example")
     from_data_repo = dataset_type in DATA_REPO_DATASETS
     if from_data_repo:
@@ -157,6 +160,7 @@ def run_tests_and_eval_by_dataset(
                 tempo=tempo_estimate,
                 kwargs=mm_kwargs or None,
             )
+            set_global_transition(mm, global_transition)
             list(mm.run(verbose=False))
             wp = mm.score_follower.alignment_path  # (2, T): perf, score
 
@@ -192,6 +196,9 @@ def run_tests_and_eval_by_dataset(
                 run_name=str(i),
                 make_plot=save_plots,
             )
+            if global_transition is not None:
+                nested["global_transition"] = global_transition
+                nested["global_transition_nonzero"] = int(np.count_nonzero(mm.score_follower.S))
             nested["tracked"] = tracking["tracked"]
             nested["max_deviation"] = float(tracking["max_deviation"])
             nested["n_failed_segments"] = int(tracking["n_failed"])
@@ -285,11 +292,34 @@ def build_parser() -> argparse.ArgumentParser:
         help="run as a wandb sweep agent, taking the method's settings from "
         "the sweep config (see sweep_config/)",
     )
+    parser.add_argument("--global-transition", choices=("on", "off"), default=None,
+                        help="MIDI OPHMM global transitions (default: unchanged)")
+    parser.add_argument("--fold", default=None, help="Use a frozen benchmark fold instead of dataset metadata")
+    parser.add_argument("--output", type=Path, default=None)
+    parser.add_argument("--shard", type=int, default=None)
+    parser.add_argument("--num-shards", type=int, default=1)
+    parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--no-fetch", action="store_true")
     return parser
 
 
 def main(args=None):
     args = args or build_parser().parse_args()
+
+    setting = getattr(args, "global_transition", None)
+    if setting is not None and args.method != "outerhmm":
+        raise SystemExit("--global-transition applies only to outerhmm")
+    if getattr(args, "fold", None):
+        if getattr(args, "sweep", False):
+            raise SystemExit("Use --dataset for sweeps")
+        from matchmaker_eval.run_submission import evaluate_submission
+        result = evaluate_submission(builtin=args.method, input_type="midi", fold=args.fold,
+            run_dir=args.output, shard=args.shard, num_shards=args.num_shards,
+            limit=args.limit, fetch=not args.no_fetch, save_plots=not args.no_plots,
+            global_transition=setting)
+        if result["n_failed"]:
+            raise SystemExit("Some executions failed; inspect metrics.json")
+        return result
 
     method = args.method
     dataset = args.dataset
@@ -321,6 +351,7 @@ def main(args=None):
         run_dir=run_dir,
         save_plots=not getattr(args, "sweep", False) and not args.no_plots,
         matchmaker_kwargs=matchmaker_kwargs,
+        global_transition=setting,
     )
 
     n_total = len(results["Index"])
@@ -337,6 +368,8 @@ def main(args=None):
             json.dump(s, f, indent=4)
         print(f"Results saved to: {path}")
 
+    if setting is not None:
+        config = config.model_copy(update={"global_transition": setting})
     save_config(config, run_dir)
 
     if getattr(args, "sweep", False):
