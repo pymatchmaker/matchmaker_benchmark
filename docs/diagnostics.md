@@ -31,7 +31,7 @@ score-based tempo initialization, not the performance's estimated tempo.
 
 All suites use the same `run_evaluation`, causal onset sampling, 3 kHz SPARC
 implementation, and musical-beat tracking criterion as the main benchmark.
-Accuracy remains in score quarter-note beats. The input manifest specifies
+Accuracy remains in score denominator-note beats. The input manifest specifies
 whether the score is unfolded. Repeat ground truth retains backward jumps.
 The perturbation summary averages per-condition MeanAE over tracked cases;
 raw per-case paths also support pooled accuracy and common-tracked analyses.
