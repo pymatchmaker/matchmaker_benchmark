@@ -25,6 +25,14 @@ name: Evaluate references
 on:
   workflow_dispatch:
     inputs:
+      source_run:
+        description: Source CI run for annotation re-evaluation
+        required: false
+        default: '42457115867'
+      data_revision:
+        description: Corrected annotation data commit (annotation_correction fold only)
+        required: false
+        default: ''
       input_type:
         description: "Which references to run"
         required: false
@@ -46,6 +54,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   # Serialize publishers on the same branch and fold. Auxiliary folds only
@@ -57,6 +66,13 @@ env:
   FOLD: ${{ github.event.inputs.fold || 'eval' }}
 
 jobs:
+  annotation_correction:
+    if: github.event.inputs.fold == 'annotation_correction'
+    uses: ./.github/workflows/reevaluate-diagnostic-annotations.yml
+    with:
+      source_run: ${{ github.event.inputs.source_run }}
+      data_revision: ${{ github.event.inputs.data_revision }}
+
   amt_reference:
     if: github.event.inputs.fold == 'amt_reference'
     uses: ./.github/workflows/evaluate-amt.yml
@@ -76,7 +92,7 @@ jobs:
       shards: ${{ github.event.inputs.shards || '4' }}
 
   plan:
-    if: github.event.inputs.fold != 'diagnostics' && github.event.inputs.fold != 'paper_extras' && github.event.inputs.fold != 'amt_reference'
+    if: github.event.inputs.fold != 'diagnostics' && github.event.inputs.fold != 'paper_extras' && github.event.inputs.fold != 'amt_reference' && github.event.inputs.fold != 'annotation_correction'
     runs-on: ubuntu-latest
     outputs:
       jobs: ${{ steps.plan.outputs.jobs }}

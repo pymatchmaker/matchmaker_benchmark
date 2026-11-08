@@ -1,0 +1,47 @@
+name: Re-evaluate diagnostic annotations
+on:
+  workflow_call:
+    inputs:
+      source_run:
+        type: string
+        required: true
+        default: '42457115867'
+      data_revision:
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  reevaluate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: pymatchmaker/matchmaker-benchmark-data
+          ref: ${{ inputs.data_revision }}
+          path: benchmark-data
+          sparse-checkout: diagnostics
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@678366b034edc7cb10e3cf71bb1755b1a679e6c1'
+      - name: Download archived CI paths
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.source_run }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh run download "$SOURCE_RUN" --pattern 'diagnosis-global_skip-midi-on-1' --pattern 'diagnosis-global_skip-midi-off-1' --dir results/source
+      - name: Re-evaluate with corrected annotations
+        env:
+          DATA_REVISION: ${{ inputs.data_revision }}
+        run: |
+          python -m matchmaker_eval.rescore_diagnostic_annotations --source results/source --data benchmark-data --output results/corrected --data-revision "$DATA_REVISION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: diagnosis-annotation-correction
+          path: results/corrected
+          if-no-files-found: error
+          retention-days: 90
