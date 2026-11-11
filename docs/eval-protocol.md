@@ -163,8 +163,25 @@ the threshold, and the piece counts as **lost** if any evaluated window fails.
 
 | Input | Threshold |
 | --- | --- |
-| audio | 1.0 beat |
-| MIDI | 0.5 beat |
+| audio | 1.0 musical beat |
+| MIDI | 0.1 musical beat |
+
+A musical beat contains three denominator-note units in compound time
+signatures (numerators 6, 9, 12, and larger multiples of three), and one in
+other meters. Simple triple meters such as 3/4 and 3/8 are not grouped.
+At every reference onset, the absolute position error is divided by the factor
+for the time signature at that reference score position **before** computing
+the window median. This uses the follower's actual unfolded score, retaining
+meter changes within a performance, even inside a single evaluation window.
+The factor follows the reference position, not a potentially incorrect estimate.
+
+Thus the native-coordinate tolerance in a compound passage is 3.0
+denominator-note beats for audio and 0.3 for MIDI. The output paths, ground
+truth, MeanAE, MedAE, standard deviations, and tolerance accuracies retain
+denominator-note units; only TR uses musical beats. Each run saves a
+`meter_<index>.json` alongside its full paths so the criterion can be reproduced.
+Scores without a time signature use the parser's 4/4 default, recorded as
+`assumed_time_signature` in that file.
 
 Accuracy metrics are reported over tracked pieces only. A piece that crashes or
 times out counts as lost.
@@ -230,28 +247,37 @@ one is a matter of data hosting and policy, not code. It is not in place today.
 
 Two rows are only comparable when everything that decides their numbers,
 apart from the follower itself, was the same. Every run records those
-conditions and hashes them into one **evaluation key**, e.g. `ek1-3f9c0a1b2d4e`:
+conditions and hashes them into one **evaluation key**, e.g. `ek2-3f9c0a1b2d4e`:
 
 | Component | What it pins |
 | --- | --- |
 | `fold_sha256` | The fold CSV: which pieces, their paths, `estimated_bpm` |
 | `data_sha256` | The bytes of every file a piece was scored with: the score, the performance that was streamed, the ground truth |
 | `scoring_sha256` | The benchmark's scoring code: `eval.py`, `utils.py`, `verify_tracking.py`, and the thresholds and per-piece scoring in `run_submission.py` |
-| `matchmaker_sha256` | The installed matchmaker sources: ground-truth resolution, beat errors, tracking windows, SPARC, and the reference followers |
+| `matchmaker_scoring_sha256` | Matchmaker's `matchmaker.py` and `utils/eval.py`: shared score loading, ground-truth resolution, beat errors, tracking windows and SPARC |
 | `partitura` | The version that parses every score and match file |
 
 They are content hashes, not commit ids, on purpose: a results commit or a
 README edit changes a commit but not a number, while any change to what is
-read or how it is scored changes the key. The `ek1` prefix names the scheme; if
+read or how it is scored changes the key. The `ek2` prefix names the scheme; if
 the set of components ever changes, so does the prefix.
+
+The full library hash, `matchmaker_sha256`, and the installed commit and
+environment are retained as provenance. All shards of one method's run must
+still share that full hash. It is excluded from the ek2 comparison key, so a
+new follower or a change confined to a follower does not invalidate other
+methods' results. Maintainers must rerun methods affected by a shared follower
+implementation change. Changes to the shared score loading or scoring modules
+do change the comparison key. Legacy ek1 records keep their original keys;
+they are not silently promoted to ek2.
 
 MIDI and audio runs stream different performance files, so their keys always
 differ in `data_sha256`: each input type has its own current key. The current
 conditions are set by the most recent run. Its code components (`fold_sha256`,
-`scoring_sha256`, `matchmaker_sha256`, `partitura`) apply to every input type,
+`scoring_sha256`, `matchmaker_scoring_sha256`, `partitura`) apply to every input type,
 and each input type's key is that of its most recent run under them. The
 leaderboard ranks a row only when it has the current key of its input type, so
-every ranked row was scored by the same code, and rows of one input type also
+every ranked row was scored by the same evaluation code, and rows of one input type also
 on the same data. A row with another key — from before a scoring fix, a data
 correction or a fold change — is listed below the table as scored under
 earlier conditions, with the components that differ, and rejoins the ranking
@@ -267,10 +293,10 @@ first and last published, and its components. A key's archive is updated while i
 and frozen once a newer key takes over.
 
 So cite a number together with the key of its input type, e.g. *"tracking rate 0.84 (benchmark
-evaluation key `ek1-3f9c0a1b2d4e`)"*. Anyone can then find the exact table it
+evaluation key `ek2-3f9c0a1b2d4e`)"*. Anyone can then find the exact table it
 came from, and see whether a later leaderboard was scored under the same
-conditions or not. The per-piece records of a key are in the repository's
-history at the `benchmark_commit` its rows record.
+conditions or not. Release assets preserve the per-piece records and identify
+the `benchmark_commit` that produced them.
 
 ## Reproducing a leaderboard row
 

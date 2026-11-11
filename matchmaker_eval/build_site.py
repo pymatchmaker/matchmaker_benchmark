@@ -25,10 +25,9 @@ for _path in (_REPO_ROOT, _REPO_ROOT / "matchmaker_eval"):
 import argparse
 import shutil
 
-from matchmaker_eval.folds import REPO_ROOT
+from matchmaker_eval.folds import REPO_ROOT, RESULTS_DIR
 
 DOCS_DIR = REPO_ROOT / "docs"
-RESULTS_DIR = REPO_ROOT / "results"
 
 
 class SiteError(Exception):
@@ -45,7 +44,7 @@ def build(destination: Path) -> dict:
     shutil.copytree(DOCS_DIR, destination)
 
     summary = {"boards": [], "details": 0, "archives": 0, "missing": []}
-    for name in ("leaderboard.json", "leaderboard.csv"):
+    for name in ("leaderboard.json", "leaderboard.csv", "release.json"):
         source = RESULTS_DIR / name
         if source.exists():
             shutil.copy2(source, destination / name)

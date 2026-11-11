@@ -1,0 +1,137 @@
+name: Evaluate offline reference
+on:
+  workflow_call:
+    inputs:
+      shards:
+        type: string
+        default: '8'
+permissions:
+  contents: read
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      shards: ${{ steps.plan.outputs.shards }}
+    steps:
+      - id: plan
+        env:
+          SHARDS: ${{ inputs.shards }}
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json,os
+          n=int(os.environ['SHARDS'])
+          if not 1 <= n <= 32: raise SystemExit('Use 1–32 shards')
+          jobs=[{'fold':fold,'shard':s} for fold in ['eval','beyond_piano'] for s in range(n)]
+          print('matrix='+json.dumps(jobs));print('shards='+str(n))
+          PY
+  evaluate:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        job: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      MATCHMAKER_DATA_DIR: ${{ github.workspace }}/benchmark-data
+      MATCHMAKER_DATA_BRANCH: 03b51262b9bce7993203044fa45c9be9dadebd34
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+      NUMBA_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install fixed environment
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fluidsynth libsndfile1 ffmpeg
+          python .github/install_matchmaker.py
+          pip install pyyaml pydantic-settings
+      - name: Install archived offline numerical environment
+        run: |
+          # The original server uses these numerical packages with synctoolbox
+          # 1.3.2, despite its obsolete pandas/numba upper bounds. Its used DTW
+          # and audio functions are smoke-tested below before the full shard.
+          pip install 'numpy==1.26.4' 'scipy==1.14.1' 'pandas==2.2.3' 'librosa==0.10.2' 'numba==0.64.0' ipython pretty_midi music21
+          pip install --no-deps 'synctoolbox==1.3.2' 'libfmp==1.3.0'
+          python matchmaker_eval/run_offline.py --fold example --no-fetch --output results/offline-preflight
+          python - <<'PY'
+          import json
+          r=json.load(open('results/offline-preflight/metrics.json'))
+          assert r['n_failed']==0 and r['n_pieces']==1
+          PY
+      - name: Run offline reference
+        run: |
+          python matchmaker_eval/run_offline.py --fold '${{ matrix.job.fold }}' \
+            --shard '${{ matrix.job.shard }}' --num-shards '${{ needs.plan.outputs.shards }}' \
+            --piece-timeout 2400 --output results/offline
+      - name: Record runner and package provenance
+        if: always()
+        run: |
+          mkdir -p results/offline
+          pip freeze > results/offline/environment.txt
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          Path('results/offline/CI.json').write_text(json.dumps({k:os.environ.get(k) for k in ['GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_SHA','MATCHMAKER_DATA_BRANCH']},indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offline-${{ matrix.job.fold }}-${{ matrix.job.shard }}
+          path: results/offline
+          retention-days: 30
+  merge:
+    needs: [plan,evaluate]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          python .github/install_matchmaker.py
+          pip install pyyaml pydantic-settings
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: offline-*
+          path: results/shards
+      - name: Merge and verify completeness
+        env:
+          SHARDS: ${{ needs.plan.outputs.shards }}
+        run: |
+          python - <<'PY'
+          import sys,os,json,shutil
+          from pathlib import Path
+          sys.path.insert(0,'matchmaker_eval')
+          from merge_shards import merge
+          errors=[]
+          output=Path('results/offline-reference');output.mkdir(parents=True,exist_ok=True)
+          for fold in ['eval','beyond_piano']:
+              key='offline-'+fold
+              stage=Path('results/staging')/key;stage.mkdir(parents=True,exist_ok=True)
+              try:
+                  for i in range(int(os.environ['SHARDS'])):
+                      src=Path('results/shards')/f'{key}-{i}'
+                      shutil.copytree(src,stage/str(i))
+                  r=merge(stage,output/key)
+                  if r['partial'] or r['n_failed']:raise ValueError('Incomplete cases')
+              except Exception as e:errors.append(key+': '+str(e))
+          shutil.copytree('results/shards',output/'raw-shards')
+          (output/'verification.json').write_text(json.dumps({'complete':not errors,'errors':errors},indent=2))
+          if errors:raise SystemExit(errors)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results-offline
+          path: results/offline-reference
+          retention-days: 90

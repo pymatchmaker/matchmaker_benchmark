@@ -47,7 +47,9 @@ from matchmaker.utils.eval import resolve_gt
 
 from eval import run_evaluation
 from utils import TOLERANCES_IN_BEATS, dataset_summaries, pooled_summaries
-from verify_tracking import check_tracking, plot_tracking
+from matchmaker_eval.verify_tracking import (
+    TRACKING_THRESHOLDS, check_tracking, plot_tracking, musical_beat_factors, score_meter_map,
+)
 
 from matchmaker import Matchmaker
 from matchmaker.base import OnlineAlignment
@@ -91,7 +93,7 @@ if not os.environ.get("PYTHONWARNINGS"):
 #: Tracking verdict thresholds, per input type. A piece counts as "tracked"
 #: unless some 30-second onset-wise window's median beat error exceeds the
 #: threshold. MIDI is held to a tighter bound than audio.
-TRACKING_THRESHOLD = {"audio": 1.0, "midi": 0.5}
+TRACKING_THRESHOLD = TRACKING_THRESHOLDS
 SEGMENT_DURATION = 30.0
 
 DEFAULT_RESULTS_DIR = REPO_ROOT / "results" / "submissions"
@@ -131,11 +133,12 @@ def sha256_of(path: Path) -> str:
 
 
 def _matchmaker_source() -> dict:
-    """The git ref and commit matchmaker was installed from, if it was.
+    """The git sources Matchmaker was installed from, if known.
 
     ``pip install git+...@<ref>`` leaves a direct_url.json beside the package
-    naming the ref asked for and the commit it resolved to. A release install
-    has none, and then there is nothing to add.
+    naming the ref asked for and the commit it resolved to. CI may instead
+    install a temporary checkout with pinned patches; its packaged manifest
+    identifies every source commit without claiming it is one upstream commit.
     """
     try:
         import json
@@ -144,7 +147,13 @@ def _matchmaker_source() -> dict:
         raw = distribution("pymatchmaker").read_text("direct_url.json")
         if not raw:
             return {}
-        vcs = (json.loads(raw).get("vcs_info") or {})
+        direct_url = json.loads(raw)
+        if "dir_info" in direct_url:
+            from importlib.resources import files
+
+            manifest = files("matchmaker").joinpath("assets/benchmark-source.json")
+            return json.loads(manifest.read_text()) if manifest.is_file() else {}
+        vcs = direct_url.get("vcs_info") or {}
         found = {}
         if vcs.get("commit_id"):
             found["matchmaker_commit"] = vcs["commit_id"]
@@ -210,8 +219,19 @@ def check_follower(follower) -> None:
         )
 
 
+def set_global_transition(mm, setting):
+    """Override only MIDI OPHMM's global transition factor when requested."""
+    if setting is None:
+        return
+    if setting not in ("on", "off") or mm.method != "outerhmm" or mm.input_type != "midi":
+        raise SubmissionError("--global-transition applies only to MIDI outerhmm")
+    if setting == "off":
+        mm.score_follower.S[:] = 0.0
+
+
 def run_piece(
-    method, piece, input_type, index, run_dir, save_plots, estimated_bpm=False
+    method, piece, input_type, index, run_dir, save_plots, estimated_bpm=False,
+    global_transition=None,
 ):
     """Run and score one piece, returning the shared metric fields.
 
@@ -242,6 +262,7 @@ def run_piece(
         tempo=tempo,
     )
     check_follower(mm.score_follower)
+    set_global_transition(mm, global_transition)
     list(mm.run(verbose=False))
 
     wp = mm.score_follower.alignment_path
@@ -271,15 +292,22 @@ def run_piece(
     # alignment_path row 0 is already absolute performance seconds.
     wp_sec = np.stack([wp[0].astype(float), wp[1].astype(float)]).T
     threshold = TRACKING_THRESHOLD[input_type]
+    meter = score_meter_map(mm.score_part)
+    factors = musical_beat_factors(gt[:, 1], meter)
+    (run_dir / f"meter_{index}.json").write_text(json.dumps(meter, indent=2) + "\n")
     tracking = check_tracking(
         wp_sec,
         gt,
         segment_duration=SEGMENT_DURATION,
         threshold=threshold,
+        beat_factors=factors,
     )
     metrics["tracked"] = bool(tracking["tracked"])
     metrics["max_deviation"] = float(tracking["max_deviation"])
     metrics["n_failed_segments"] = int(tracking["n_failed"])
+    metrics["tracking_criterion"] = {
+        key: tracking[key] for key in ("error_unit", "threshold", "window_duration")
+    }
 
     if save_plots:
         plot_tracking(
@@ -289,11 +317,15 @@ def run_piece(
             save_path=run_dir / f"tracking_{index}.png",
             segment_duration=SEGMENT_DURATION,
             threshold=threshold,
+            beat_factors=factors,
         )
 
     # Whether this piece actually got a measured tempo. False both when the
     # entry never asked and when it asked and the fold had none — the run
     # summary separates the two, since only the second is worth reporting.
+    if global_transition is not None:
+        metrics["global_transition"] = global_transition
+        metrics["global_transition_nonzero"] = int(np.count_nonzero(mm.score_follower.S))
     metrics["used_estimated_bpm"] = tempo is not None
 
     with open(run_dir / f"{index}.json", "w") as f:
@@ -335,7 +367,7 @@ def fold_file_label(fold) -> str:
 #: the rerun would otherwise be scored on the previous run's path — and the
 #: progress count in run_references.py would read 146/146 from the first
 #: second. metrics.json stays until the run replaces it.
-PIECE_OUTPUTS = ("wp_*.tsv", "gt_*.tsv", "tracking_*.png", "[0-9]*.json")
+PIECE_OUTPUTS = ("wp_*.tsv", "gt_*.tsv", "meter_*.json", "tracking_*.png", "[0-9]*.json")
 
 
 def clear_piece_outputs(run_dir: Path) -> int:
@@ -361,6 +393,7 @@ def evaluate_submission(
     builtin: Optional[str] = None,
     skip_missing: bool = False,
     fetch: bool = True,
+    global_transition: Optional[str] = None,
 ) -> dict:
     """Run a submission — or a built-in method — over a fold or one shard of it.
 
@@ -385,6 +418,12 @@ def evaluate_submission(
         method, registered_input_type, metadata = load_submission(directory)
         input_type = input_type or registered_input_type
         name = directory.name
+
+    if global_transition is not None:
+        if builtin != "outerhmm" or input_type != "midi" or global_transition not in ("on", "off"):
+            raise SubmissionError("--global-transition applies only to MIDI outerhmm")
+        name += "-global-" + global_transition
+        metadata = {**metadata, "global_transition": global_transition}
 
     # Declared by the entry, not chosen here: a follower is given the tempo
     # only if it said it uses one, and the run is labelled accordingly.
@@ -496,6 +535,7 @@ def evaluate_submission(
                     run_dir,
                     save_plots,
                     estimated_bpm=estimated_bpm,
+                    **({"global_transition": global_transition} if global_transition is not None else {}),
                 )
         except Exception as e:
             # One broken piece must not void a whole run: record it as an
@@ -661,6 +701,8 @@ def main():
         default=1,
         help="split the fold into this many shards (merge them with merge_shards.py)",
     )
+    parser.add_argument("--global-transition", choices=("on", "off"), default=None,
+                        help="MIDI OPHMM global transitions (default: unchanged)")
     args = parser.parse_args()
 
     try:
@@ -677,6 +719,7 @@ def main():
             fetch=not args.no_fetch,
             shard=args.shard,
             num_shards=args.num_shards,
+            global_transition=args.global_transition,
         )
     except SubmissionError as e:
         print(f"\nSubmission error: {e}", file=sys.stderr)

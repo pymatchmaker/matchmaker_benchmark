@@ -34,7 +34,9 @@ from matchmaker_eval.utils import (
     AudioEvalConfig,
     save_debug_results,
 )
-from matchmaker_eval.verify_tracking import check_tracking, plot_tracking
+from matchmaker_eval.verify_tracking import (
+    TRACKING_THRESHOLDS, check_tracking, plot_tracking, musical_beat_factors, score_meter_map,
+)
 
 # ---------------------------------------------------------------------------
 # Evaluation against ground truth (post-processing of a completed Matchmaker run)
@@ -300,33 +302,41 @@ def run_score_following(
         run_name=run_name,
         level=granularity,
     )
-    # Tracking verification
-    try:
-        wp_for_check = wp.T
-        if gt_pairs is not None:
-            gt_for_check = gt_pairs
-        else:
-            score_annots_for_gt = mm.build_score_annotations(
-                level=granularity, return_type="beats"
-            )
-            min_len = min(len(score_annots_for_gt), len(perf_annotations))
-            gt_for_check = np.column_stack(
-                [perf_annotations[:min_len], score_annots_for_gt[:min_len]]
-            )
-        tracking = check_tracking(wp_for_check, gt_for_check)
-        results["tracked"] = tracking["tracked"]
-        results["max_deviation"] = tracking["max_deviation"]
-        results["n_failed_segments"] = tracking["n_failed"]
+    # Tracking verification: a scoring error must not silently drop the verdict.
+    wp_for_check = wp.T
+    if gt_pairs is not None:
+        gt_for_check = gt_pairs
+    else:
+        score_annots_for_gt = mm.build_score_annotations(
+            level=granularity, return_type="beats"
+        )
+        min_len = min(len(score_annots_for_gt), len(perf_annotations))
+        gt_for_check = np.column_stack(
+            [perf_annotations[:min_len], score_annots_for_gt[:min_len]]
+        )
+    meter = score_meter_map(mm.score_part)
+    factors = musical_beat_factors(gt_for_check[:, 1], meter)
+    threshold = TRACKING_THRESHOLDS[mm.input_type]
+    tracking = check_tracking(wp_for_check, gt_for_check, threshold=threshold,
+                              beat_factors=factors)
+    results["tracked"] = tracking["tracked"]
+    results["max_deviation"] = tracking["max_deviation"]
+    results["n_failed_segments"] = tracking["n_failed"]
+    results["tracking_criterion"] = {
+        key: tracking[key] for key in ("error_unit", "threshold", "window_duration")
+    }
+    if save_dir is not None and run_name:
+        (Path(save_dir) / f"meter_{run_name}.json").write_text(json.dumps(meter, indent=2) + "\n")
 
-        if save_plots and save_dir is not None and run_name:
-            plot_tracking(
-                wp_for_check,
-                gt_for_check,
-                title=f"{config.method} #{run_name}",
-                save_path=Path(save_dir) / f"tracking_{run_name}.png",
-            )
-    except Exception:
-        pass
+    if save_plots and save_dir is not None and run_name:
+        plot_tracking(
+            wp_for_check,
+            gt_for_check,
+            title=f"{config.method} #{run_name}",
+            save_path=Path(save_dir) / f"tracking_{run_name}.png",
+            threshold=threshold,
+            beat_factors=factors,
+        )
 
     if save_dir is not None and run_name and not dry_run:
         with open(Path(save_dir) / f"{run_name}.json", "w") as f:

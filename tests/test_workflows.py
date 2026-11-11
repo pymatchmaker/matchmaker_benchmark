@@ -119,22 +119,17 @@ class TestEvaluateWorkflow:
 class TestMatchmakerPin:
     """All workflows must install the same matchmaker, or jobs disagree."""
 
-    def _pins(self) -> dict:
-        import re
-
-        found = {}
+    def test_every_workflow_uses_the_shared_installer(self):
+        installs = []
         for path in sorted(WORKFLOWS.glob("*.yml")):
-            for match in re.finditer(r"matchmaker\.git@([\w./-]+)", path.read_text()):
-                found.setdefault(path.name, set()).add(match.group(1))
-        return found
-
-    def test_every_workflow_pins_the_same_ref(self):
-        refs = {ref for refs in self._pins().values() for ref in refs}
-        assert len(refs) == 1, (
-            f"workflows install different matchmaker refs: {sorted(refs)}. "
-            "A partial revert leaves the merge job on a different version "
-            "from the shards."
-        )
+            workflow = load_workflow(path)
+            for job in workflow.get("jobs", {}).values():
+                commands = "\n".join(s.get("run", "") for s in job.get("steps", []))
+                assert "matchmaker.git@" not in commands, path.name
+                if "run_submission.py" in commands or "merge_references.py" in commands:
+                    assert "python .github/install_matchmaker.py" in commands, path.name
+                    installs.append(path.name)
+        assert installs
 
 
 class TestSiteAssembly:
@@ -186,11 +181,15 @@ class TestReferencesWorkflow:
 
     REFERENCES = WORKFLOWS / "evaluate-references.yml"
 
-    def test_it_shares_the_leaderboard_concurrency_group(self):
-        """Two workflows committing results/ at once would race."""
-        mine = load_workflow(self.REFERENCES)["concurrency"]["group"]
-        theirs = load_workflow(EVALUATE)["concurrency"]["group"]
-        assert mine == theirs
+    def test_diagnostics_select_only_requested_methods_and_input(self):
+        from matchmaker_eval.diagnostics import select_configs
+
+        selected = select_configs("dixon", "midi")
+        assert selected
+        assert all(c["method"] == "dixon" and c["input_type"] == "midi"
+                   for c in selected.values())
+        with pytest.raises(ValueError, match="unknown_method"):
+            select_configs("dixon unknown_method", "midi")
 
     def test_it_uses_the_same_data_route_as_evaluate(self):
         workflow = load_workflow(self.REFERENCES)
@@ -271,9 +270,11 @@ class TestStagingBranch:
         trigger = workflow.get(True) or workflow.get("on")
         return trigger["push"]["branches"]
 
-    def test_evaluation_runs_on_the_staging_branch(self):
-        assert "submissions" in self._branches(EVALUATE)
-        assert "main" not in self._branches(EVALUATE)
+    @pytest.mark.parametrize("path", [EVALUATE, WORKFLOWS / "evaluate-references.yml"])
+    def test_full_evaluations_require_explicit_dispatch(self, path):
+        workflow = load_workflow(path)
+        trigger = workflow.get(True) or workflow.get("on")
+        assert set(trigger) == {"workflow_dispatch"}
 
     def test_the_site_publishes_only_from_main(self):
         """A staging run must be inspectable before anyone sees it."""
@@ -282,13 +283,6 @@ class TestStagingBranch:
             "publishing from a staging branch would defeat the point of having "
             "one: a result could reach the site before it was checked"
         )
-
-    def test_a_results_only_commit_does_not_re_trigger_evaluation(self):
-        """Committing results/ must not start another evaluation."""
-        workflow = load_workflow(EVALUATE)
-        trigger = workflow.get(True) or workflow.get("on")
-        paths = trigger["push"]["paths"]
-        assert not any(p.startswith("results") for p in paths)
 
 
 class TestValidateWorkflow:
@@ -381,3 +375,94 @@ class TestRunProvenance:
             "importlib.metadata.distribution", lambda name: NoDirectUrl()
         )
         assert R._matchmaker_source() == {}
+
+    def test_a_patched_install_records_all_sources_without_a_false_commit(self, tmp_path, monkeypatch):
+        from matchmaker_eval import run_submission as R
+
+        provenance = {"matchmaker_base_commit": "base", "matchmaker_patches": [
+            {"base": "parent", "head": "pr-head", "sha256": "patch-hash"},
+        ]}
+        (tmp_path / "assets").mkdir()
+        import json
+        (tmp_path / "assets" / "benchmark-source.json").write_text(json.dumps(provenance))
+
+        class LocalInstall:
+            def read_text(self, name):
+                return '{"url": "file:///tmp/source", "dir_info": {}}'
+
+        monkeypatch.setattr("importlib.metadata.distribution", lambda name: LocalInstall())
+        monkeypatch.setattr("importlib.resources.files", lambda name: tmp_path)
+        assert R._matchmaker_source() == provenance
+        assert "matchmaker_commit" not in R._matchmaker_source()
+
+
+class TestReleasedResults:
+    """A release must identify its evaluated code and preserve a usable snapshot."""
+
+    @pytest.mark.parametrize("change", [
+        {"status": "in_progress"}, {"conclusion": "failure"},
+        {"head_repository": {"full_name": "someone/fork"}},
+    ])
+    def test_only_successful_completed_repository_runs_can_be_released(self, change):
+        from matchmaker_eval.release_results import validate_runs
+        run = {"status": "completed", "conclusion": "success", "head_branch": "main",
+               "head_repository": {"full_name": "owner/benchmark"}, "head_sha": "abc"}
+        validate_runs([run, {**run, "head_branch": "feature", "head_sha": "def"}], "owner/benchmark")
+        with pytest.raises(ValueError, match="successful, completed runs"):
+            validate_runs([{**run, **change}], "owner/benchmark")
+
+    def test_only_complete_results_with_matching_provenance_replace_an_entry(self, tmp_path):
+        import json
+        from matchmaker_eval.release_results import stage_piano
+        source = tmp_path / "source" / "method-midi"
+        source.mkdir(parents=True)
+        destination = tmp_path / "published"
+        existing = destination / "submissions" / source.name / "metrics.json"
+        existing.parent.mkdir(parents=True)
+        existing.write_text("previous result")
+        other = destination / "submissions" / "other-midi" / "metrics.json"
+        other.parent.mkdir()
+        other.write_text("other result")
+        record = {"submission": source.name, "fold": "eval", "partial": False,
+                  "n_failed": 0, "n_pieces": 2, "fold_size": 2,
+                  "environment": {"benchmark_commit": "abc"}}
+        metrics = source / "metrics.json"
+        metrics.write_text(json.dumps({**record, "partial": True}))
+        with pytest.raises(ValueError, match="Incomplete"):
+            stage_piano(source.parent, destination, "abc")
+        assert existing.read_text() == "previous result"
+        metrics.write_text(json.dumps(record))
+        with pytest.raises(ValueError, match="source run's commit"):
+            stage_piano(source.parent, destination, "def")
+        assert existing.read_text() == "previous result"
+        assert stage_piano(source.parent, destination, "abc") == [source.name]
+        assert json.loads(existing.read_text()) == record
+        corrected = {**record, "n_tracked": 2, "environment": {"benchmark_commit": "def"}}
+        metrics.write_text(json.dumps(corrected))
+        stage_piano(source.parent, destination, "def")
+        assert json.loads(existing.read_text()) == corrected
+        assert other.read_text() == "other result"
+
+    def test_snapshot_round_trip_preserves_the_site_and_metrics(self, tmp_path, monkeypatch):
+        import json
+        import build_site
+        from matchmaker_eval.release_results import snapshot, extract
+        results = tmp_path / "results"
+        entry = results / "submissions" / "method-midi"
+        entry.mkdir(parents=True)
+        record = {"submission": "method-midi", "n_tracked": 2}
+        (entry / "metrics.json").write_text(json.dumps(record))
+        (entry / "wp_0.tsv").write_text("0 0\n1 1\n")
+        (results / "leaderboard.json").write_text('{"entries": []}')
+        (results / "release.json").write_text('{"publisher_commit": "abc"}')
+        bundle = tmp_path / "snapshot.zip"
+        snapshot(results, bundle)
+        restored = tmp_path / "restored"
+        extract(bundle, restored)
+        assert json.loads((restored / "submissions/method-midi/metrics.json").read_text()) == record
+        monkeypatch.setattr(build_site, "RESULTS_DIR", restored)
+        site = tmp_path / "site"
+        build_site.build(site)
+        assert (site / "index.html").exists()
+        assert (site / "release.json").read_bytes() == (results / "release.json").read_bytes()
+        assert (site / "leaderboard.json").read_bytes() == (results / "leaderboard.json").read_bytes()

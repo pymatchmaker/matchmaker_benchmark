@@ -42,9 +42,8 @@ import json
 import shutil
 from datetime import datetime, timezone
 
-from matchmaker_eval.folds import REPO_ROOT
+from matchmaker_eval.folds import REPO_ROOT, RESULTS_DIR
 
-RESULTS_DIR = REPO_ROOT / "results"
 SUBMISSION_RESULTS = RESULTS_DIR / "submissions"
 DETAILS_DIR = RESULTS_DIR / "details"
 RETRACTED_PATH = RESULTS_DIR / "retracted.json"
@@ -134,7 +133,7 @@ def retract(entry: str, reason: str, archive: bool = True) -> dict:
         if destination.exists():
             shutil.rmtree(destination)
         shutil.move(str(run_dir), str(destination))
-        record["archived"] = str(destination.relative_to(REPO_ROOT))
+        record["archived"] = str(destination.relative_to(RESULTS_DIR))
     else:
         shutil.rmtree(run_dir)
 
@@ -163,7 +162,7 @@ def undo(entry: str) -> None:
     destination = SUBMISSION_RESULTS / entry
     if destination.exists():
         raise RetractionError(
-            f"{destination.relative_to(REPO_ROOT)} already exists — "
+            f"{destination} already exists — "
             "remove or rename it before restoring."
         )
     destination.parent.mkdir(parents=True, exist_ok=True)

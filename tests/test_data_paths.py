@@ -89,6 +89,19 @@ class TestDatasetRoot:
         assert not has_expected_layout(f)
 
 
+def test_explicit_revision_overrides_every_fold_branch(tmp_path, monkeypatch):
+    from matchmaker_eval import fetch_data
+
+    source = tmp_path / "sources.yaml"
+    source.write_text("branch: main\nbranches:\n  eval: eval\n  valid: valid\n")
+    monkeypatch.setattr(fetch_data, "CONFIG_PATH", source)
+    revision = "a" * 40
+    monkeypatch.setenv("MATCHMAKER_DATA_BRANCH", revision)
+    config = fetch_data.load_config()
+    for fold in ("eval", "valid", "unlisted"):
+        assert fetch_data.branch_for(config, fold) == revision
+
+
 class TestMissingDataMessage:
     def test_it_says_how_to_fetch(self, data_root):
         from matchmaker_eval.folds import FoldError, load_fold, require_files
@@ -164,3 +177,19 @@ class TestMetadataRunnerPaths:
             )
             assert done.returncode == 0, done.stderr
             assert "--fold valid" in done.stdout
+
+
+def test_diagnostic_chunked_input_verified(tmp_path):
+    import hashlib
+    from matchmaker_eval.diagnostics import materialize
+    chunks = [b'first', b'second']
+    parts = []
+    for i, data in enumerate(chunks):
+        p = tmp_path/f'p{i}'; p.write_bytes(data)
+        parts.append(dict(path=p.name, sha256=hashlib.sha256(data).hexdigest()))
+    m={'files':{'audio.flac':dict(parts=parts,sha256=hashlib.sha256(b''.join(chunks)).hexdigest())}}
+    out=materialize('audio.flac',m,tmp_path,'https://invalid/')
+    assert out.read_bytes() == b'firstsecond'
+    m['files']['audio.flac']['sha256']='wrong'
+    with pytest.raises(ValueError,match='hash mismatch'):
+        materialize('audio.flac',m,tmp_path,'https://invalid/')

@@ -35,6 +35,15 @@ branches:
   # test-only beyond-piano corpora, held with the eval data
   beyond_piano: eval
 
+# Auxiliary experiments use immutable manifests from the same data repository.
+frozen_sources:
+  diagnostics:
+    commit: 2840905846c62074555d7be566757ac6fce2d179
+    manifest_sha256: 742ca3ab6beab0ce379f20e6f293c07a4a227f2312150a09cf9541e58786ad32
+  amt:
+    commit: 74298e15338a7b0431e96443e965025705736f61
+    manifest_sha256: d35985e237869a19455bc4e37d07d92a6776232879d22f8b520b66b258ad3b90
+
 # Where a fold's <dataset>/<path> sits inside that repository. Change this if
 # the repository nests the datasets under a subdirectory, e.g. "data/{dataset}/{path}".
 layout: "{dataset}/{path}"

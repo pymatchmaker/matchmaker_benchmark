@@ -38,11 +38,11 @@ import json
 import numpy as np
 from matchmaker.utils.eval import transfer_positions
 
-from matchmaker_eval.folds import LEADERBOARD_FOLD, REPO_ROOT
+from matchmaker_eval.folds import LEADERBOARD_FOLD, REPO_ROOT, RESULTS_DIR
 from matchmaker_eval.leaderboard import ACCURACY_COLUMNS, without_nan
 
-SUBMISSION_RESULTS = REPO_ROOT / "results" / "submissions"
-DETAILS_DIR = REPO_ROOT / "results" / "details"
+SUBMISSION_RESULTS = RESULTS_DIR / "submissions"
+DETAILS_DIR = RESULTS_DIR / "details"
 
 #: Points kept per polyline. A leaderboard plot is a few hundred pixels wide;
 #: beyond roughly this many points the extra coordinates are invisible.
@@ -63,6 +63,7 @@ PRECISION = 2
 #: ``data_sha256`` names the bytes a piece was scored with (see provenance.py):
 #: provenance, not a measurement. It is published beside the identity fields.
 PIECE_IDENTITY = (
+    "tracking_criterion",
     "index",
     "piece_id",
     "dataset",
@@ -182,6 +183,8 @@ def export(run_dir: Path, include_paths: bool = True) -> dict:
         }
         for key in ordered_metrics(piece):
             row[key] = piece[key]
+        if "tracking_criterion" in piece:
+            row["tracking_criterion"] = piece["tracking_criterion"]
         if piece.get("error"):
             row["error"] = piece["error"]
 
@@ -192,6 +195,16 @@ def export(run_dir: Path, include_paths: bool = True) -> dict:
             row["wp"] = decimate(wp)
             row["gt"] = decimate(gt)
             row["err"] = decimate_peaks(error_series(wp, gt))
+            meter_path = run_dir / f"meter_{index}.json"
+            if meter_path.exists() and len(gt) and piece.get("tracking_criterion"):
+                from matchmaker_eval.verify_tracking import musical_beat_factors
+                meter = json.loads(meter_path.read_text())
+                factors = musical_beat_factors(gt[:, 1], meter)
+                changes = np.flatnonzero(np.r_[True, factors[1:] != factors[:-1]])
+                keep = np.unique(np.r_[changes, len(gt) - 1])
+                threshold = piece["tracking_criterion"]["threshold"]
+                row["tr_tolerance"] = np.column_stack([gt[keep, 0], threshold * factors[keep]]).tolist()
+                row["meter"] = meter
         detail_pieces.append(row)
 
     return {
@@ -226,7 +239,7 @@ def export(run_dir: Path, include_paths: bool = True) -> dict:
 
 
 #: Per-piece fields built from the run's wp_/gt_ files rather than its metrics.
-PATH_FIELDS = ("wp", "gt", "err")
+PATH_FIELDS = ("wp", "gt", "err", "tr_tolerance", "meter")
 
 
 def has_path_files(run_dir: Path) -> bool:
@@ -340,7 +353,7 @@ def main():
         # evaluation it follows had already succeeded.
         print(f"No complete {args.fold}-fold runs to export.")
         return 0
-    print(f"\nwrote {written} file(s) to {DETAILS_DIR.relative_to(REPO_ROOT)}")
+    print(f"\nwrote {written} file(s) to {DETAILS_DIR}")
     return 0
 
 

@@ -1,0 +1,118 @@
+name: Evaluate diagnostic suites
+on:
+  workflow_call:
+    inputs:
+      shards:
+        type: string
+        default: '4'
+      only:
+        type: string
+        default: ''
+      input_type:
+        type: string
+        default: both
+permissions:
+  contents: read
+env:
+  ONLY: ${{ inputs.only }}
+  INPUT_TYPE: ${{ inputs.input_type }}
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      shards: ${{ steps.plan.outputs.shards }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - id: plan
+        env:
+          SHARDS: ${{ inputs.shards }}
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          from matchmaker_eval.diagnostics import select_configs
+          n = int(os.environ['SHARDS'])
+          if not 1 <= n <= 8: raise SystemExit('Use 1–8 shards for diagnostics')
+          configs = select_configs(os.environ['ONLY'], os.environ['INPUT_TYPE'])
+          print('matrix='+json.dumps([{'config': c, 'shard': s} for c in configs for s in range(n)]))
+          print('shards='+str(n))
+          PY
+  evaluate:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        job: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install environment
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fluidsynth libsndfile1 ffmpeg
+          python .github/install_matchmaker.py
+          pip install pyyaml pydantic-settings
+      - name: Run frozen diagnostic cases
+        run: |
+          python matchmaker_eval/diagnostics.py run \
+            --config '${{ matrix.job.config }}' --shard '${{ matrix.job.shard }}' \
+            --shards '${{ needs.plan.outputs.shards }}' --output results/diagnostics
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: diagnosis-${{ matrix.job.config }}-${{ matrix.job.shard }}
+          path: results/diagnostics
+          if-no-files-found: error
+          retention-days: 30
+  merge:
+    needs: [plan, evaluate]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy pyyaml
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: diagnosis-*
+          path: results/shards
+      - name: Fetch and verify frozen manifest
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from matchmaker_eval.diagnostics import download, sha
+          from matchmaker_eval.fetch_data import frozen_source
+          p = frozen_source('diagnostics')
+          dest = Path('results/data_manifest.json')
+          download(f'https://raw.githubusercontent.com/{p["repository"]}/{p["commit"]}/diagnostics/manifest.json', dest)
+          assert sha(dest) == p['manifest_sha256']
+          PY
+      - name: Verify completeness and aggregate
+        run: |
+          python matchmaker_eval/diagnostics.py merge --source results/shards \
+            --output results/diagnosis --manifest results/data_manifest.json \
+            --shards '${{ needs.plan.outputs.shards }}' --only "$ONLY" --input-type "$INPUT_TYPE"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results-diagnosis
+          path: results/diagnosis
+          if-no-files-found: error
+          retention-days: 90
