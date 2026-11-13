@@ -42,7 +42,7 @@ from matchmaker.registry import REGISTRY
 from matchmaker.utils.eval import resolve_gt
 
 from eval import run_evaluation
-from matchmaker_eval.folds import load_fold
+from matchmaker_eval.load_folds import load_fold
 from methods import builtin_methods, default_kwargs, processor_for
 from utils import TOLERANCES_IN_BEATS
 

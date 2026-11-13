@@ -55,12 +55,12 @@ from matchmaker import Matchmaker
 from matchmaker.base import OnlineAlignment
 
 from matchmaker_eval.fetch_data import FetchError, fetch_for_pieces, load_config
-from matchmaker_eval.provenance import (
+from matchmaker_eval.evaluation_key import (
     code_components,
     evaluation_record,
     piece_data_sha256,
 )
-from matchmaker_eval.folds import (
+from matchmaker_eval.load_folds import (
     LEADERBOARD_FOLD,
     REPO_ROOT,
     fold_path,
@@ -339,7 +339,7 @@ def scoring_parts() -> dict:
 
     The tracked-verdict thresholds and the function that resolves ground truth
     and calls the evaluation. Anything added here that decides a number belongs
-    in this dict too; see provenance.py.
+    in this dict too; see evaluation_key.py.
     """
     return {
         "TRACKING_THRESHOLD": TRACKING_THRESHOLD,
@@ -609,7 +609,7 @@ def evaluate_submission(
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "environment": environment_info(),
         # The conditions these numbers were scored under, as one key. Rows
-        # with the same key are comparable; see provenance.py. On a shard it
+        # with the same key are comparable; see evaluation_key.py. On a shard it
         # covers that shard's pieces only, and merge_shards.py recomputes it.
         "evaluation": evaluation_record(
             code_components(fold_sha256, scoring_parts()), piece_records

@@ -27,7 +27,7 @@ sys.setrecursionlimit(10000)
 import numpy as np
 import pandas as pd
 import partitura as pt
-from matchmaker_eval.folds import DATA_ROOT
+from matchmaker_eval.load_folds import DATA_ROOT
 from matchmaker_eval.utils import source_annotation
 
 

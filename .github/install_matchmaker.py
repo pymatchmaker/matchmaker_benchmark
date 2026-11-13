@@ -13,9 +13,10 @@ from pathlib import Path
 
 
 REPOSITORY = "https://github.com/pymatchmaker/matchmaker.git"
-BASE = "25960ea95aadf1b98d1bc753c8be133e0bc859ff"  # develop, including #79, #80 and #81
+# develop with #79, #80 and #81: DPDannenberg, its initial-window fix, 3 kHz SPARC.
+BASE = "25960ea95aadf1b98d1bc753c8be133e0bc859ff"
 PATCHES = (
-    # Retain the existing bounded repeat enumeration used by diagnostics.
+    # Multi-Fold Arzt: retain the bounded repeat enumeration used by diagnostics.
     ("678366b034edc7cb10e3cf71bb1755b1a679e6c1",
      "0e673e2bfebd86c1e814ed9f5270b926c053a0ae"),
 )

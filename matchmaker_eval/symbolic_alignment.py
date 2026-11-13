@@ -44,7 +44,7 @@ from matchmaker.prob.hmm import (
     compute_ioi_matrix,
     compute_discrete_pitch_profiles,
 )
-from matchmaker_eval.folds import nested_dataset_root
+from matchmaker_eval.load_folds import nested_dataset_root
 from matchmaker_eval.utils import save_nparray_to_csv, save_score_following_result
 
 from matchmaker.utils.tempo_models import ReactiveTempoModel, KalmanTempoModel

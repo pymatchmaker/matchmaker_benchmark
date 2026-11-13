@@ -29,7 +29,7 @@ import re
 import shutil
 from collections import defaultdict
 
-from matchmaker_eval.folds import REPO_ROOT
+from matchmaker_eval.load_folds import REPO_ROOT
 from merge_shards import MergeError, merge
 
 #: refshard-<method>-<input type>-<shard index>

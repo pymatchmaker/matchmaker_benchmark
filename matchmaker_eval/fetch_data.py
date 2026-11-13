@@ -36,7 +36,7 @@ from typing import Dict, List, Optional
 
 import yaml
 
-from matchmaker_eval.folds import DATA_ROOT, REPO_ROOT, load_fold, shard_of
+from matchmaker_eval.load_folds import DATA_ROOT, REPO_ROOT, load_fold, shard_of
 
 CONFIG_PATH = REPO_ROOT / "data" / "data_sources.yaml"
 CHECKSUM_DIR = REPO_ROOT / "data" / "checksums"
@@ -353,7 +353,7 @@ def metadata_path(dataset: str, branch: str = "main") -> Path:
     caching both to one path would let whichever was fetched first silently
     stand in for the other.
     """
-    from matchmaker_eval.folds import dataset_root
+    from matchmaker_eval.load_folds import dataset_root
 
     root = dataset_root(dataset)
     if branch in ("main", "master"):
@@ -380,7 +380,7 @@ def fetch_root_metadata(fold: Optional[str], force: bool = False) -> Optional[Pa
     reasonable shapes; this looks for the root form and returns None when the
     branch does not use it, so the caller can fall back to the per-dataset one.
     """
-    from matchmaker_eval.folds import DATA_ROOT
+    from matchmaker_eval.load_folds import DATA_ROOT
 
     config = load_config()
     if not config.get("enabled"):

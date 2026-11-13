@@ -17,7 +17,7 @@
 #   Actions -> Evaluate references -> Run workflow
 #     input_type: both      shards: 8
 #
-# 17 described entries x 8 shards is 136 jobs. They queue against the account's
+# Every described entry runs as one job per shard. They queue against the account's
 # concurrency limit rather than all starting at once, so expect this to take a
 # while; that is the price of every row being measured the same way.
 name: Evaluate references
@@ -184,7 +184,7 @@ jobs:
           pip install --quiet pyyaml
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import json, os, yaml
-          from matchmaker_eval.folds import load_fold
+          from matchmaker_eval.load_folds import load_fold
           described = yaml.safe_load(
               open("data/builtin_methods.yaml").read()
           ) or {}

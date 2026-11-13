@@ -603,7 +603,7 @@
         in any window exceeds the tolerance — 0.1 musical beat for MIDI, 1.0 for
         audio. In compound meter, three denominator-note units form one musical
         beat. The reference meter is applied at each onset, including changes
-        within a piece. Position-error summaries retain denominator-note units.
+        within a piece. Position-error summaries use denominator-note units.
         A follower that loses the performer produces meaningless errors,
         so accuracy is only reported over the pieces it held onto.
       </p>
@@ -647,7 +647,7 @@
       <h2>Evaluation key</h2>
       <p>
         Every ranked row was scored under the same conditions: the same fold,
-        scoring code, shared score loading and score parser, and, within an input
+        scoring code, matchmaker sources and score parser, and, within an input
         type, the same data files. MIDI and audio stream different files, so
         each has its own key above, a hash of all of these. Cite the key of the
         row's input type with any number you take from here;
@@ -873,8 +873,8 @@ function plotError(detail, piece, other, otherDetail, width) {
   const { W, H } = plotSize(width, 6.4, 120, 190);
   const PAD = { l: 52, r: 14, t: 14, b: 30 };
   const xs = all.map((p) => p[0]);
-  // Full-path export retains every meter transition. Historical details use
-  // the earlier denominator-note thresholds until evaluated under the new rule.
+  // tr_tolerance steps at every meter change. Details without a tracking
+  // criterion are drawn against a flat denominator-note threshold.
   const nativeThreshold = detail.input_type === "audio" ? 1.0 : 0.5;
   const tolerance = piece.tr_tolerance || (piece.tracking_criterion ? [] :
     [[Math.min(...xs), nativeThreshold], [Math.max(...xs), nativeThreshold]]);

@@ -45,7 +45,7 @@ import argparse
 import csv
 from collections import Counter, defaultdict
 
-from matchmaker_eval.folds import FOLD_DIR, REPO_ROOT, Piece, load_fold, write_fold
+from matchmaker_eval.load_folds import FOLD_DIR, REPO_ROOT, Piece, load_fold, write_fold
 
 METADATA_DIR = REPO_ROOT / "data"
 

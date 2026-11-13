@@ -33,7 +33,7 @@ jobs:
         run: |
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import json, os
-          from matchmaker_eval.diagnostics import select_configs
+          from matchmaker_eval.run_diagnostics import select_configs
           n = int(os.environ['SHARDS'])
           if not 1 <= n <= 8: raise SystemExit('Use 1–8 shards for diagnostics')
           configs = select_configs(os.environ['ONLY'], os.environ['INPUT_TYPE'])
@@ -68,7 +68,7 @@ jobs:
           pip install pyyaml pydantic-settings
       - name: Run frozen diagnostic cases
         run: |
-          python matchmaker_eval/diagnostics.py run \
+          python matchmaker_eval/run_diagnostics.py run \
             --config '${{ matrix.job.config }}' --shard '${{ matrix.job.shard }}' \
             --shards '${{ needs.plan.outputs.shards }}' --output results/diagnostics
       - uses: actions/upload-artifact@v4
@@ -97,16 +97,17 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
-          from matchmaker_eval.diagnostics import download, sha
+          from matchmaker_eval.evaluation_key import file_sha256
+          from matchmaker_eval.run_diagnostics import download
           from matchmaker_eval.fetch_data import frozen_source
           p = frozen_source('diagnostics')
           dest = Path('results/data_manifest.json')
           download(f'https://raw.githubusercontent.com/{p["repository"]}/{p["commit"]}/diagnostics/manifest.json', dest)
-          assert sha(dest) == p['manifest_sha256']
+          assert file_sha256(dest) == p['manifest_sha256']
           PY
       - name: Verify completeness and aggregate
         run: |
-          python matchmaker_eval/diagnostics.py merge --source results/shards \
+          python matchmaker_eval/run_diagnostics.py merge --source results/shards \
             --output results/diagnosis --manifest results/data_manifest.json \
             --shards '${{ needs.plan.outputs.shards }}' --only "$ONLY" --input-type "$INPUT_TYPE"
       - uses: actions/upload-artifact@v4

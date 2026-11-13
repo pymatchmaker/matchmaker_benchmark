@@ -8,7 +8,7 @@ decisions baked into this setup.
 CI has already checked structure, metadata and that the follower runs on one
 piece. **Review is the trust boundary**: `evaluate.yml` executes the submitted
 code on a machine that holds the datasets. Read the code before merging it or
-dispatching a full evaluation. A merge does not start that evaluation automatically.
+dispatching a full evaluation.
 
 `validate_submission.py` prints `review` lines for things worth a second look —
 network access, subprocesses, `.match` file access, reaching for
@@ -230,14 +230,30 @@ Actions -> Evaluate references -> Run workflow
   input_type: both     only: (empty = all described)     shards: 8
 ```
 
+The `fold` input selects what to run. Only `eval` feeds the leaderboard; the
+others are archived as artifacts.
+
+| fold | input_type | shards | what it runs |
+| --- | --- | --- | --- |
+| `eval` | both | 8 | the piano leaderboard |
+| `beyond_piano` | audio | 8 | the non-piano corpora (audio only) |
+| `diagnostics` | both | 4 | the manuscript diagnostic suites in `matchmaker_eval/run_diagnostics.py` |
+| `offline` | audio | 8 | the offline reference in `matchmaker_eval/run_offline.py` |
+| `amt_reference` | midi | 4 | symbolic followers on frozen AMT output, `matchmaker_eval/run_amt.py` |
+| `ophmm_playthrough` | midi | 4 (fixed) | MIDI OPHMM with global transitions on and off |
+
+Each run uploads one `benchmark-results-<fold>` artifact with every merged
+method directory: `metrics.json`, the full `wp_`/`gt_` paths and the
+`meter_<index>.json` maps.
+
 It mirrors `evaluate.yml` exactly — same data checkout, same eight-way
 round-robin sharding, same merge, same leaderboard rebuild — and fans out over
 every method described in `data/builtin_methods.yaml`. Both workflows pin
 `OMP_NUM_THREADS=1` so a runner's core count cannot move the timing columns
 between one entry and the next.
 
-11 described methods x 8 shards is 88 jobs, which queue against the account's
-concurrency limit rather than all starting at once. To evaluate a single
+Every described method runs as one job per shard; the jobs queue against the
+account's concurrency limit rather than all starting at once. To evaluate a single
 reference instead, `Evaluate submissions` takes a `method` and `input_type`.
 
 Accuracy is unaffected by any of this — an alignment path is a deterministic
@@ -299,21 +315,24 @@ differ on their own.
 
 ### Staging a run before it is published
 
-Evaluation and publication are separate. Evaluation workflows upload merged
-artifacts and a preview without committing results or publishing the website.
-Full evaluations require an explicit dispatch; merging a submission cannot
-start a duplicate run. Publication runs from `main` after the code has been
-squash-merged. Reviewed branch runs can be reused when the merged evaluation
-logic and data match; their original code commits remain recorded.
+Evaluation and publication are separate. Evaluation workflows are dispatched
+explicitly and upload merged artifacts and a preview. Publication runs from
+`main` after the code has been squash-merged. Reviewed branch runs can be
+reused when the merged evaluation logic and data match.
 
 Inspect the required evaluations, then dispatch **Publish leaderboard** on
-`main` with the selected `source_runs` and a new `benchmark-*` release tag.
-Later listed runs replace earlier entries for the same method, so put a
-corrected method's rerun after the full evaluation. The workflow attaches all
-original merged artifacts and the website snapshot to the publishing commit's
-release before deploying.
-See [the release procedure](ci-evaluation.md#preserving-and-publishing-final-results)
-for inputs, downloads and redeployment. No result changes need merging into main.
+`main`:
+
+- `source_runs`: the completed run IDs, separated by spaces. Later listed runs
+  replace earlier entries for the same method, so put a corrected method's
+  rerun after the full evaluation. Methods not listed are carried over from the
+  latest release.
+- `release_tag`: a new `benchmark-*` tag. Leave `source_runs` empty to redeploy
+  that release, or both empty to redeploy the latest one.
+
+The workflow attaches the selected artifacts, a `benchmark-snapshot.zip` for
+the site and `SHA256SUMS` to the release, then deploys. Actions artifacts
+expire, so publish final runs before they do.
 
 A manually dispatched evaluation runs only the requested methods or submission;
 publication reuses those outputs and never executes a follower.
@@ -350,9 +369,8 @@ a result that was on the leaderboard and is not any more is itself a fact about
 the leaderboard, so it is published rather than quietly erased. The run is moved
 to `results/retracted/<entry>/`, so `--reason` is required and `--undo` puts it
 back. `--purge` deletes instead of archiving, and cannot be undone.
-These commands edit the local snapshot only. A withdrawal needs a new corrected
-release snapshot and checksums; changing a file in the code checkout does not
-change the website. Preserve the original release.
+These commands edit the local snapshot only; publish the corrected snapshot
+as a new release.
 
 `export_details.py` also removes any detail file whose run has gone, so a
 hand-deleted result cannot leave one behind either.
@@ -463,9 +481,9 @@ somewhere else.
 ## Publishing
 
 `.github/workflows/pages.yml` combines `docs/` with the selected release snapshot
-and deploys it to GitHub Pages. A documentation update reuses the last published
-snapshot. `MATCHMAKER_RESULTS_DIR` points the existing export and site-building
-scripts at a temporary directory outside the code checkout.
+and deploys it to GitHub Pages. A documentation update reuses the latest published
+snapshot. `MATCHMAKER_RESULTS_DIR` points the export and site-building scripts
+at a temporary directory outside the code checkout.
 
 ### What the site can show
 

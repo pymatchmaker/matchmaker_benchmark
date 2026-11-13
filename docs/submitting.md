@@ -4,7 +4,6 @@ The benchmark takes submissions as pull requests **against the `submissions`
 branch**, not `main`. You add one directory and CI checks it on the bundled
 example. A maintainer reviews and squash-merges the code into `main`, explicitly
 runs the full evaluation, and selects the completed run for a result release.
-Merging alone does not start a full evaluation.
 
 ```
  you              GitHub                    maintainer          GitHub Actions
@@ -187,8 +186,7 @@ though a single job could not. The merged result is identical to an unsharded
 run.
 
 The full per-piece output (alignment paths, per-piece metrics) is attached to
-the workflow run as an artifact for 30 days. Evaluation does not commit files
-to either code branch.
+the workflow run as an artifact for 30 days.
 
 A maintainer checks the result. Selected final runs are then preserved as downloadable
 [release assets](https://github.com/pymatchmaker/matchmaker_benchmark/releases).

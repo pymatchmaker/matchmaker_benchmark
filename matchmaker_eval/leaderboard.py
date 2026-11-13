@@ -6,7 +6,7 @@
 Reads every ``results/submissions/*/metrics.json`` produced by
 ``run_submission.py``, keeps the runs made on the **eval** fold, and writes
 
-    results/leaderboard.json            full records, with per-fold provenance
+    results/leaderboard.json            full records, with each fold's evaluation key
     results/leaderboard.csv             the headline columns, for papers
     results/leaderboard-<dataset>.json  the same entries ranked on one dataset
     results/leaderboard-<dataset>.csv
@@ -46,8 +46,8 @@ from datetime import datetime, timezone
 
 from matchmaker.utils.eval import TOLERANCES_IN_BEATS
 
-from matchmaker_eval.folds import LEADERBOARD_FOLD, REPO_ROOT, RESULTS_DIR
-from matchmaker_eval.provenance import comparison_components
+from matchmaker_eval.load_folds import LEADERBOARD_FOLD, REPO_ROOT, RESULTS_DIR
+from matchmaker_eval.evaluation_key import SHARED_COMPONENTS
 from matchmaker_eval.retract import read_retractions
 from matchmaker_eval.submission import read_descriptions
 
@@ -76,7 +76,7 @@ CSV_COLUMNS = [
     "skewness", "kurtosis", "smoothness", "median_b_all", "rtf",
     "feature_latency_ms", "inference_latency_ms", "n_pieces", "n_tracked",
     "estimated_bpm", "evaluated",
-    # The conditions the row was scored under (see provenance.py). Cite it
+    # The conditions the row was scored under (see evaluation_key.py). Cite it
     # with any number taken from this file.
     "evaluation_key",
 ]
@@ -293,7 +293,7 @@ def split_by_conditions(rows: list) -> tuple:
     is the one that reflects them. MIDI and audio stream different files, so
     their keys always differ in ``data_sha256``: each input type has its own
     current key, the newest among its rows that share the newest run's code
-    components (fold, scoring, shared score loading, partitura). Every ranked row,
+    components (fold, scoring, matchmaker, partitura). Every ranked row,
     whichever its input type, therefore shares those.
 
     A row with any other key — or none, from before keys existed — was scored
@@ -311,11 +311,8 @@ def split_by_conditions(rows: list) -> tuple:
         return row.get("evaluated") or ""
 
     def code(row):
-        return {
-            name: value
-            for name, value in comparison_components(row.get("evaluation") or {}).items()
-            if name != "data_sha256"
-        }
+        theirs = row.get("evaluation") or {}
+        return {name: theirs.get(name) for name in SHARED_COMPONENTS}
 
     newest_code = code(max(rows, key=evaluated))
     conditions = {}
@@ -328,7 +325,7 @@ def split_by_conditions(rows: list) -> tuple:
             latest = max(same_code, key=evaluated)
             conditions[input_type] = {
                 "key": latest.get("evaluation_key"),
-                "components": comparison_components(latest.get("evaluation") or {}),
+                "components": latest.get("evaluation") or {},
             }
 
     current, earlier = [], []
@@ -338,11 +335,11 @@ def split_by_conditions(rows: list) -> tuple:
             current.append(row)
             continue
         earlier.append(row)
-        theirs = comparison_components(row.get("evaluation") or {})
+        theirs = row.get("evaluation") or {}
         # Without a current key of its own input type, only the code components
         # can be compared: another input type's data hash says nothing here.
-        ours = comparison_components(reference["components"]) if reference else newest_code
-        names = set(ours) | set(theirs) if reference else set(newest_code) | set(code(row))
+        ours = reference["components"] if reference else newest_code
+        names = set(ours) | set(theirs) if reference else SHARED_COMPONENTS
         row["evaluation_changed"] = sorted(
             name for name in names if ours.get(name) != theirs.get(name)
         ) if row.get("evaluation_key") else []

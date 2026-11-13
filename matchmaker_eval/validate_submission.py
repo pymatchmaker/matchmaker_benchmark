@@ -32,7 +32,7 @@ for _path in (_REPO_ROOT, _REPO_ROOT / "matchmaker_eval"):
 import argparse
 import re
 
-from matchmaker_eval.folds import REPO_ROOT
+from matchmaker_eval.load_folds import REPO_ROOT
 from matchmaker_eval.submission import (
     SubmissionError,
     load_solution,

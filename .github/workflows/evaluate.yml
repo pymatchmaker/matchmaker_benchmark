@@ -8,9 +8,8 @@
 # down once (`fetch_data.py --source`).
 #
 # A maintainer explicitly selects a reviewed submission or built-in method.
-# Results are uploaded as artifacts and never committed to the code branch.
-# After the code is on main, evaluate that main commit and select the
-# completed run in Publish leaderboard to preserve and publish a release.
+# Results are uploaded as artifacts. To publish them, select the completed run
+# in Publish leaderboard (see docs/maintaining.md).
 #
 # Sharding is what makes this fit: a job on a GitHub runner is capped at 6
 # hours, and audio evaluation over 146 pieces does not fit in one. Shards are
@@ -78,7 +77,6 @@ jobs:
 
       - name: Decide what to evaluate
         id: plan
-        # Full evaluations are explicit, so a merge cannot start a duplicate run.
         run: |
           pip install --quiet pyyaml
           python - <<'PY' >> "$GITHUB_OUTPUT"

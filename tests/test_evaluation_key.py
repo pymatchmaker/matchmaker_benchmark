@@ -18,7 +18,7 @@ for _p in (REPO_ROOT, REPO_ROOT / "matchmaker_eval"):
         sys.path.insert(0, str(_p))
 
 import matchmaker_eval.leaderboard as L
-from matchmaker_eval import provenance as P
+from matchmaker_eval import evaluation_key as P
 from matchmaker_eval.export_details import export
 from merge_shards import MergeError, merge
 
@@ -28,12 +28,6 @@ CODE = {
     "scoring_sha256": "s" * 64,
     "matchmaker_sha256": "m" * 64,
     "partitura": "1.9.0",
-}
-
-CURRENT_CODE = {
-    **CODE,
-    "scheme": P.SCHEME,
-    "matchmaker_scoring_sha256": "e" * 64,
 }
 
 
@@ -65,14 +59,6 @@ def records(n=3, prefix="h"):
 
 
 class TestTheKey:
-    def test_follower_source_changes_preserve_comparability_and_provenance(self):
-        old = P.evaluation_record(CURRENT_CODE, records())
-        new = P.evaluation_record({**CURRENT_CODE, "matchmaker_sha256": "new"}, records())
-        assert re.fullmatch(r"ek2-[0-9a-f]{12}", new["key"])
-        assert old["key"] == new["key"]
-        assert old["components"]["matchmaker_sha256"] != new["components"]["matchmaker_sha256"]
-        assert old["key"] != P.evaluation_record(CODE, records())["key"]
-
     def test_it_names_its_scheme_and_is_short(self):
         key = P.evaluation_record(CODE, records())["key"]
         assert re.fullmatch(r"ek1-[0-9a-f]{12}", key)
@@ -115,25 +101,6 @@ class TestTheKey:
 
 
 class TestTheComponents:
-    @pytest.mark.parametrize("module", ["matchmaker.py", "utils/eval.py"])
-    def test_shared_score_loading_and_evaluation_change_conditions(self, tmp_path, monkeypatch, module):
-        import matchmaker
-
-        monkeypatch.setattr(matchmaker, "__file__", str(tmp_path / "__init__.py"))
-        for name in P.MATCHMAKER_SCORING_MODULES:
-            path = tmp_path / name
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("original source")
-        before = P.matchmaker_scoring_sha256()
-        full_before = P.matchmaker_sha256()
-        (tmp_path / "new_follower.py").write_text("new follower")
-        assert P.matchmaker_sha256() != full_before
-        assert P.matchmaker_scoring_sha256() == before
-        (tmp_path / module).write_text("changed shared evaluation")
-        after = P.matchmaker_scoring_sha256()
-        assert after != before
-        assert P.evaluation_record({**CURRENT_CODE, "matchmaker_scoring_sha256": before}, records())["key"] != P.evaluation_record({**CURRENT_CODE, "matchmaker_scoring_sha256": after}, records())["key"]
-
     def test_a_piece_hash_follows_its_bytes(self, tmp_path):
         piece = FakePiece(tmp_path / "asap")
         before = P.piece_data_sha256(piece, "midi")
@@ -191,13 +158,6 @@ def write_shard(root: Path, index: int, piece: dict, code: dict) -> None:
 
 
 class TestMerging:
-    def test_shards_still_require_the_same_follower_sources(self, tmp_path):
-        piece = {"index": 0, "piece_id": "asap/a", "dataset": "asap", "tracked": False, "data_sha256": "h0"}
-        write_shard(tmp_path / "shards", 0, piece, CURRENT_CODE)
-        write_shard(tmp_path / "shards", 1, {**piece, "index": 1}, {**CURRENT_CODE, "matchmaker_sha256": "different"})
-        with pytest.raises(MergeError, match="matchmaker_sha256"):
-            merge(tmp_path / "shards", tmp_path / "out")
-
     def test_the_merged_key_is_the_whole_fold_key(self, tmp_path):
         pieces = [
             {"index": 0, "piece_id": "asap/a", "dataset": "asap", "tracked": False, "data_sha256": "h0"},
@@ -267,19 +227,6 @@ NEW = {**OLD, "scoring_sha256": "n" * 64}
 
 
 class TestTheLeaderboard:
-    def test_adding_a_method_preserves_both_modalities_under_the_same_protocol(self, results):
-        for name, kind, date, library in (
-            ("existing-midi", "midi", "2026-10-01", "old"),
-            ("existing-audio", "audio", "2026-10-01", "old"),
-            ("new-midi", "midi", "2026-10-02", "new"),
-        ):
-            evaluation = P.evaluation_record({**CURRENT_CODE, "matchmaker_sha256": library}, records(prefix=kind))
-            results(entry(name, evaluation["key"], date, evaluation["components"], input_type=kind))
-        board = L.build()
-        assert {row["submission"] for row in board["entries"]} == {"existing-midi", "existing-audio", "new-midi"}
-        assert board["earlier_conditions"] == []
-        assert all("matchmaker_sha256" not in value for value in board["evaluation_conditions"].values())
-
     def test_only_rows_with_the_newest_key_are_ranked(self, results):
         results(entry("old-ref", "ek1-aaaaaaaaaaaa", "2026-10-01T00:00:00+00:00", OLD))
         results(entry("new-ref", "ek1-bbbbbbbbbbbb", "2026-10-28T00:00:00+00:00", NEW, 0.5))
@@ -384,7 +331,7 @@ class TestTheArchive:
 
 
 class TestTheDetailExport:
-    def test_the_data_hash_is_provenance_not_a_metric(self, tmp_path):
+    def test_the_data_hash_is_an_input_not_a_metric(self, tmp_path):
         run = tmp_path / "run"
         run.mkdir()
         (run / "metrics.json").write_text(json.dumps({

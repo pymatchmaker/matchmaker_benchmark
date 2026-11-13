@@ -268,7 +268,7 @@ class TestFoldPaths:
     """``--fold`` also takes a path to a CSV, which need not be in the repo."""
 
     def test_fold_file_label_handles_an_external_csv(self, tmp_path):
-        from matchmaker_eval.folds import REPO_ROOT
+        from matchmaker_eval.load_folds import REPO_ROOT
         from run_submission import fold_file_label
 
         external = tmp_path / "subset.csv"

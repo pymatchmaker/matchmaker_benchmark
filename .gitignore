@@ -182,8 +182,7 @@ reports/
 *exports/
 scripts/
 
-# New generated results belong in CI artifacts and release assets.
-# Previously tracked snapshots remain unchanged; CI never commits results.
+# Results are published as CI artifacts and release assets.
 /results/
 
 # Assembled leaderboard site (matchmaker_eval/build_site.py)

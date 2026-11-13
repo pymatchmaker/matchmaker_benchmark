@@ -16,7 +16,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 from matchmaker_eval.eval import run_offline_alignment, run_score_following
-from matchmaker_eval.folds import (
+from matchmaker_eval.load_folds import (
     DATA_REPO_DATASETS,
     data_repo_metadata,
     explain_missing_dataset,

@@ -8,8 +8,8 @@ annotated performance onset. The window slides onset-wise until one first
 reaches the final annotation. A piece fails when any window median exceeds the
 selected beat tolerance. Benchmark callers supply ``beat_factors`` from the
 reference score: errors are divided by three in compound-meter passages and
-by one elsewhere, before the window median is taken. Omitting the factors is
-an explicit legacy denominator-note calculation.
+by one elsewhere, before the window median is taken. Without the factors,
+errors stay in denominator-note beats.
 
 Input:
   wp.tsv   Warping path (tab-separated)

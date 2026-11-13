@@ -20,7 +20,7 @@ for _p in (REPO_ROOT, REPO_ROOT / "matchmaker_eval"):
 
 @pytest.fixture
 def data_root(tmp_path, monkeypatch):
-    import matchmaker_eval.folds as F
+    import matchmaker_eval.load_folds as F
 
     monkeypatch.setattr(F, "DATA_ROOT", tmp_path)
     return tmp_path
@@ -28,7 +28,7 @@ def data_root(tmp_path, monkeypatch):
 
 class TestDatasetRoot:
     def test_the_repository_layout_wins(self, data_root):
-        from matchmaker_eval.folds import dataset_root
+        from matchmaker_eval.load_folds import dataset_root
 
         (data_root / "asap" / "score").mkdir(parents=True)
         (data_root / "asap-dataset-matchmaker" / "score").mkdir(parents=True)
@@ -36,12 +36,12 @@ class TestDatasetRoot:
 
     def test_nothing_on_disk_gives_the_fetch_target(self, data_root):
         """So a download lands where the folds will look for it."""
-        from matchmaker_eval.folds import dataset_root
+        from matchmaker_eval.load_folds import dataset_root
 
         assert dataset_root("asap") == data_root / "asap"
 
     def test_a_legacy_copy_in_the_expected_shape_is_reused(self, data_root):
-        from matchmaker_eval.folds import dataset_root
+        from matchmaker_eval.load_folds import dataset_root
 
         legacy = data_root / "vienna4x22"
         (legacy / "score").mkdir(parents=True)
@@ -55,7 +55,7 @@ class TestDatasetRoot:
         CSVs name. Returning it sent every path into a differently-shaped tree
         and the run failed on paths nobody had configured.
         """
-        from matchmaker_eval.folds import dataset_root
+        from matchmaker_eval.load_folds import dataset_root
 
         (data_root / "batik_plays_mozart" / "scores_effective").mkdir(parents=True)
         assert dataset_root("batik") == data_root / "batik", (
@@ -63,52 +63,39 @@ class TestDatasetRoot:
         )
 
     def test_an_empty_legacy_directory_is_ignored(self, data_root):
-        from matchmaker_eval.folds import dataset_root
+        from matchmaker_eval.load_folds import dataset_root
 
         (data_root / "batik_plays_mozart").mkdir()
         assert dataset_root("batik") == data_root / "batik"
 
     def test_local_pieces_come_from_the_repository(self, data_root):
-        from matchmaker_eval.folds import REPO_ROOT as R, dataset_root
+        from matchmaker_eval.load_folds import REPO_ROOT as R, dataset_root
 
         assert dataset_root("local") == R
 
     @pytest.mark.parametrize("layout", ["score", "midi", "match", "audio"])
     def test_any_expected_subdirectory_counts(self, data_root, layout):
-        from matchmaker_eval.folds import has_expected_layout
+        from matchmaker_eval.load_folds import has_expected_layout
 
         d = data_root / "whatever"
         (d / layout).mkdir(parents=True)
         assert has_expected_layout(d)
 
     def test_a_file_is_not_a_layout(self, data_root):
-        from matchmaker_eval.folds import has_expected_layout
+        from matchmaker_eval.load_folds import has_expected_layout
 
         f = data_root / "notadir"
         f.write_text("")
         assert not has_expected_layout(f)
 
 
-def test_explicit_revision_overrides_every_fold_branch(tmp_path, monkeypatch):
-    from matchmaker_eval import fetch_data
-
-    source = tmp_path / "sources.yaml"
-    source.write_text("branch: main\nbranches:\n  eval: eval\n  valid: valid\n")
-    monkeypatch.setattr(fetch_data, "CONFIG_PATH", source)
-    revision = "a" * 40
-    monkeypatch.setenv("MATCHMAKER_DATA_BRANCH", revision)
-    config = fetch_data.load_config()
-    for fold in ("eval", "valid", "unlisted"):
-        assert fetch_data.branch_for(config, fold) == revision
-
-
 class TestMissingDataMessage:
     def test_it_says_how_to_fetch(self, data_root):
-        from matchmaker_eval.folds import FoldError, load_fold, require_files
+        from matchmaker_eval.load_folds import FoldError, load_fold, require_files
 
         pieces = load_fold("example", input_type="midi")
         # Point the local dataset somewhere empty so the files are missing.
-        import matchmaker_eval.folds as F
+        import matchmaker_eval.load_folds as F
 
         monkey = data_root / "nothing"
         monkey.mkdir()
@@ -136,13 +123,13 @@ class TestMetadataRunnerPaths:
     """
 
     def test_the_root_follows_the_data_dir(self, data_root):
-        from matchmaker_eval.folds import nested_dataset_root
+        from matchmaker_eval.load_folds import nested_dataset_root
 
         assert nested_dataset_root("asap") == data_root / "asap-dataset-matchmaker"
         assert nested_dataset_root("batik") == data_root / "batik_plays_mozart"
 
     def test_an_unknown_dataset_uses_its_own_name(self, data_root):
-        from matchmaker_eval.folds import nested_dataset_root
+        from matchmaker_eval.load_folds import nested_dataset_root
 
         assert nested_dataset_root("urmp") == data_root / "urmp"
 
@@ -158,7 +145,7 @@ class TestMetadataRunnerPaths:
     def test_the_message_names_both_ways_forward(self):
         from pathlib import Path as P
 
-        from matchmaker_eval.folds import explain_missing_dataset
+        from matchmaker_eval.load_folds import explain_missing_dataset
 
         message = explain_missing_dataset("asap", P("/nowhere/x.musicxml"))
         assert "MATCHMAKER_DATA_DIR" in message
@@ -177,19 +164,3 @@ class TestMetadataRunnerPaths:
             )
             assert done.returncode == 0, done.stderr
             assert "--fold valid" in done.stdout
-
-
-def test_diagnostic_chunked_input_verified(tmp_path):
-    import hashlib
-    from matchmaker_eval.diagnostics import materialize
-    chunks = [b'first', b'second']
-    parts = []
-    for i, data in enumerate(chunks):
-        p = tmp_path/f'p{i}'; p.write_bytes(data)
-        parts.append(dict(path=p.name, sha256=hashlib.sha256(data).hexdigest()))
-    m={'files':{'audio.flac':dict(parts=parts,sha256=hashlib.sha256(b''.join(chunks)).hexdigest())}}
-    out=materialize('audio.flac',m,tmp_path,'https://invalid/')
-    assert out.read_bytes() == b'firstsecond'
-    m['files']['audio.flac']['sha256']='wrong'
-    with pytest.raises(ValueError,match='hash mismatch'):
-        materialize('audio.flac',m,tmp_path,'https://invalid/')

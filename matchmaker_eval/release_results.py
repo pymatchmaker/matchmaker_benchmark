@@ -1,12 +1,10 @@
-"""Preserve completed CI runs in a release, or fetch a published snapshot.
+"""Publish completed CI runs as a release, or fetch a published snapshot.
 
-Called by pages.yml; requires the GitHub CLI and GH_TOKEN. Evaluation is never
-run here. MATCHMAKER_RESULTS_DIR keeps downloaded/generated files out of the
-source checkout. Raw merged artifacts are attached without modifying them.
+Called by pages.yml with the GitHub CLI and GH_TOKEN; it never runs a follower.
+Results are written to MATCHMAKER_RESULTS_DIR, outside the source checkout.
 """
 
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -18,7 +16,8 @@ import tempfile
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from matchmaker_eval.folds import REPO_ROOT, RESULTS_DIR
+from matchmaker_eval.evaluation_key import file_sha256
+from matchmaker_eval.load_folds import REPO_ROOT, RESULTS_DIR
 
 SNAPSHOT = "benchmark-snapshot.zip"
 
@@ -43,11 +42,6 @@ def latest(records):
     return max(candidates, key=lambda r: r["published_at"], default=None)
 
 
-def digest(path):
-    with path.open("rb") as stream:
-        return hashlib.file_digest(stream, "sha256").hexdigest()
-
-
 def extract(archive, destination):
     """Reject paths outside the destination before extracting any member."""
     destination = destination.resolve()
@@ -68,7 +62,7 @@ def fetch(repo, release, destination):
            "--pattern", SNAPSHOT, "--pattern", "SHA256SUMS", "--dir", str(work))
         hashes = dict(line.split(maxsplit=1)[::-1]
                       for line in (work / "SHA256SUMS").read_text().splitlines())
-        if digest(work / SNAPSHOT) != hashes.get(SNAPSHOT):
+        if file_sha256(work / SNAPSHOT) != hashes.get(SNAPSHOT):
             raise ValueError("Published snapshot checksum does not match")
         unpacked = work / "unpacked"
         extract(work / SNAPSHOT, unpacked)
@@ -145,7 +139,7 @@ def publish(repo, tag, run_ids, records, destination):
         entry_sources = json.loads((destination / "release.json").read_text()).get("entry_sources", {})
     else:
         destination.mkdir(parents=True, exist_ok=False)
-        # Retain existing public archive URLs during the first release migration.
+        # With no earlier release, start from the archive tracked in the repository.
         old_archive = REPO_ROOT / "results" / "archive"
         if old_archive.exists():
             shutil.copytree(old_archive, destination / "archive")
@@ -178,13 +172,13 @@ def publish(repo, tag, run_ids, records, destination):
                     for entry in stage_piano(unpacked, destination, run["head_sha"]):
                         entry_sources[entry] = run["id"]
                 saved.append({"id": artifact["id"], "asset": output.name,
-                              "sha256": digest(output)})
+                              "sha256": file_sha256(output)})
             sources.append({"id": run["id"], "url": run["html_url"],
                             "benchmark_commit": run["head_sha"], "branch": run["head_branch"],
                             "attempt": run["run_attempt"], "artifacts": saved})
 
         if not list((destination / "submissions").glob("*/metrics.json")):
-            raise ValueError("The first release must include a complete piano evaluation")
+            raise ValueError("A release must include a complete piano evaluation")
         env = {**os.environ, "MATCHMAKER_RESULTS_DIR": str(destination)}
         for script in ("export_details.py", "leaderboard.py"):
             subprocess.run([sys.executable, str(REPO_ROOT / "matchmaker_eval" / script)],
@@ -201,19 +195,13 @@ def publish(repo, tag, run_ids, records, destination):
                         str(work / "site")], env=env, check=True)
         snapshot(destination, assets / SNAPSHOT)
         checksums = assets / "SHA256SUMS"
-        checksums.write_text("".join(f"{digest(p)}  {p.name}\n" for p in sorted(assets.iterdir())))
-        if any(p.stat().st_size >= 2 * 1024**3 for p in assets.iterdir()):
-            raise ValueError("A result asset exceeds GitHub's 2 GiB limit")
+        checksums.write_text("".join(f"{file_sha256(p)}  {p.name}\n" for p in sorted(assets.iterdir())))
         notes = work / "release.md"
         notes.write_text(
             f"Benchmark results published from `{commit}`.\n\n"
             + "\n".join(f"- [Run {s['id']}]({s['url']}), evaluated at `{s['benchmark_commit']}`"
                         for s in sources)
-            + "\n\nThe run ZIPs contain the original merged outputs, including full paths, "
-              "meter maps and environment metadata. `benchmark-snapshot.zip` contains "
-              "the leaderboard, per-piece views, metrics and `release.json`, which identifies "
-              "the selected run for each entry. Later listed runs replace earlier entries. "
-              "`SHA256SUMS` covers every attached ZIP.\n"
+            + "\n"
         )
         # Upload everything as a draft; expose it only after every upload succeeds.
         gh("release", "create", tag, *(str(p) for p in sorted(assets.iterdir())),

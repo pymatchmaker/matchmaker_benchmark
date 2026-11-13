@@ -38,7 +38,7 @@ import json
 import numpy as np
 from matchmaker.utils.eval import transfer_positions
 
-from matchmaker_eval.folds import LEADERBOARD_FOLD, REPO_ROOT, RESULTS_DIR
+from matchmaker_eval.load_folds import LEADERBOARD_FOLD, REPO_ROOT, RESULTS_DIR
 from matchmaker_eval.leaderboard import ACCURACY_COLUMNS, without_nan
 
 SUBMISSION_RESULTS = RESULTS_DIR / "submissions"
@@ -60,8 +60,8 @@ PRECISION = 2
 #: measurement of the follower, so it is excluded here too — otherwise it lands
 #: in the site's metric table as a boolean among the error statistics. The run's
 #: count of it is published once, alongside n_tracked.
-#: ``data_sha256`` names the bytes a piece was scored with (see provenance.py):
-#: provenance, not a measurement. It is published beside the identity fields.
+#: ``data_sha256`` names the bytes a piece was scored with (see evaluation_key.py).
+#: It records an input, not a measurement, so it sits beside the identity fields.
 PIECE_IDENTITY = (
     "tracking_criterion",
     "index",

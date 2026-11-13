@@ -42,7 +42,7 @@ import json
 import shutil
 from datetime import datetime, timezone
 
-from matchmaker_eval.folds import REPO_ROOT, RESULTS_DIR
+from matchmaker_eval.load_folds import REPO_ROOT, RESULTS_DIR
 
 SUBMISSION_RESULTS = RESULTS_DIR / "submissions"
 DETAILS_DIR = RESULTS_DIR / "details"

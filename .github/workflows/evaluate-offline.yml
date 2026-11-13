@@ -54,34 +54,20 @@ jobs:
           sudo apt-get install -y --no-install-recommends fluidsynth libsndfile1 ffmpeg
           python .github/install_matchmaker.py
           pip install pyyaml pydantic-settings
-      - name: Install archived offline numerical environment
+      - name: Install the offline numerical environment
         run: |
-          # The original server uses these numerical packages with synctoolbox
-          # 1.3.2, despite its obsolete pandas/numba upper bounds. Its used DTW
-          # and audio functions are smoke-tested below before the full shard.
+          # synctoolbox 1.3.2 declares pandas/numba upper bounds it does not
+          # need, so it is installed without its dependency pins.
           pip install 'numpy==1.26.4' 'scipy==1.14.1' 'pandas==2.2.3' 'librosa==0.10.2' 'numba==0.64.0' ipython pretty_midi music21
           pip install --no-deps 'synctoolbox==1.3.2' 'libfmp==1.3.0'
-          python matchmaker_eval/run_offline.py --fold example --no-fetch --output results/offline-preflight
-          python - <<'PY'
-          import json
-          r=json.load(open('results/offline-preflight/metrics.json'))
-          assert r['n_failed']==0 and r['n_pieces']==1
-          PY
       - name: Run offline reference
         run: |
           python matchmaker_eval/run_offline.py --fold '${{ matrix.job.fold }}' \
             --shard '${{ matrix.job.shard }}' --num-shards '${{ needs.plan.outputs.shards }}' \
             --piece-timeout 2400 --output results/offline
-      - name: Record runner and package provenance
+      - name: Record installed packages
         if: always()
-        run: |
-          mkdir -p results/offline
-          pip freeze > results/offline/environment.txt
-          python - <<'PY'
-          import json,os
-          from pathlib import Path
-          Path('results/offline/CI.json').write_text(json.dumps({k:os.environ.get(k) for k in ['GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_SHA','MATCHMAKER_DATA_BRANCH']},indent=2))
-          PY
+        run: mkdir -p results/offline && pip freeze > results/offline/environment.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -16,11 +16,8 @@ data** — the evaluation runs on GitHub's runners, which fetch what they need.
 | **Library** | [matchmaker](https://github.com/pymatchmaker/matchmaker) |
 | **Metrics** | beat error, ms error, tracking rate, real-time factor |
 
-Final result bundles are available under [Releases](https://github.com/pymatchmaker/matchmaker_benchmark/releases).
-Maintainers squash-merge code into main, preserve selected completed CI runs in
-a release and publish its snapshot. Reviewed pre-merge results can be reused
-when the evaluation logic and data are unchanged. Generated results
-are not committed by CI. See [running and publishing results](docs/ci-evaluation.md).
+Full results are published as [Releases](https://github.com/pymatchmaker/matchmaker_benchmark/releases).
+See [publishing results](docs/maintaining.md#staging-a-run-before-it-is-published).
 
 ## Submit a score follower
 
@@ -95,9 +92,8 @@ code; after merge it is evaluated and appears on the leaderboard.
 ```
 
 Review is the trust boundary: CI executes submitted code, it does not sandbox
-it. Full evaluation and publication are explicitly started by a maintainer.
-Evaluation may run on a reviewed branch; publication runs from `main` after
-merge. A merge alone does not start a full evaluation.
+it. A maintainer starts full evaluation and publication explicitly;
+publication runs from `main`.
 
 ## Folds
 
@@ -215,8 +211,7 @@ contract.
   and one elsewhere. The reference score's time signature is looked up at
   each annotated onset, including changes within a piece and a window.
 - **Precision metric**: beat error (performance → score), pooled over the
-  pieces that method actually tracked. These error summaries and tolerance
-  accuracies retain denominator-note beat units.
+  pieces that method actually tracked, in denominator-note beats.
 - **Secondary precision metric**: ms error (score → performance), same pooling.
 - **Aggregation**: precision metrics are event-pooled across tracked pieces.
 - **Ranking**: tracking rate first, then median beat error.
@@ -243,7 +238,7 @@ matchmaker_eval/
   merge_references.py     — regroup and merge a sharded multi-method run
   export_details.py       — every pooled metric per dataset, per-piece
                             detail and decimated alignment paths
-  folds.py, make_folds.py — fold definitions and their integrity checks
+  load_folds.py, make_folds.py — fold definitions and their integrity checks
   fetch_data.py           — locate a fold's data (--source), check it is all
                             present (--verify), or download just what it needs
   verify_equivalence.py   — proves submissions are scored like built-in methods
