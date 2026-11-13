@@ -485,6 +485,23 @@ and deploys it to GitHub Pages. A documentation update reuses the latest publish
 snapshot. `MATCHMAKER_RESULTS_DIR` points the export and site-building scripts
 at a temporary directory outside the code checkout.
 
+### Older result versions
+
+Every deployment also includes all published releases under their own path,
+`v/<tag>/` (for example
+`https://pymatchmaker.github.io/matchmaker_benchmark/v/benchmark-v1/`), and the
+page shows a **Results version** menu. The root always shows the latest release;
+older versions show a note that newer results exist. Link a paper to its
+`v/<tag>/` address so readers see exactly the cited numbers. Each version is
+shown with the current page code.
+
+Per-piece views take almost all of a version's space (about 25–30 MB, against
+under 1 MB for its tables), and GitHub Pages allows 1 GB in total. So only the
+newest versions and those listed in `data/full_versions.yaml` keep them; all
+other versions show their tables, with the per-piece results in their release
+files. **Add every version a paper cites to `keep`** in that file. A listed tag
+that is not published yet only produces a warning in the publish run.
+
 ### What the site can show
 
 `results/leaderboard.json` is the index: one row per entry, small enough to load

@@ -142,6 +142,24 @@
     color: var(--ink-soft);
   }
 
+  /* ── Result versions ──────────────────────────────────────────────────── */
+  .versions {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
+    font-size: 13px; color: var(--ink-soft);
+  }
+  .versions select {
+    font-family: var(--ui); font-size: 13px; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--rule-firm);
+    border-radius: 2px; padding: 5px 9px; max-width: 100%;
+  }
+  .versions a { color: var(--ink-soft); text-underline-offset: 2px; }
+  .version-note {
+    border-left: 3px solid var(--warn); background: var(--surface);
+    padding: 8px 12px; font-size: 13px; color: var(--ink-soft);
+  }
+  .version-note b { color: var(--ink); font-weight: 500; }
+  .version-note a { color: var(--ink); text-underline-offset: 2px; }
+
   /* ── Controls ─────────────────────────────────────────────────────────── */
   .controls {
     display: flex;
@@ -540,6 +558,12 @@
     </p>
     <div class="staff" role="presentation"></div>
     <div class="provenance" id="provenance"></div>
+    <div class="versions" id="versions" hidden>
+      <label for="version-select">Results version</label>
+      <select id="version-select"></select>
+      <a id="version-release" href="#">release files</a>
+    </div>
+    <p class="version-note" id="version-note" hidden></p>
   </header>
 
   <div class="controls">
@@ -1487,6 +1511,58 @@ async function loadBoard() {
   }
   return null;
 }
+
+// Published result versions. Pages serves the latest release at the root and
+// every release under v/<tag>/ (build_site.py --versions); versions.json at
+// the root lists them, newest first. Without it (a local checkout) the menu
+// stays hidden.
+const VERSION_PATH = location.pathname.match(/\/v\/(benchmark-[A-Za-z0-9][A-Za-z0-9._-]*)\/(?:index\.html)?$/);
+const SITE_ROOT = VERSION_PATH ? "../../" : "./";
+
+async function fetchJson(url) {
+  try {
+    const response = await fetch(url);
+    return response.ok ? await response.json() : null;
+  } catch (error) { return null; }
+}
+
+async function showVersions() {
+  const [index, release] = await Promise.all([
+    fetchJson(SITE_ROOT + "versions.json"), fetchJson("./release.json"),
+  ]);
+  const versions = (index && index.versions) || [];
+  const shown = release && release.tag;
+  if (!shown || !versions.length) return;
+  if (!versions.some((v) => v.tag === shown)) versions.unshift({ tag: shown });
+  const newest = versions[0].tag;
+  const date = (v) => (v.published_at || "").slice(0, 10);
+  const select = el("version-select");
+  select.innerHTML = versions.map((v) => `<option value="${escapeHtml(v.tag)}"
+      ${v.tag === shown ? "selected" : ""}>${escapeHtml(v.tag)}${date(v) ? " · " + escapeHtml(date(v)) : ""}${v.tag === newest ? " (latest)" : ""}</option>`).join("");
+  select.addEventListener("change", () => {
+    // The newest version lives at the root; every version, newest included,
+    // also has a permanent address under v/<tag>/.
+    location.href = SITE_ROOT + (select.value === newest ? "" : `v/${encodeURIComponent(select.value)}/`);
+  });
+  const current = versions.find((v) => v.tag === shown);
+  const link = el("version-release");
+  link.href = (current && current.url)
+    || `https://github.com/pymatchmaker/matchmaker_benchmark/releases/tag/${encodeURIComponent(shown)}`;
+  el("versions").hidden = false;
+
+  const note = el("version-note");
+  if (shown !== newest) {
+    note.innerHTML = `You are viewing <b>${escapeHtml(shown)}</b>${current && date(current) ? `, published ${escapeHtml(date(current))}` : ""}.
+      Newer results exist: <a href="${SITE_ROOT}">see the latest version (${escapeHtml(newest)})</a>.`;
+    note.hidden = false;
+  } else {
+    const permanent = new URL(`v/${encodeURIComponent(shown)}/`, new URL(SITE_ROOT, location.href)).href;
+    note.innerHTML = `To cite these exact numbers, link this version: <a href="${escapeHtml(permanent)}">${escapeHtml(permanent)}</a>`;
+    note.hidden = false;
+    note.style.borderLeftColor = "var(--accent)";
+  }
+}
+showVersions();
 
 loadBoard().then((board) => {
   if (!board) {

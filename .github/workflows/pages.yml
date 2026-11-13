@@ -2,6 +2,7 @@
 #
 # Selected completed runs are preserved in a release before deployment.
 # Documentation-only rebuilds reuse the last published result snapshot.
+# Every published release is also served under v/<tag>/ (version menu).
 name: Publish leaderboard
 
 on:
@@ -65,11 +66,14 @@ jobs:
           SOURCE_RUNS: ${{ inputs.source_runs }}
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
-          python matchmaker_eval/release_results.py --source-runs "$SOURCE_RUNS" --tag "$RELEASE_TAG"
+          python matchmaker_eval/release_results.py --source-runs "$SOURCE_RUNS" --tag "$RELEASE_TAG" \
+            --versions-dir "$RUNNER_TEMP/benchmark-versions"
 
       - name: Assemble the site
         if: steps.results.outputs.ready == 'true'
-        run: python matchmaker_eval/build_site.py _site
+        # Every published release is also kept under v/<tag>/, so a cited
+        # version stays viewable after newer results are published.
+        run: python matchmaker_eval/build_site.py _site --versions "$RUNNER_TEMP/benchmark-versions"
 
       - uses: actions/configure-pages@v5
         if: steps.results.outputs.ready == 'true'

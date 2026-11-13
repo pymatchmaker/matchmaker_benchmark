@@ -35,11 +35,16 @@ def releases(repo):
     return [release for page in pages for release in page]
 
 
-def latest(records):
+def published(records):
+    """Published result releases with a website snapshot, newest first."""
     candidates = [r for r in records if r["tag_name"].startswith("benchmark-")
                   and not r["draft"] and not r["prerelease"]
                   and any(a["name"] == SNAPSHOT for a in r["assets"])]
-    return max(candidates, key=lambda r: r["published_at"], default=None)
+    return sorted(candidates, key=lambda r: r["published_at"], reverse=True)
+
+
+def latest(records):
+    return next(iter(published(records)), None)
 
 
 def extract(archive, destination):
@@ -211,11 +216,35 @@ def publish(repo, tag, run_ids, records, destination):
     return tag
 
 
+def fetch_versions(repo, records, destination):
+    """Download every published snapshot to ``destination/<tag>/`` for the site.
+
+    ``versions.json`` lists them newest first. Each snapshot is checked
+    against the release's SHA256SUMS, exactly as when it is deployed alone.
+    """
+    destination = Path(destination)
+    destination.mkdir(parents=True, exist_ok=True)
+    versions = []
+    for release in published(records):
+        tag = release["tag_name"]
+        if not re.fullmatch(r"benchmark-[A-Za-z0-9][A-Za-z0-9._-]*", tag):
+            continue
+        fetch(repo, release, destination / tag)
+        manifest = json.loads((destination / tag / "release.json").read_text())
+        versions.append({"tag": tag, "published_at": release["published_at"],
+                         "url": release["html_url"],
+                         "evaluation_keys": manifest.get("evaluation_keys", {})})
+    (destination / "versions.json").write_text(json.dumps({"versions": versions}, indent=2) + "\n")
+    return versions
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY"))
     parser.add_argument("--tag", default="")
     parser.add_argument("--source-runs", default="", help="space-separated completed CI run IDs")
+    parser.add_argument("--versions-dir", type=Path, default=None,
+                        help="also download every published release here, for the site's version menu")
     args = parser.parse_args()
     if not args.repo or not re.fullmatch(r"[\w.-]+/[\w.-]+", args.repo):
         parser.error("Set GITHUB_REPOSITORY or --repo owner/repository")
@@ -232,6 +261,10 @@ def main():
             tag = release["tag_name"] if release else ""
             if release:
                 fetch(args.repo, release, RESULTS_DIR)
+        if tag and args.versions_dir:
+            # Listed again: a release created just now is not in `records`.
+            versions = fetch_versions(args.repo, releases(args.repo), args.versions_dir)
+            print(f"Versions for the site: {', '.join(v['tag'] for v in versions)}")
         if os.environ.get("GITHUB_OUTPUT"):
             with open(os.environ["GITHUB_OUTPUT"], "a") as stream:
                 stream.write(f"ready={'true' if tag else 'false'}\ntag={tag}\n")
