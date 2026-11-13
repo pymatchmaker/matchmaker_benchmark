@@ -47,7 +47,9 @@ from matchmaker.utils.eval import resolve_gt
 
 from eval import run_evaluation
 from utils import TOLERANCES_IN_BEATS, dataset_summaries, pooled_summaries
-from verify_tracking import check_tracking, plot_tracking
+from verify_tracking import (
+    TRACKING_THRESHOLDS, check_tracking, musical_beat_factors, plot_tracking, score_meter_map,
+)
 
 from matchmaker import Matchmaker
 from matchmaker.base import OnlineAlignment
@@ -91,7 +93,7 @@ if not os.environ.get("PYTHONWARNINGS"):
 #: Tracking verdict thresholds, per input type. A piece counts as "tracked"
 #: unless some 30-second onset-wise window's median beat error exceeds the
 #: threshold. MIDI is held to a tighter bound than audio.
-TRACKING_THRESHOLD = {"audio": 1.0, "midi": 0.5}
+TRACKING_THRESHOLD = TRACKING_THRESHOLDS
 SEGMENT_DURATION = 30.0
 
 DEFAULT_RESULTS_DIR = REPO_ROOT / "results" / "submissions"
@@ -271,15 +273,22 @@ def run_piece(
     # alignment_path row 0 is already absolute performance seconds.
     wp_sec = np.stack([wp[0].astype(float), wp[1].astype(float)]).T
     threshold = TRACKING_THRESHOLD[input_type]
+    meter = score_meter_map(mm.score_part)
+    factors = musical_beat_factors(gt[:, 1], meter)
+    (run_dir / f"meter_{index}.json").write_text(json.dumps(meter, indent=2) + "\n")
     tracking = check_tracking(
         wp_sec,
         gt,
         segment_duration=SEGMENT_DURATION,
         threshold=threshold,
+        beat_factors=factors,
     )
     metrics["tracked"] = bool(tracking["tracked"])
     metrics["max_deviation"] = float(tracking["max_deviation"])
     metrics["n_failed_segments"] = int(tracking["n_failed"])
+    metrics["tracking_criterion"] = {
+        key: tracking[key] for key in ("error_unit", "threshold", "window_duration")
+    }
 
     if save_plots:
         plot_tracking(
@@ -289,6 +298,7 @@ def run_piece(
             save_path=run_dir / f"tracking_{index}.png",
             segment_duration=SEGMENT_DURATION,
             threshold=threshold,
+            beat_factors=factors,
         )
 
     # Whether this piece actually got a measured tempo. False both when the
@@ -335,7 +345,7 @@ def fold_file_label(fold) -> str:
 #: the rerun would otherwise be scored on the previous run's path — and the
 #: progress count in run_references.py would read 146/146 from the first
 #: second. metrics.json stays until the run replaces it.
-PIECE_OUTPUTS = ("wp_*.tsv", "gt_*.tsv", "tracking_*.png", "[0-9]*.json")
+PIECE_OUTPUTS = ("wp_*.tsv", "gt_*.tsv", "meter_*.json", "tracking_*.png", "[0-9]*.json")
 
 
 def clear_piece_outputs(run_dir: Path) -> int:

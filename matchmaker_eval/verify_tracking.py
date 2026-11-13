@@ -1,12 +1,15 @@
 """
 Check if a tracker followed the score throughout a piece.
 
-Evaluates in the score domain, in beat unit. At every annotated onset it
+Evaluates in the score domain. At every annotated onset it
 looks up the last score position emitted at or before that time, then computes
 the median absolute beat error in a forward window starting at each unique
 annotated performance onset. The window slides onset-wise until one first
 reaches the final annotation. A piece fails when any window median exceeds the
-selected beat tolerance.
+selected beat tolerance. Benchmark callers supply ``beat_factors`` from the
+reference score: errors are divided by three in compound-meter passages and
+by one elsewhere, before the window median is taken. Without the factors,
+errors stay in denominator-note beats.
 
 Input:
   wp.tsv   Warping path (tab-separated)
@@ -25,9 +28,83 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 from matchmaker.utils.eval import ONSET_WINDOW_DURATION, onset_wise_windows
+from partitura.score import TimeSignature
 
 BEAT_ERROR_THRESHOLD = 1.0  # threshold for window median beat error (beats)
 SEGMENT_DURATION = ONSET_WINDOW_DURATION  # shared window duration (seconds)
+
+
+TRACKING_THRESHOLDS = {"audio": 1.0, "midi": 0.1}
+TRACKING_ERROR_UNIT = "musical_beat"
+POSITION_ERROR_UNIT = "denominator_note"
+
+
+def denominator_notes_per_beat(numerator: int) -> int:
+    """Three in compound meters (6, 9, 12, ...); one in other meters."""
+    if numerator <= 0 or int(numerator) != numerator:
+        raise ValueError("time-signature numerator must be a positive integer")
+    return 3 if numerator >= 6 and numerator % 3 == 0 else 1
+
+
+def score_meter_map(part) -> dict:
+    """Serializable meter changes in the follower's score-beat coordinates.
+
+    ``part`` must be the native, denominator-note score part passed to the
+    follower. Do not call ``use_musical_beat()`` on it: that would also change
+    its note array and the algorithm's behavior, rather than just evaluation.
+    A score without time signatures follows Partitura's 4/4 default, explicitly
+    recorded in the map instead of being mistaken for annotated meter.
+    """
+    if getattr(part, "_use_musical_beat", False):
+        raise ValueError("TR expects score positions in denominator-note beats")
+    signatures = list(part.iter_all(TimeSignature))
+    changes = []
+    for ts in sorted(signatures, key=lambda ts: ts.start.t):
+        if ts.beat_type <= 0:
+            raise ValueError("time-signature denominator must be positive")
+        change = {
+            "start_score_beat": float(part.beat_map(ts.start.t)),
+            "numerator": int(ts.beats),
+            "denominator": int(ts.beat_type),
+            "denominator_notes_per_beat": denominator_notes_per_beat(ts.beats),
+        }
+        if changes and change["start_score_beat"] == changes[-1]["start_score_beat"]:
+            if change != changes[-1]:
+                raise ValueError("conflicting time signatures at one score position")
+            continue
+        changes.append(change)
+    if not changes:
+        changes = [{"start_score_beat": 0.0, "numerator": 4, "denominator": 4,
+                    "denominator_notes_per_beat": 1}]
+    return {
+        "schema": 1,
+        "position_unit": POSITION_ERROR_UNIT,
+        "tracking_error_unit": TRACKING_ERROR_UNIT,
+        "assumed_time_signature": not bool(signatures),
+        "changes": changes,
+    }
+
+
+def musical_beat_factors(score_positions, meter: dict) -> np.ndarray:
+    """The reference meter's factor at each position, right-inclusive at changes.
+
+    Positions need not increase: the same lookup also applies when a performed
+    repeat returns to an earlier score position. Pickups before the first
+    explicit signature use that first signature.
+    """
+    positions = np.asarray(score_positions, dtype=float)
+    if not np.all(np.isfinite(positions)):
+        raise ValueError("ground-truth score positions must be finite")
+    if meter.get("position_unit") != POSITION_ERROR_UNIT:
+        raise ValueError("meter map must use denominator-note score positions")
+    changes = meter["changes"]
+    starts = np.asarray([r["start_score_beat"] for r in changes], dtype=float)
+    factors = np.asarray([r["denominator_notes_per_beat"] for r in changes], dtype=float)
+    if (len(starts) == 0 or not np.all(np.isfinite(starts))
+            or np.any(np.diff(starts) <= 0) or not np.all(np.isin(factors, [1., 3.]))):
+        raise ValueError("meter map must have ordered, finite changes and factors 1 or 3")
+    indices = np.maximum(np.searchsorted(starts, positions, side="right") - 1, 0)
+    return factors[indices]
 
 
 def _onset_wise_window_profile(
@@ -66,6 +143,8 @@ def check_tracking(
     gt: np.ndarray,
     segment_duration: float = SEGMENT_DURATION,
     threshold: float = BEAT_ERROR_THRESHOLD,
+    *,
+    beat_factors: np.ndarray = None,
 ) -> dict:
     """
     Check tracking quality using an onset-wise sliding-window median.
@@ -80,14 +159,29 @@ def check_tracking(
     gt : (M, 2) array — col 0: perf time (seconds), col 1: score position (beats)
     segment_duration : float — window duration W in seconds (default: 30)
     threshold : float — maximum median absolute beat error theta (default: 1.0)
+    beat_factors : (M,) array, optional
+        Denominator notes per musical beat at each GT score position. The
+        benchmark supplies this even for simple meter; without it, errors
+        remain in denominator-note units.
 
     Returns
     -------
     dict with: windows, mean_onsets_per_window, worst_window, max_deviation,
     tracked, reason
     """
+    if not np.isfinite(threshold) or threshold < 0:
+        raise ValueError("threshold must be finite and non-negative")
+    if beat_factors is not None:
+        beat_factors = np.asarray(beat_factors, dtype=float)
+        if (beat_factors.shape != (len(gt),) or not np.all(np.isfinite(beat_factors))
+                or np.any(beat_factors <= 0)):
+            raise ValueError("beat_factors must contain one positive finite factor per GT onset")
+    unit = "musical_beat" if beat_factors is not None else "denominator_note"
+    criterion = {"error_unit": unit, "threshold": float(threshold),
+                 "window_duration": float(segment_duration)}
     if wp.size == 0 or gt.size == 0:
         return {
+            **criterion,
             "windows": [],
             "n_windows": 0,
             "mean_onsets_per_window": 0.0,
@@ -123,6 +217,8 @@ def check_tracking(
 
     errors_all = np.abs(predicted_score - gt_score)  # beats
     errors_all[~valid] = np.inf  # no causal estimate at an annotation
+    if beat_factors is not None:
+        errors_all = errors_all / beat_factors
 
     windows = _onset_wise_window_profile(
         gt_perf, errors_all, segment_duration, threshold
@@ -148,6 +244,7 @@ def check_tracking(
         )
 
     return {
+        **criterion,
         "windows": windows,
         "n_windows": len(windows),
         "mean_onsets_per_window": float(
@@ -182,6 +279,8 @@ def plot_tracking(
     save_path: Path = None,
     segment_duration: float = SEGMENT_DURATION,
     threshold: float = BEAT_ERROR_THRESHOLD,
+    *,
+    beat_factors: np.ndarray = None,
 ):
     """Plot the alignment path and onset-wise window median-error profile."""
     result = check_tracking(
@@ -189,6 +288,7 @@ def plot_tracking(
         gt,
         segment_duration=segment_duration,
         threshold=threshold,
+        beat_factors=beat_factors,
     )
     windows = result["windows"]
     worst_window = result["worst_window"]
@@ -251,7 +351,7 @@ def plot_tracking(
         color="green" if tracked else "red",
         fontweight="bold",
     )
-    ax1.set_ylabel("Score position")
+    ax1.set_ylabel("Score position (denominator-note beats)")
     ax1.set_xlabel("Performance time (s)")
     ax1.legend(loc="upper left")
 
@@ -263,7 +363,8 @@ def plot_tracking(
         threshold, color="red", ls="--", lw=1.5, label=f"threshold={threshold:.1f}b"
     )
     ax2.axhline(0, color="black", lw=0.5)
-    ax2.set_ylabel("Sliding median |beat error|")
+    beat_label = "musical beats" if beat_factors is not None else "denominator-note beats"
+    ax2.set_ylabel(f"Sliding median error ({beat_label})")
     yl = max(threshold * 2, max_dev * 1.3) if max_dev > 0 else threshold * 2
     ax2.set_ylim(0, yl)
     ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.1f}b"))
@@ -333,6 +434,10 @@ def main():
     parser.add_argument("--wp", type=Path, required=True, help="Warping path TSV")
     parser.add_argument("--gt", type=Path, required=True, help="Ground truth TSV")
     parser.add_argument(
+        "--meter", type=Path, default=None,
+        help="Saved meter_<index>.json from the benchmark; applies musical-beat TR",
+    )
+    parser.add_argument(
         "--save", type=Path, default=None, help="Save plot to file (default: show)"
     )
     parser.add_argument(
@@ -349,14 +454,19 @@ def main():
     )
     args = parser.parse_args()
 
-    wp = np.loadtxt(args.wp, delimiter="\t", skiprows=1)
-    gt = np.loadtxt(args.gt, delimiter="\t", skiprows=1)
+    wp = np.loadtxt(args.wp, delimiter="\t", skiprows=1, ndmin=2)
+    gt = np.loadtxt(args.gt, delimiter="\t", skiprows=1, ndmin=2)
+    factors = None
+    if args.meter is not None:
+        import json
+        factors = musical_beat_factors(gt[:, 1], json.loads(args.meter.read_text()))
 
     result = check_tracking(
         wp,
         gt,
         segment_duration=args.window_duration,
         threshold=args.threshold,
+        beat_factors=factors,
     )
     title = _auto_title(args.wp)
 
@@ -386,6 +496,7 @@ def main():
         save_path=args.save,
         segment_duration=args.window_duration,
         threshold=args.threshold,
+        beat_factors=factors,
     )
 
 

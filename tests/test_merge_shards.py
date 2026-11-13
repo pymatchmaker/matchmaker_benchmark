@@ -84,6 +84,17 @@ class TestMergePreservesIdentity:
         merged = merge(root, tmp_path / "out")
         assert merged["partial"] is True
 
+    def test_the_meter_and_tracking_criterion_are_kept(self, tmp_path):
+        criterion = {"error_unit": "musical_beat", "threshold": 0.1, "window_duration": 30.0}
+        meter = {"position_unit": "denominator_note", "changes": []}
+        record = shard_record(0, fold_size=1)
+        record["pieces"][0]["tracking_criterion"] = criterion
+        root = write_shards(tmp_path / "shards", [record])
+        (root / "shard-0" / "meter_0.json").write_text(json.dumps(meter))
+        merged = merge(root, tmp_path / "out")
+        assert merged["pieces"][0]["tracking_criterion"] == criterion
+        assert json.loads((tmp_path / "out" / "meter_0.json").read_text()) == meter
+
 
 class TestMergeRejectsMismatchedShards:
     @pytest.mark.parametrize("key,value", [

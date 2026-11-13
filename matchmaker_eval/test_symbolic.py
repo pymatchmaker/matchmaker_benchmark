@@ -41,7 +41,9 @@ from matchmaker_eval.utils import (
     save_config,
     save_results_to_csv,
 )
-from matchmaker_eval.verify_tracking import check_tracking, plot_tracking
+from matchmaker_eval.verify_tracking import (
+    TRACKING_THRESHOLDS, check_tracking, plot_tracking, musical_beat_factors, score_meter_map,
+)
 
 from tabulate import tabulate
 import wandb
@@ -51,7 +53,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 sys.setrecursionlimit(10000)
 
-TRACKING_THRESHOLD = 0.5  # beats
+TRACKING_THRESHOLD = TRACKING_THRESHOLDS["midi"]  # musical beats
 
 WORKING_DIR = Path(__file__).parent.parent
 #: Resolved through MATCHMAKER_DATA_DIR rather than a hardcoded home
@@ -168,11 +170,14 @@ def run_tests_and_eval_by_dataset(
             gt = np.column_stack([ps, sb])
 
             wp_T = wp.T if wp.shape[0] == 2 else wp
+            meter = score_meter_map(mm.score_part)
+            factors = musical_beat_factors(gt[:, 1], meter)
             tracking = check_tracking(
                 wp_T,
                 gt,
                 segment_duration=30,
                 threshold=TRACKING_THRESHOLD,
+                beat_factors=factors,
             )
 
             nested = run_evaluation(
@@ -188,11 +193,15 @@ def run_tests_and_eval_by_dataset(
             nested["tracked"] = tracking["tracked"]
             nested["max_deviation"] = float(tracking["max_deviation"])
             nested["n_failed_segments"] = int(tracking["n_failed"])
+            nested["tracking_criterion"] = {
+                key: tracking[key] for key in ("error_unit", "threshold", "window_duration")
+            }
 
             piece_result = nested.copy()
 
             # Save WP/GT — column order: perf_sec, score_beat
             if run_dir is not None:
+                (run_dir / f"meter_{i}.json").write_text(json.dumps(meter, indent=2) + "\n")
                 np.savetxt(
                     run_dir / f"wp_{i}.tsv",
                     wp_T,
@@ -218,6 +227,7 @@ def run_tests_and_eval_by_dataset(
                         title=f"{method} #{i}",
                         save_path=run_dir / f"tracking_{i}.png",
                         threshold=TRACKING_THRESHOLD,
+                        beat_factors=factors,
                     )
 
             status = "TRACKED" if tracking["tracked"] else "FAILED"
