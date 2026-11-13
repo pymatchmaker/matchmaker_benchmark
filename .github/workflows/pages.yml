@@ -11,6 +11,7 @@ on:
     paths:
       - "docs/**"
       - "matchmaker_eval/build_site.py"
+      - "data/full_versions.yaml"
       - "matchmaker_eval/release_results.py"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
@@ -73,7 +74,10 @@ jobs:
         if: steps.results.outputs.ready == 'true'
         # Every published release is also kept under v/<tag>/, so a cited
         # version stays viewable after newer results are published.
-        run: python matchmaker_eval/build_site.py _site --versions "$RUNNER_TEMP/benchmark-versions"
+        # data/full_versions.yaml decides which keep their per-piece views.
+        run: |
+          pip install --quiet pyyaml
+          python matchmaker_eval/build_site.py _site --versions "$RUNNER_TEMP/benchmark-versions"
 
       - uses: actions/configure-pages@v5
         if: steps.results.outputs.ready == 'true'

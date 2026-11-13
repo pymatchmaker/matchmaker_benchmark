@@ -1,0 +1,18 @@
+# Which published result versions the website shows in full.
+#
+# Every published `benchmark-*` release stays on the website under v/<tag>/
+# and in the "Results version" menu. Versions listed here (and the newest
+# ones) also keep their per-piece views and plots, about 25-30 MB each. All
+# other versions show their tables only (under 1 MB); their per-piece results
+# stay downloadable from the release files on GitHub.
+#
+# GitHub Pages allows 1 GB per site, so keep this list short.
+
+# How many of the newest releases to show in full.
+newest: 3
+
+# Versions that are always shown in full, whatever their age. Add every
+# version a paper cites, e.g. the release made for the TISMIR submission.
+# A tag listed here that has not been published yet only causes a warning.
+keep:
+  - benchmark-v1  # TODO: the paper's version; confirm the tag once the final rerun is released

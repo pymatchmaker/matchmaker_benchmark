@@ -156,9 +156,10 @@ class TestSiteAssembly:
         ]}))
         site = tmp_path / "site"
         build_site.build(site)
-        listed = build_site.add_versions(site, versions)
+        listed = build_site.add_versions(site, versions, {"newest": 3, "keep": []})
 
         assert [v["tag"] for v in listed] == ["benchmark-v2", "benchmark-v1"]
+        assert all(v["full"] for v in listed)
         assert json.loads((site / "versions.json").read_text())["versions"] == listed
         for tag, generated in (("benchmark-v2", "new"), ("benchmark-v1", "old")):
             assert (site / "v" / tag / "index.html").exists()
@@ -166,6 +167,53 @@ class TestSiteAssembly:
         assert not (site / "v" / "benchmark-v0").exists()
         # The root site is left as built from the current results.
         assert (site / "leaderboard.json").exists()
+
+    def test_only_the_newest_and_kept_versions_keep_per_piece_views(self, tmp_path, capsys):
+        """Older versions shrink to their tables, so the site stays under the
+        Pages size limit, while a version a paper cites is never trimmed."""
+        import json
+        import build_site
+
+        versions = tmp_path / "versions"
+        tags = [f"benchmark-v{n}" for n in (5, 4, 3, 2, 1)]  # newest first
+        for tag in tags:
+            (versions / tag / "details").mkdir(parents=True)
+            (versions / tag / "details" / "m-midi.json").write_text("{}")
+            (versions / tag / "leaderboard.json").write_text("{}")
+            (versions / tag / "release.json").write_text(json.dumps({"tag": tag}))
+        (versions / "versions.json").write_text(json.dumps(
+            {"versions": [{"tag": tag} for tag in tags]}))
+        site = tmp_path / "site"
+        build_site.build(site)
+        rule = {"newest": 2, "keep": ["benchmark-v1", "benchmark-v9"]}
+        listed = build_site.add_versions(site, versions, rule)
+
+        full = {v["tag"]: v["full"] for v in listed}
+        assert full == {"benchmark-v5": True, "benchmark-v4": True, "benchmark-v3": False,
+                        "benchmark-v2": False, "benchmark-v1": True}
+        for tag, kept in full.items():
+            assert (site / "v" / tag / "details" / "m-midi.json").exists() is kept
+            assert (site / "v" / tag / "leaderboard.json").exists()
+        # A kept tag that is not published yet is a reminder, not an error.
+        assert "benchmark-v9 is kept in full" in capsys.readouterr().out
+
+    def test_the_committed_full_version_rule_is_valid(self):
+        import build_site
+
+        rule = build_site.full_version_rule()
+        assert rule["newest"] >= 1
+        assert all(build_site.VERSION_TAG.fullmatch(tag) for tag in rule["keep"])
+
+    def test_a_malformed_full_version_rule_is_refused(self, tmp_path):
+        import build_site
+
+        path = tmp_path / "full_versions.yaml"
+        path.write_text("newest: 0\n")
+        with pytest.raises(build_site.SiteError, match="newest"):
+            build_site.full_version_rule(path)
+        path.write_text("keep: benchmark-v1\n")
+        with pytest.raises(build_site.SiteError, match="keep"):
+            build_site.full_version_rule(path)
 
     def test_versions_need_the_downloaded_index(self, tmp_path):
         import build_site
@@ -213,6 +261,7 @@ class TestSiteAssembly:
         pages = (WORKFLOWS / "pages.yml").read_text()
         assert '--versions-dir "$RUNNER_TEMP/benchmark-versions"' in pages
         assert 'build_site.py _site --versions "$RUNNER_TEMP/benchmark-versions"' in pages
+        assert "data/full_versions.yaml" in pages  # editing the rule redeploys
 
     def test_it_refuses_to_build_without_a_leaderboard(self, tmp_path, monkeypatch):
         import build_site

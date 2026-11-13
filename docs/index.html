@@ -1154,7 +1154,10 @@ async function fillDetail(entry, container) {
   container.innerHTML = '<p class="plot-hint">Loading the full record…</p>';
   const detail = await loadDetail(entry);
   if (!detail) {
-    container.innerHTML = '<p class="plot-hint">Per-piece results are not published for this entry.</p>';
+    container.innerHTML = tablesOnly
+      ? `<p class="plot-hint">This older version is shown with its tables only. Per-piece results
+           are in its <a href="${escapeHtml(tablesOnly)}">release files</a>.</p>`
+      : '<p class="plot-hint">Per-piece results are not published for this entry.</p>';
     return;
   }
 
@@ -1526,6 +1529,9 @@ async function fetchJson(url) {
   } catch (error) { return null; }
 }
 
+// Set to this version's release URL when the site has its tables only.
+let tablesOnly = null;
+
 async function showVersions() {
   const [index, release] = await Promise.all([
     fetchJson(SITE_ROOT + "versions.json"), fetchJson("./release.json"),
@@ -1548,12 +1554,15 @@ async function showVersions() {
   const link = el("version-release");
   link.href = (current && current.url)
     || `https://github.com/pymatchmaker/matchmaker_benchmark/releases/tag/${encodeURIComponent(shown)}`;
+  // Older versions may be published with their tables only (full_versions.yaml).
+  if (VERSION_PATH && current && current.full === false) tablesOnly = link.href;
   el("versions").hidden = false;
 
   const note = el("version-note");
   if (shown !== newest) {
     note.innerHTML = `You are viewing <b>${escapeHtml(shown)}</b>${current && date(current) ? `, published ${escapeHtml(date(current))}` : ""}.
-      Newer results exist: <a href="${SITE_ROOT}">see the latest version (${escapeHtml(newest)})</a>.`;
+      Newer results exist: <a href="${SITE_ROOT}">see the latest version (${escapeHtml(newest)})</a>.${
+      tablesOnly ? " Per-piece plots for this version are in its release files." : ""}`;
     note.hidden = false;
   } else {
     const permanent = new URL(`v/${encodeURIComponent(shown)}/`, new URL(SITE_ROOT, location.href)).href;
