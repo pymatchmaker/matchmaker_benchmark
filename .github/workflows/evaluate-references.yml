@@ -17,7 +17,7 @@
 #   Actions -> Evaluate references -> Run workflow
 #     input_type: both      shards: 8
 #
-# 15 described entries x 8 shards is 120 jobs. They queue against the account's
+# Every described entry runs as one job per shard. They queue against the account's
 # concurrency limit rather than all starting at once, so expect this to take a
 # while; that is the price of every row being measured the same way.
 name: Evaluate references
@@ -36,7 +36,7 @@ on:
         required: false
         default: ""
       fold:
-        description: "Fold to evaluate on"
+        description: "Fold: eval, beyond_piano, diagnostics, offline, or amt_reference"
         required: false
         default: eval
       shards:
@@ -45,26 +45,50 @@ on:
         default: "8"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  # Shares evaluate.yml's group: both commit results/, and two at once would
-  # race on the leaderboard.
-  group: evaluate
+  # Avoid overlapping evaluations of the same branch and fold.
+  group: evaluate-${{ github.ref }}-${{ github.event.inputs.fold || 'eval' }}
   cancel-in-progress: false
 
 env:
   FOLD: ${{ github.event.inputs.fold || 'eval' }}
 
 jobs:
+  amt_reference:
+    name: amt replay
+    if: github.event.inputs.fold == 'amt_reference'
+    uses: ./.github/workflows/evaluate-amt.yml
+    with:
+      shards: ${{ github.event.inputs.shards || '4' }}
+
+  offline:
+    if: github.event.inputs.fold == 'offline'
+    uses: ./.github/workflows/evaluate-offline.yml
+    with:
+      shards: ${{ github.event.inputs.shards || '8' }}
+
+  diagnostics:
+    if: github.event.inputs.fold == 'diagnostics'
+    uses: ./.github/workflows/evaluate-diagnostics.yml
+    with:
+      shards: ${{ github.event.inputs.shards || '4' }}
+      only: ${{ github.event.inputs.only || '' }}
+      input_type: ${{ github.event.inputs.input_type || 'both' }}
+
   plan:
+    name: main / plan
+    if: github.event.inputs.fold != 'diagnostics' && github.event.inputs.fold != 'offline' && github.event.inputs.fold != 'amt_reference'
     runs-on: ubuntu-latest
     outputs:
       jobs: ${{ steps.plan.outputs.jobs }}
       count: ${{ steps.plan.outputs.count }}
+      entries: ${{ steps.plan.outputs.entries }}
       data_repo: ${{ steps.source.outputs.data_repo }}
       data_branch: ${{ steps.source.outputs.branch }}
       num_shards: ${{ steps.plan.outputs.num_shards }}
+      results_root: ${{ steps.plan.outputs.results_root }}
     steps:
       - uses: actions/checkout@v4
 
@@ -78,6 +102,7 @@ jobs:
           pip install --quiet pyyaml
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import json, os, yaml
+          from matchmaker_eval.folds import load_fold
           described = yaml.safe_load(
               open("data/builtin_methods.yaml").read()
           ) or {}
@@ -85,6 +110,14 @@ jobs:
           types = ("midi", "audio") if wanted == "both" else (wanted,)
           only = [m for m in os.environ["ONLY"].split() if m]
           n = int(os.environ["SHARDS"])
+          if not 1 <= n <= 32:
+              raise SystemExit("shards must be between 1 and 32")
+          fold = os.environ["FOLD"]
+          pieces = load_fold(fold)
+          available = {t for t in ("midi", "audio") if any(p.has_performance(t) for p in pieces)}
+          if wanted != "both" and wanted not in available:
+              raise SystemExit(f"Fold {fold!r} has no {wanted} performances")
+          types = tuple(t for t in types if t in available)
 
           jobs = [
               {"method": method, "input_type": t, "shard": s}
@@ -95,7 +128,11 @@ jobs:
           ]
           print(f"jobs={json.dumps(jobs)}")
           print(f"count={len(jobs)}")
+          entries = sorted({j["method"] + "-" + j["input_type"] for j in jobs})
+          print(f"entries={json.dumps(entries)}")
           print(f"num_shards={n}")
+          output = f"results/ci/{fold}"
+          print(f"results_root={output}")
           PY
         env:
           INPUT_TYPE: ${{ github.event.inputs.input_type || 'both' }}
@@ -115,6 +152,7 @@ jobs:
           echo "${{ steps.plan.outputs.count }} shard job(s) to run"
 
   evaluate:
+    name: main / evaluate (${{ matrix.job.method }}, ${{ matrix.job.input_type }}, ${{ matrix.job.shard }})
     needs: plan
     if: needs.plan.outputs.count != '0'
     runs-on: ${{ vars.BENCHMARK_RUNNER || 'ubuntu-latest' }}
@@ -141,11 +179,11 @@ jobs:
       - name: Install the benchmark environment
         run: |
           python -m pip install --upgrade pip
-          # Pinned to the matchmaker 0.4.0 release (tag v0.4.0, main after #73):
+          # Pinned to matchmaker develop after #82 (commit 02bfe75):
           # its sources are part of the evaluation key, so every row of a run
           # must be scored by the same matchmaker. Move every workflow together
           # when the pin changes, and re-run the entries: their keys will change.
-          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.4.0"
+          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@02bfe75115cb3c1e67a91544a71b67d50df37806"
           pip install pyyaml pydantic-settings
 
       - name: Check out the benchmark data
@@ -221,21 +259,15 @@ jobs:
           retention-days: 14
 
   merge:
+    name: main / merge
     needs: [plan, evaluate]
-    if: always() && needs.plan.outputs.count != '0'
+    if: always() && needs.plan.result == 'success' && needs.plan.outputs.count != '0'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Catch up with anything committed while this run was queued or evaluating
-        # actions/checkout pins to the commit that existed when this run was
-        # dispatched, not now. The `evaluate` concurrency group serializes the
-        # actual pushes, but a run can still sit queued -- or just take a long
-        # time evaluating -- behind another one that lands a commit in the
-        # meantime. leaderboard.py rewrites the whole file rather than
-        # appending, so building on a stale base produces a real content
-        # conflict at push time instead of a clean fast-forward.
-        run: git pull
+      - name: Keep preview files outside the code checkout
+        run: echo "MATCHMAKER_RESULTS_DIR=$RUNNER_TEMP/benchmark-preview" >> "$GITHUB_ENV"
 
       - uses: actions/setup-python@v5
         with:
@@ -243,7 +275,7 @@ jobs:
 
       - name: Install what the merge needs
         run: |
-          pip install --quiet "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.4.0"
+          pip install --quiet "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@02bfe75115cb3c1e67a91544a71b67d50df37806"
           pip install --quiet pyyaml pydantic-settings
 
       - uses: actions/download-artifact@v4
@@ -255,34 +287,40 @@ jobs:
         # One run produces shards for many entries; this regroups them by entry
         # and merges each separately. An entry missing shards stays partial and
         # off the leaderboard.
-        run: python matchmaker_eval/merge_references.py results/refshards
+        env:
+          EXPECTED_ENTRIES: ${{ needs.plan.outputs.entries }}
+        run: python matchmaker_eval/merge_references.py results/refshards --fold "$FOLD" --output "${{ needs.plan.outputs.results_root }}" --expected-entries-json "$EXPECTED_ENTRIES"
+
+      - name: Upload the complete merged results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ env.FOLD }}
+          path: ${{ needs.plan.outputs.results_root }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Stage the piano results for the leaderboard
+        if: env.FOLD == 'eval'
+        run: |
+          mkdir -p "$MATCHMAKER_RESULTS_DIR/submissions"
+          cp -a "${{ needs.plan.outputs.results_root }}/." "$MATCHMAKER_RESULTS_DIR/submissions/"
 
       - name: Export the per-piece detail
+        if: env.FOLD == 'eval'
         run: python matchmaker_eval/export_details.py
 
       - name: Rebuild the leaderboard
+        if: env.FOLD == 'eval'
         run: python matchmaker_eval/leaderboard.py
 
       - name: Assemble the site for review
+        if: env.FOLD == 'eval'
         run: python matchmaker_eval/build_site.py _site
 
       - uses: actions/upload-artifact@v4
+        if: env.FOLD == 'eval'
         with:
           name: leaderboard-site
           path: _site
           retention-days: 14
-
-      - name: Commit the results
-        run: |
-          git config user.name "matchmaker-benchmark[bot]"
-          git config user.email "actions@github.com"
-          git add results/
-          if git diff --cached --quiet; then
-            echo "Leaderboard unchanged."
-            exit 0
-          fi
-          git commit -m "benchmark: evaluate references on the ${{ env.FOLD }} fold
-
-          Run ${{ github.run_id }}, ${{ needs.plan.outputs.count }} shard jobs."
-          git pull --rebase --autostash
-          git push

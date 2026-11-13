@@ -1,0 +1,112 @@
+name: Evaluate frozen AMT outputs
+on:
+  workflow_call:
+    inputs:
+      shards:
+        type: string
+        default: '4'
+permissions:
+  contents: read
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      shards: ${{ steps.plan.outputs.shards }}
+    steps:
+      - id: plan
+        env:
+          SHARDS: ${{ inputs.shards }}
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json,os
+          n=int(os.environ['SHARDS'])
+          if not 1 <= n <= 32:raise SystemExit('Use 1–32 shards')
+          print('matrix='+json.dumps({'method':['arzt','pthmm','SLT_OLTW'],'shard':list(range(n))}))
+          print('shards='+str(n))
+          PY
+  evaluate:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      MATCHMAKER_DATA_DIR: ${{ github.workspace }}/benchmark-data
+      MATCHMAKER_DATA_BRANCH: 03b51262b9bce7993203044fa45c9be9dadebd34
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      NUMBA_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fluidsynth libsndfile1 ffmpeg
+          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@02bfe75115cb3c1e67a91544a71b67d50df37806"
+          pip install pyyaml pydantic-settings
+      - name: Run symbolic follower on frozen transcription
+        run: |
+          python matchmaker_eval/run_amt.py --method '${{ matrix.method }}' \
+            --shard '${{ matrix.shard }}' --num-shards '${{ needs.plan.outputs.shards }}' --output results/amt
+      - name: Record installed packages
+        if: always()
+        run: mkdir -p results/amt && pip freeze > results/amt/environment.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: amt-${{ matrix.method }}-${{ matrix.shard }}
+          path: results/amt
+          retention-days: 30
+  merge:
+    needs: [plan,evaluate]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@02bfe75115cb3c1e67a91544a71b67d50df37806"
+          pip install pyyaml pydantic-settings
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: amt-*
+          path: results/shards
+      - name: Merge and verify complete test set
+        env:
+          SHARDS: ${{ needs.plan.outputs.shards }}
+        run: |
+          python - <<'PY'
+          import sys,os,json,shutil
+          from pathlib import Path
+          sys.path.insert(0,'matchmaker_eval')
+          from merge_shards import merge
+          out=Path('results/amt-reference');out.mkdir(parents=True,exist_ok=True)
+          errors=[]
+          for method in ['arzt','pthmm','SLT_OLTW']:
+              stage=Path('results/staging')/method;stage.mkdir(parents=True,exist_ok=True)
+              try:
+                  for i in range(int(os.environ['SHARDS'])):shutil.copytree(Path('results/shards')/f'amt-{method}-{i}',stage/str(i))
+                  r=merge(stage,out/method)
+                  if r['partial'] or r['n_failed'] or r['n_pieces']!=146:raise ValueError('Incomplete AMT reference')
+              except Exception as e:errors.append(method+': '+str(e))
+          shutil.copytree('results/shards',out/'raw-shards')
+          from matchmaker_eval.fetch_data import frozen_source
+          (out/'amt-data-pin.json').write_text(json.dumps(frozen_source('amt'),indent=2))
+          (out/'verification.json').write_text(json.dumps({'complete':not errors,'errors':errors},indent=2))
+          if errors:raise SystemExit(errors)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results-amt-reference
+          path: results/amt-reference
+          retention-days: 90

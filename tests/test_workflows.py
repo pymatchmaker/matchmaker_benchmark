@@ -186,12 +186,6 @@ class TestReferencesWorkflow:
 
     REFERENCES = WORKFLOWS / "evaluate-references.yml"
 
-    def test_it_shares_the_leaderboard_concurrency_group(self):
-        """Two workflows committing results/ at once would race."""
-        mine = load_workflow(self.REFERENCES)["concurrency"]["group"]
-        theirs = load_workflow(EVALUATE)["concurrency"]["group"]
-        assert mine == theirs
-
     def test_it_uses_the_same_data_route_as_evaluate(self):
         workflow = load_workflow(self.REFERENCES)
         steps = steps_of(workflow, "evaluate")
@@ -263,32 +257,21 @@ class TestBundledDataLicence:
         )
 
 
-class TestStagingBranch:
-    """Evaluation may run on a staging branch; publishing must not."""
+class TestWorkflowTriggers:
+    """Merging into `submissions` evaluates; references run by hand; only main publishes."""
 
-    def _branches(self, path):
+    def _trigger(self, path):
         workflow = load_workflow(path)
-        trigger = workflow.get(True) or workflow.get("on")
-        return trigger["push"]["branches"]
+        return workflow.get(True) or workflow.get("on")
 
-    def test_evaluation_runs_on_the_staging_branch(self):
-        assert "submissions" in self._branches(EVALUATE)
-        assert "main" not in self._branches(EVALUATE)
+    def test_merging_a_submission_starts_its_evaluation(self):
+        assert self._trigger(EVALUATE)["push"]["branches"] == ["submissions"]
+
+    def test_references_run_only_when_dispatched(self):
+        assert set(self._trigger(WORKFLOWS / "evaluate-references.yml")) == {"workflow_dispatch"}
 
     def test_the_site_publishes_only_from_main(self):
-        """A staging run must be inspectable before anyone sees it."""
-        pages = WORKFLOWS / "pages.yml"
-        assert self._branches(pages) == ["main"], (
-            "publishing from a staging branch would defeat the point of having "
-            "one: a result could reach the site before it was checked"
-        )
-
-    def test_a_results_only_commit_does_not_re_trigger_evaluation(self):
-        """Committing results/ must not start another evaluation."""
-        workflow = load_workflow(EVALUATE)
-        trigger = workflow.get(True) or workflow.get("on")
-        paths = trigger["push"]["paths"]
-        assert not any(p.startswith("results") for p in paths)
+        assert self._trigger(WORKFLOWS / "pages.yml")["push"]["branches"] == ["main"]
 
 
 class TestValidateWorkflow:
@@ -381,3 +364,67 @@ class TestRunProvenance:
             "importlib.metadata.distribution", lambda name: NoDirectUrl()
         )
         assert R._matchmaker_source() == {}
+
+class TestReleasedResults:
+    """A release takes complete runs only and keeps a site-ready snapshot."""
+
+    RUN = {"status": "completed", "conclusion": "success",
+           "head_repository": {"full_name": "owner/benchmark"}}
+
+    @pytest.mark.parametrize("change", [
+        {"status": "in_progress"}, {"conclusion": "failure"},
+        {"head_repository": {"full_name": "someone/fork"}},
+    ])
+    def test_only_successful_runs_of_this_repository_are_released(self, change):
+        from matchmaker_eval.release_results import validate_runs
+
+        validate_runs([self.RUN], "owner/benchmark")
+        with pytest.raises(ValueError, match="successful, completed runs"):
+            validate_runs([{**self.RUN, **change}], "owner/benchmark")
+
+    @staticmethod
+    def _stage(tmp_path, **record):
+        import json
+        from matchmaker_eval.release_results import stage_piano
+
+        source = tmp_path / "source" / "method-midi"
+        source.mkdir(parents=True, exist_ok=True)
+        complete = {"submission": "method-midi", "fold": "eval", "partial": False,
+                    "n_failed": 0, "n_pieces": 2, "fold_size": 2,
+                    "environment": {"benchmark_commit": "abc"}}
+        (source / "metrics.json").write_text(json.dumps({**complete, **record}))
+        return stage_piano(source.parent, tmp_path / "published", "abc")
+
+    def test_a_complete_entry_replaces_only_itself(self, tmp_path):
+        published = tmp_path / "published" / "submissions"
+        for name in ("method-midi", "other-midi"):
+            (published / name).mkdir(parents=True)
+            (published / name / "metrics.json").write_text("previous")
+        assert self._stage(tmp_path) == ["method-midi"]
+        assert (published / "method-midi" / "metrics.json").read_text() != "previous"
+        assert (published / "other-midi" / "metrics.json").read_text() == "previous"
+
+    @pytest.mark.parametrize("record,message", [
+        ({"partial": True}, "Incomplete"),
+        ({"environment": {"benchmark_commit": "other"}}, "source run's commit"),
+    ])
+    def test_an_incomplete_or_mismatched_entry_is_refused(self, tmp_path, record, message):
+        with pytest.raises(ValueError, match=message):
+            self._stage(tmp_path, **record)
+
+    def test_the_site_builds_from_a_snapshot(self, tmp_path, monkeypatch):
+        import build_site
+        from matchmaker_eval.release_results import extract, snapshot
+
+        results = tmp_path / "results"
+        (results / "submissions" / "method-midi").mkdir(parents=True)
+        (results / "submissions" / "method-midi" / "metrics.json").write_text("{}")
+        (results / "leaderboard.json").write_text('{"entries": []}')
+        (results / "release.json").write_text('{"publisher_commit": "abc"}')
+        snapshot(results, tmp_path / "snapshot.zip")
+        extract(tmp_path / "snapshot.zip", tmp_path / "restored")
+
+        monkeypatch.setattr(build_site, "RESULTS_DIR", tmp_path / "restored")
+        build_site.build(tmp_path / "site")
+        for name in ("index.html", "leaderboard.json", "release.json"):
+            assert (tmp_path / "site" / name).exists()

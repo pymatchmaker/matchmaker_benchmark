@@ -22,7 +22,7 @@ data** — the evaluation runs on GitHub's runners, which fetch what they need.
 git clone https://github.com/pymatchmaker/matchmaker_benchmark.git
 cd matchmaker_benchmark
 conda env create -f environment.yml && conda activate matchmaker-benchmark
-pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.4.0"
+pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@02bfe75115cb3c1e67a91544a71b67d50df37806"
 
 cp -r submissions/_template submissions/your-name
 ```
@@ -83,13 +83,14 @@ code; after merge it is evaluated and appears on the leaderboard.
   │                 │                            │        fetches its own data,
   │                 │                            │        runs 146 pieces in
   │                 │                            │        parallel shards,
-  │                 │                            │        commits the leaderboard
+  │                 │                            │        uploads the results
   │                 │                            │                    │
   └──────────────── leaderboard on GitHub Pages ◄─────────────────────┘
 ```
 
 Review is the trust boundary: CI executes submitted code, it does not sandbox
-it. Everything after merge is automatic.
+it. Evaluation after merge is automatic; a maintainer publishes results in
+batches as GitHub releases (see [publishing results](docs/maintaining.md#staging-a-run-before-it-is-published)).
 
 ## Folds
 
@@ -263,7 +264,7 @@ docs/                     — contributor and maintainer documentation, and the
 .github/workflows/
   validate-submission.yml — pull-request checks (no secrets, read-only token)
   evaluate.yml            — post-merge evaluation in parallel shards
-  pages.yml               — publishes the leaderboard
+  pages.yml               — publishes selected runs as a release and the leaderboard
 ```
 
 ## Acknowledgments

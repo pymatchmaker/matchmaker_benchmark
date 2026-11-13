@@ -41,7 +41,7 @@ jobs:
         # matchmaker_eval/test_audio.py, which tests/test_audio_runner.py loads.
         run: |
           python -m pip install --upgrade pip
-          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.4.0"
+          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@02bfe75115cb3c1e67a91544a71b67d50df37806"
           pip install pyyaml pydantic-settings tabulate wandb pytest
 
       - name: Run the tests

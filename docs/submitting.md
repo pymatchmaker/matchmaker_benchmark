@@ -4,8 +4,8 @@ The benchmark takes submissions as pull requests **against the `submissions`
 branch**, not `main`. You add one directory, CI checks it, and once a
 maintainer reads the code and merges your pull request, that merge itself
 evaluates it — along with any other new or changed submission already waiting
-on `submissions`. A maintainer publishes the result to the live site by
-merging `submissions` into `main` whenever they judge the batch ready.
+on `submissions`. A maintainer publishes results to the live site in batches,
+as a GitHub release, whenever they judge a batch ready.
 
 ```
  you              GitHub                    maintainer          GitHub Actions
@@ -21,11 +21,11 @@ merging `submissions` into `main` whenever they judge the batch ready.
   │                 │                            │        evaluates every new or
   │                 │                            │        changed submission in
   │                 │                            │        parallel shards,
-  │                 │                            │        commits the result
-  │                 │                            │        to `submissions`
+  │                 │                            │        uploads the result
+  │                 │                            │        as an artifact
   │                 │                            │                    │
-  │                 │     ...whenever ready, the maintainer merges
-  │                 │     `submissions` into `main` to publish...
+  │                 │     ...whenever ready, the maintainer publishes
+  │                 │     the batch as a release...
   │                 │                            │                    │
   └──────────────── leaderboard on GitHub Pages ◄─────────────────────┘
 ```
@@ -38,7 +38,7 @@ cd matchmaker_benchmark
 
 conda env create -f environment.yml
 conda activate matchmaker-benchmark
-pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.4.0"
+pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@02bfe75115cb3c1e67a91544a71b67d50df37806"
 ```
 
 You do not need to download any dataset to write and test a submission — the
@@ -182,28 +182,25 @@ GitHub will hold the workflow until a maintainer approves the run.
 Merging your pull request into `submissions` is what evaluates it — along
 with any other submission already on `submissions` that is new or has
 changed since the last time this ran, skipping anything unchanged. It runs on
-the eval fold, in parallel shards, and commits the result to `submissions`.
+the eval fold, in parallel shards, and uploads the result as an artifact.
 
 It splits the 146 pieces across parallel jobs, each of which fetches only its
 own share of the data, so the whole thing finishes in well under an hour even
 though a single job could not. The merged result is identical to an unsharded
 run.
 
-The full per-piece output (alignment paths, per-piece metrics) is attached to
-the workflow run as an artifact for 30 days; the summary record stays in
-`results/submissions/your-name/metrics.json` on `submissions`.
+The merged record and the full per-piece output (alignment paths, per-piece
+metrics) are attached to the workflow run as an artifact for 30 days.
 
-This does not publish yet. A maintainer reads the result there and decides
-when to merge `submissions` into `main`, which is what actually updates the
-live leaderboard at
+This does not publish yet. A maintainer reads the result and adds the run to
+the next GitHub release, which is what actually updates the live leaderboard at
 [pymatchmaker.github.io/matchmaker_benchmark](https://pymatchmaker.github.io/matchmaker_benchmark/).
 
 ## Updating a submission
 
 Open a new pull request against the same directory, still based on
-`submissions`. Merging it evaluates your submission again and replaces its
-row on `submissions`; the live leaderboard picks up the change the next time
-`submissions` merges into `main`. If the change is substantial enough that it
+`submissions`. Merging it evaluates your submission again, and the next
+release replaces its row on the live leaderboard. If the change is substantial enough that it
 is really a different method, submit it under a new name so both can be
 compared.
 
