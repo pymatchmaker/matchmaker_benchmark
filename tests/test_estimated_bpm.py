@@ -121,14 +121,14 @@ class TestTheFoldCarriesIt:
     """The tempo is frozen in the fold, beside the paths it belongs to."""
 
     def test_the_example_piece_publishes_one(self):
-        from matchmaker_eval.load_folds import load_fold
+        from matchmaker_eval.folds import load_fold
 
         piece = load_fold("example", input_type="midi")[0]
         assert piece.performance_tempo == 58.0
 
     def test_every_eval_row_has_one(self):
         """A missing value would silently disarm `estimated_bpm: true` runs."""
-        from matchmaker_eval.load_folds import load_fold
+        from matchmaker_eval.folds import load_fold
 
         for fold in ("eval", "valid"):
             blank = [p.piece_id for p in load_fold(fold) if not p.estimated_bpm]
@@ -140,19 +140,19 @@ class TestTheFoldCarriesIt:
         A per-container tempo would have to be two columns, and a follower's
         audio and MIDI runs would then be measured against different tempi.
         """
-        from matchmaker_eval.load_folds import FOLD_COLUMNS
+        from matchmaker_eval.folds import FOLD_COLUMNS
 
         assert [c for c in FOLD_COLUMNS if "bpm" in c] == ["estimated_bpm"]
 
     def test_an_absent_value_reads_as_none(self):
-        from matchmaker_eval.load_folds import Piece
+        from matchmaker_eval.folds import Piece
 
         piece = Piece("p", "asap", "Bach", "t", "s.musicxml", "p.mid", "", "p.match")
         assert piece.performance_tempo is None
 
     def test_a_non_numeric_value_is_refused(self):
         """Better a named failure than a follower handed a nonsense tempo."""
-        from matchmaker_eval.load_folds import FoldError, Piece
+        from matchmaker_eval.folds import FoldError, Piece
 
         piece = Piece(
             "p", "asap", "Bach", "t", "s.musicxml", "p.mid", "", "p.match",
@@ -166,7 +166,7 @@ class TestOlderFoldsStillLoad:
     """The column arrived after folds were already in circulation."""
 
     def test_a_fold_without_the_column_loads(self, tmp_path):
-        from matchmaker_eval.load_folds import REQUIRED_FOLD_COLUMNS, load_fold
+        from matchmaker_eval.folds import REQUIRED_FOLD_COLUMNS, load_fold
 
         csv_path = tmp_path / "old.csv"
         csv_path.write_text(
@@ -178,7 +178,7 @@ class TestOlderFoldsStillLoad:
         assert piece.performance_tempo is None
 
     def test_a_required_column_is_still_required(self, tmp_path):
-        from matchmaker_eval.load_folds import FoldError, load_fold
+        from matchmaker_eval.folds import FoldError, load_fold
 
         csv_path = tmp_path / "broken.csv"
         csv_path.write_text("piece_id,dataset\nlocal/x/y,local\n")
@@ -196,7 +196,7 @@ class TestMissingTempoFallsBack:
     def _piece_without_tempo(self):
         import dataclasses
 
-        from matchmaker_eval.load_folds import load_fold
+        from matchmaker_eval.folds import load_fold
 
         piece = load_fold("example", input_type="midi")[0]
         return dataclasses.replace(piece, estimated_bpm="")
@@ -210,7 +210,7 @@ class TestMissingTempoFallsBack:
         assert flat["tracked"] is True
 
     def test_a_piece_with_a_tempo_records_that_it_used_one(self, tmp_path):
-        from matchmaker_eval.load_folds import load_fold
+        from matchmaker_eval.folds import load_fold
         from run_submission import run_piece
 
         piece = load_fold("example", input_type="midi")[0]
@@ -219,7 +219,7 @@ class TestMissingTempoFallsBack:
         assert flat["used_estimated_bpm"] is True
 
     def test_an_entry_that_never_asked_records_false(self, tmp_path):
-        from matchmaker_eval.load_folds import load_fold
+        from matchmaker_eval.folds import load_fold
         from run_submission import run_piece
 
         piece = load_fold("example", input_type="midi")[0]

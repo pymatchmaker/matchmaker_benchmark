@@ -1,21 +1,30 @@
-"""Evaluation key: a short hash of the conditions a run was scored under.
+"""The evaluation key: one short hash naming the conditions a run was scored under.
 
-The leaderboard ranks two rows together only when everything that decides their
-numbers, apart from the follower itself, is the same:
+Two leaderboard rows are only comparable when everything that decides their
+numbers — apart from the follower itself — was the same. That is:
 
     fold_sha256         the fold CSV: which pieces, their paths, estimated_bpm
-    data_sha256         the score, performance and ground-truth files of every piece
-    scoring_sha256      the benchmark's scoring code: the evaluation and tracking
-                        modules, and the parts of run_submission.py that decide
-                        ground truth and the tracked verdict
-    matchmaker_sha256   the installed matchmaker sources
-    partitura           the version that parses every score and match file
+    data_sha256         the bytes of every file a piece was scored with
+                        (score, the performance that was streamed, the match /
+                        annotation file), over the whole fold
+    scoring_sha256      the benchmark's own scoring code: the evaluation and
+                        tracking modules, and the parts of run_submission.py
+                        that decide ground truth and the tracked verdict
+    matchmaker_sha256   the installed matchmaker sources. They hold the ground
+                        truth resolution, the beat errors, the tracking
+                        windows and SPARC, and the reference followers
+    partitura           how every score and match file is parsed
 
-``evaluation_key()`` hashes these into ``ek1-<12 hex>``. The ``ek1`` prefix names
-which components are included, and changes whenever that set changes.
+``evaluation_key()`` folds these into ``ek1-<12 hex>``. Same key, same
+conditions; a different key means at least one of them changed. The ``ek1``
+prefix is the scheme: if what goes into the key ever changes, the prefix does
+too, so a key never silently changes meaning.
 
-Components hash file contents rather than commit ids, so an unrelated commit
-(a README edit, a new corpus in the data repository) does not change the key.
+Content hashes, not commits, on purpose. A data-repository commit changes when
+an unrelated corpus is added; a matchmaker commit changes when a follower
+nobody evaluated is edited in a way that does not touch the sources (a README);
+the benchmark commit changes with every results commit. The bytes that were
+actually read are what decide the numbers, so they are what is hashed.
 """
 
 import hashlib
@@ -25,7 +34,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Iterable, Optional
 
-from matchmaker_eval.load_folds import REPO_ROOT
+from matchmaker_eval.folds import REPO_ROOT
 
 #: Bumped whenever the set of components, or how one is computed, changes.
 SCHEME = "ek1"

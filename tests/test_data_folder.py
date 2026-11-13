@@ -53,7 +53,7 @@ class TestDatasetMaterialIsSeparable:
         # A repo tree holding only the config, and nothing dataset-shaped.
         script = (
             "import sys; sys.path[:0] = [r'%s', r'%s']\n"
-            "import matchmaker_eval.load_folds as F\n"
+            "import matchmaker_eval.folds as F\n"
             "from pathlib import Path\n"
             "F.FOLD_DIR = Path(r'%s')\n"
             "pieces = F.load_fold('eval', input_type='midi')\n"

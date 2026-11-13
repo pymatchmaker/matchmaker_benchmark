@@ -36,7 +36,7 @@ from typing import Dict, List, Optional
 
 import yaml
 
-from matchmaker_eval.load_folds import DATA_ROOT, REPO_ROOT, load_fold, shard_of
+from matchmaker_eval.folds import DATA_ROOT, REPO_ROOT, load_fold, shard_of
 
 CONFIG_PATH = REPO_ROOT / "data" / "data_sources.yaml"
 CHECKSUM_DIR = REPO_ROOT / "data" / "checksums"
@@ -113,19 +113,10 @@ def load_config() -> dict:
         value = os.environ.get(variable)
         if value:
             config[key] = value
-            if key == "branch":
-                # An explicit revision override applies to every selected fold.
-                config["branches"] = {}
             # An override of the address implies fetching is wanted, even if the
             # committed config still has it switched off.
             config["enabled"] = True
     return config
-
-
-def frozen_source(name: str) -> dict:
-    config = load_config()
-    return {"repository": f"{config['owner']}/{config['repo']}",
-            **config["frozen_sources"][name]}
 
 
 #: Prefixes GitHub uses for access tokens. If one of these turns up where an
@@ -353,7 +344,7 @@ def metadata_path(dataset: str, branch: str = "main") -> Path:
     caching both to one path would let whichever was fetched first silently
     stand in for the other.
     """
-    from matchmaker_eval.load_folds import dataset_root
+    from matchmaker_eval.folds import dataset_root
 
     root = dataset_root(dataset)
     if branch in ("main", "master"):
@@ -380,7 +371,7 @@ def fetch_root_metadata(fold: Optional[str], force: bool = False) -> Optional[Pa
     reasonable shapes; this looks for the root form and returns None when the
     branch does not use it, so the caller can fall back to the per-dataset one.
     """
-    from matchmaker_eval.load_folds import DATA_ROOT
+    from matchmaker_eval.folds import DATA_ROOT
 
     config = load_config()
     if not config.get("enabled"):

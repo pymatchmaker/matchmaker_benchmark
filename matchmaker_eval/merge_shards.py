@@ -27,8 +27,8 @@ import shutil
 
 from utils import dataset_summaries, pooled_summaries
 
-from matchmaker_eval.load_folds import REPO_ROOT
-from matchmaker_eval.evaluation_key import SHARED_COMPONENTS, evaluation_record
+from matchmaker_eval.folds import REPO_ROOT
+from matchmaker_eval.provenance import SHARED_COMPONENTS, evaluation_record
 
 
 class MergeError(Exception):

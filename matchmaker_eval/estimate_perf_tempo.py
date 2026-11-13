@@ -15,7 +15,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 import partitura as pt
 from partitura.score import merge_parts
 
-from matchmaker_eval.load_folds import DATA_ROOT, nested_dataset_root
+from matchmaker_eval.folds import DATA_ROOT, nested_dataset_root
 
 WORKING_DIR = Path(__file__).parent.parent
 #: The `example` dataset is the one piece committed to this repository under

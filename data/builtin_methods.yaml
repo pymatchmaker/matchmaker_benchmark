@@ -15,15 +15,6 @@
 # leaderboard links each reference's citation to that entry.
 
 midi:
-  dannenberg:
-    name: Dynamic programming (Bloch and Dannenberg)
-    authors: ["Bloch and Dannenberg (1985)"]
-    bib: Bloch1985Real
-    description: >
-      Dynamic grouping of individual MIDI notes against score chords, using
-      a dynamic-programming rating for matched, missing and extra notes.
-      Reports a match when its rating exceeds the previous maximum.
-
   pthmm:
     name: Pitch HMM
     authors: ["Cancino-Chacón et al. (2023)"]

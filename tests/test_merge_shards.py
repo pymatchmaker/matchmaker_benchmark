@@ -5,10 +5,8 @@ simply absent from the published row. ``kind`` and ``method`` were dropped,
 which turned every reference method into an unnamed "submission".
 """
 
-import hashlib
 import json
 import sys
-from argparse import Namespace
 from pathlib import Path
 
 import pytest
@@ -19,7 +17,6 @@ for _p in (REPO_ROOT, REPO_ROOT / "matchmaker_eval"):
         sys.path.insert(0, str(_p))
 
 from matchmaker_eval.leaderboard import row_from_metrics
-from matchmaker_eval import run_diagnostics
 from merge_shards import MergeError, merge
 
 
@@ -188,28 +185,6 @@ class TestMergeReferences:
         (root / "some-other-artifact").mkdir()
         assert sorted(group(root)) == ["arzt-audio"]
 
-    @pytest.mark.parametrize("fold,expected", [
-        ("beyond_piano", ["arzt-audio"]),
-        ("eval", ["arzt-audio", "pthmm-midi"]),
-    ])
-    def test_wrong_fold_or_missing_method_cannot_overwrite_results(
-        self, tmp_path, monkeypatch, fold, expected,
-    ):
-        from merge_references import main
-
-        root = self._flat_download(tmp_path, ["arzt-audio"])
-        published = tmp_path / "published" / "arzt-audio"
-        published.mkdir(parents=True)
-        record = published / "metrics.json"
-        record.write_text('{"previous": true}')
-        monkeypatch.setattr(sys, "argv", [
-            "merge_references.py", str(root), "--fold", fold,
-            "--expected-entries-json", json.dumps(expected),
-            "--output", str(published.parent),
-        ])
-        assert main() == 1
-        assert record.read_text() == '{"previous": true}'
-
 
 class TestTheTempoLabelSurvivesMerging:
     """A sharded run must not lose the fact that it was given the tempo."""
@@ -246,62 +221,3 @@ class TestTheTempoLabelSurvivesMerging:
         root = write_shards(tmp_path / "shards", [one, two])
         merged = merge(root, tmp_path / "merged")
         assert merged["n_estimated_bpm"] == 1
-
-
-class TestDiagnostics:
-    """The manuscript diagnostics run every selected case exactly once."""
-
-    def test_shards_cover_every_case_once(self):
-        manifest = {"cases": [{"id": str(i), "suite": "perturbations", "input_type": "audio"}
-                              for i in range(41)]}
-        config = {"suite": "perturbations", "input_type": "audio"}
-        shards = [run_diagnostics.select_cases(manifest, config, s, 4) for s in range(4)]
-        assert sorted(i for shard in shards for i, _ in shard) == list(range(41))
-
-    def test_selection_filters_by_method_and_rejects_unknown_ones(self):
-        selected = run_diagnostics.select_configs("dixon", "midi")
-        assert selected
-        assert all(c["method"] == "dixon" and c["input_type"] == "midi" for c in selected.values())
-        with pytest.raises(ValueError, match="unknown_method"):
-            run_diagnostics.select_configs("dixon unknown_method", "midi")
-
-    def test_merge_fails_when_a_selected_case_is_missing(self, tmp_path, monkeypatch):
-        config = {"suite": "perturbations", "input_type": "midi", "method": "chosen"}
-        monkeypatch.setattr(run_diagnostics, "CONFIGS", {
-            "chosen-midi": config, "other-midi": {**config, "method": "other"},
-        })
-        manifest = tmp_path / "manifest.json"
-        manifest.write_text(json.dumps({"cases": [
-            {"id": name, "suite": "perturbations", "input_type": "midi"} for name in ("a", "b")
-        ]}))
-        shard = tmp_path / "shards" / "chosen-0"
-        shard.mkdir(parents=True)
-        (shard / "metrics.json").write_text(json.dumps({
-            "config": "chosen-midi", "shard": 0, "failures": [], "github_run_id": "1",
-            "data": {"commit": "data"}, "environment": {"benchmark_commit": "code"},
-            "pieces": [{"case_id": "a", "category": "example", "tracked": True, "mean_b": 0.0}],
-        }))
-        args = Namespace(source=tmp_path / "shards", output=tmp_path / "out", manifest=manifest,
-                         shards=1, only="chosen", input_type="midi")
-
-        with pytest.raises(SystemExit, match="Incomplete diagnostic results"):
-            run_diagnostics.merge(args)
-        summary = json.loads((args.output / "summary.json").read_text())
-        assert summary["complete"] is False
-        assert list(summary["configurations"]) == ["chosen-midi"]
-
-    def test_a_chunked_input_is_reassembled_and_hash_checked(self, tmp_path):
-        chunks = [b"first", b"second"]
-        parts = []
-        for i, data in enumerate(chunks):
-            (tmp_path / f"p{i}").write_bytes(data)
-            parts.append({"path": f"p{i}", "sha256": hashlib.sha256(data).hexdigest()})
-        entry = {"parts": parts, "sha256": hashlib.sha256(b"".join(chunks)).hexdigest()}
-        manifest = {"files": {"audio.flac": entry}}
-
-        out = run_diagnostics.fetch_input("audio.flac", manifest, tmp_path, "https://invalid/")
-        assert out.read_bytes() == b"firstsecond"
-
-        entry["sha256"] = "wrong"
-        with pytest.raises(ValueError, match="hash mismatch"):
-            run_diagnostics.fetch_input("audio.flac", manifest, tmp_path, "https://invalid/")

@@ -47,20 +47,20 @@ from matchmaker.utils.eval import resolve_gt
 
 from eval import run_evaluation
 from utils import TOLERANCES_IN_BEATS, dataset_summaries, pooled_summaries
-from matchmaker_eval.verify_tracking import (
-    TRACKING_THRESHOLDS, check_tracking, plot_tracking, musical_beat_factors, score_meter_map,
+from verify_tracking import (
+    TRACKING_THRESHOLDS, check_tracking, musical_beat_factors, plot_tracking, score_meter_map,
 )
 
 from matchmaker import Matchmaker
 from matchmaker.base import OnlineAlignment
 
 from matchmaker_eval.fetch_data import FetchError, fetch_for_pieces, load_config
-from matchmaker_eval.evaluation_key import (
+from matchmaker_eval.provenance import (
     code_components,
     evaluation_record,
     piece_data_sha256,
 )
-from matchmaker_eval.load_folds import (
+from matchmaker_eval.folds import (
     LEADERBOARD_FOLD,
     REPO_ROOT,
     fold_path,
@@ -133,12 +133,11 @@ def sha256_of(path: Path) -> str:
 
 
 def _matchmaker_source() -> dict:
-    """The git sources Matchmaker was installed from, if known.
+    """The git ref and commit matchmaker was installed from, if it was.
 
     ``pip install git+...@<ref>`` leaves a direct_url.json beside the package
-    naming the ref asked for and the commit it resolved to. CI may instead
-    install a temporary checkout with pinned patches; its packaged manifest
-    identifies every source commit without claiming it is one upstream commit.
+    naming the ref asked for and the commit it resolved to. A release install
+    has none, and then there is nothing to add.
     """
     try:
         import json
@@ -147,13 +146,7 @@ def _matchmaker_source() -> dict:
         raw = distribution("pymatchmaker").read_text("direct_url.json")
         if not raw:
             return {}
-        direct_url = json.loads(raw)
-        if "dir_info" in direct_url:
-            from importlib.resources import files
-
-            manifest = files("matchmaker").joinpath("assets/benchmark-source.json")
-            return json.loads(manifest.read_text()) if manifest.is_file() else {}
-        vcs = direct_url.get("vcs_info") or {}
+        vcs = (json.loads(raw).get("vcs_info") or {})
         found = {}
         if vcs.get("commit_id"):
             found["matchmaker_commit"] = vcs["commit_id"]
@@ -219,19 +212,8 @@ def check_follower(follower) -> None:
         )
 
 
-def set_global_transition(mm, setting):
-    """Override only MIDI OPHMM's global transition factor when requested."""
-    if setting is None:
-        return
-    if setting not in ("on", "off") or mm.method != "outerhmm" or mm.input_type != "midi":
-        raise SubmissionError("--global-transition applies only to MIDI outerhmm")
-    if setting == "off":
-        mm.score_follower.S[:] = 0.0
-
-
 def run_piece(
-    method, piece, input_type, index, run_dir, save_plots, estimated_bpm=False,
-    global_transition=None,
+    method, piece, input_type, index, run_dir, save_plots, estimated_bpm=False
 ):
     """Run and score one piece, returning the shared metric fields.
 
@@ -262,7 +244,6 @@ def run_piece(
         tempo=tempo,
     )
     check_follower(mm.score_follower)
-    set_global_transition(mm, global_transition)
     list(mm.run(verbose=False))
 
     wp = mm.score_follower.alignment_path
@@ -323,9 +304,6 @@ def run_piece(
     # Whether this piece actually got a measured tempo. False both when the
     # entry never asked and when it asked and the fold had none — the run
     # summary separates the two, since only the second is worth reporting.
-    if global_transition is not None:
-        metrics["global_transition"] = global_transition
-        metrics["global_transition_nonzero"] = int(np.count_nonzero(mm.score_follower.S))
     metrics["used_estimated_bpm"] = tempo is not None
 
     with open(run_dir / f"{index}.json", "w") as f:
@@ -339,7 +317,7 @@ def scoring_parts() -> dict:
 
     The tracked-verdict thresholds and the function that resolves ground truth
     and calls the evaluation. Anything added here that decides a number belongs
-    in this dict too; see evaluation_key.py.
+    in this dict too; see provenance.py.
     """
     return {
         "TRACKING_THRESHOLD": TRACKING_THRESHOLD,
@@ -393,7 +371,6 @@ def evaluate_submission(
     builtin: Optional[str] = None,
     skip_missing: bool = False,
     fetch: bool = True,
-    global_transition: Optional[str] = None,
 ) -> dict:
     """Run a submission — or a built-in method — over a fold or one shard of it.
 
@@ -418,12 +395,6 @@ def evaluate_submission(
         method, registered_input_type, metadata = load_submission(directory)
         input_type = input_type or registered_input_type
         name = directory.name
-
-    if global_transition is not None:
-        if builtin != "outerhmm" or input_type != "midi" or global_transition not in ("on", "off"):
-            raise SubmissionError("--global-transition applies only to MIDI outerhmm")
-        name += "-global-" + global_transition
-        metadata = {**metadata, "global_transition": global_transition}
 
     # Declared by the entry, not chosen here: a follower is given the tempo
     # only if it said it uses one, and the run is labelled accordingly.
@@ -535,7 +506,6 @@ def evaluate_submission(
                     run_dir,
                     save_plots,
                     estimated_bpm=estimated_bpm,
-                    **({"global_transition": global_transition} if global_transition is not None else {}),
                 )
         except Exception as e:
             # One broken piece must not void a whole run: record it as an
@@ -609,7 +579,7 @@ def evaluate_submission(
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "environment": environment_info(),
         # The conditions these numbers were scored under, as one key. Rows
-        # with the same key are comparable; see evaluation_key.py. On a shard it
+        # with the same key are comparable; see provenance.py. On a shard it
         # covers that shard's pieces only, and merge_shards.py recomputes it.
         "evaluation": evaluation_record(
             code_components(fold_sha256, scoring_parts()), piece_records
@@ -701,8 +671,6 @@ def main():
         default=1,
         help="split the fold into this many shards (merge them with merge_shards.py)",
     )
-    parser.add_argument("--global-transition", choices=("on", "off"), default=None,
-                        help="MIDI OPHMM global transitions (default: unchanged)")
     args = parser.parse_args()
 
     try:
@@ -719,7 +687,6 @@ def main():
             fetch=not args.no_fetch,
             shard=args.shard,
             num_shards=args.num_shards,
-            global_transition=args.global_transition,
         )
     except SubmissionError as e:
         print(f"\nSubmission error: {e}", file=sys.stderr)

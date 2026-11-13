@@ -6,9 +6,11 @@ decisions baked into this setup.
 ## Reviewing a submission
 
 CI has already checked structure, metadata and that the follower runs on one
-piece. **Review is the trust boundary**: `evaluate.yml` executes the submitted
-code on a machine that holds the datasets. Read the code before merging it or
-dispatching a full evaluation.
+piece. **Review is the trust boundary**: merging a submission's pull request
+into `submissions` is what triggers `evaluate.yml`, which executes the
+submitted code on a machine that holds the datasets, immediately and with no
+further review in between. Nothing sandboxes it. Read the code before you
+merge, not after.
 
 `validate_submission.py` prints `review` lines for things worth a second look —
 network access, subprocesses, `.match` file access, reaching for
@@ -30,21 +32,20 @@ What to check by hand:
   interesting research but will take a long time on 146 pieces. The per-piece
   budget is 15 minutes.
 
-When in doubt, ask in the pull request. See "Staging a run before it is published"
-below for the evaluation and publication steps.
+When in doubt, ask in the pull request. Merging into `submissions` is what
+starts the evaluation — see "Staging a run before it is published" below.
 
 ## Running the evaluation
 
-After merge, dispatch **Evaluate submissions** on `main` with the submission
-directory. It runs on GitHub's runners and uploads merged results and a preview.
-Nobody has to hold the data locally.
+After merge, `.github/workflows/evaluate.yml` runs the eval fold on GitHub's own
+runners and commits the leaderboard. Nobody has to hold the data locally.
 
 ```
 plan ──► evaluate (8 parallel shards) ──► merge
   │            │                            │
   │       each shard:                  combines the shards,
 which submission,   check out the data repo,      rebuilds the leaderboard,
-which input type,   verify its slice is present,  uploads artifacts
+which input type,   verify its slice is present,  commits results/
 how many shards,    run it, upload results
 where the data is
 ```
@@ -230,30 +231,14 @@ Actions -> Evaluate references -> Run workflow
   input_type: both     only: (empty = all described)     shards: 8
 ```
 
-The `fold` input selects what to run. Only `eval` feeds the leaderboard; the
-others are archived as artifacts.
-
-| fold | input_type | shards | what it runs |
-| --- | --- | --- | --- |
-| `eval` | both | 8 | the piano leaderboard |
-| `beyond_piano` | audio | 8 | the non-piano corpora (audio only) |
-| `diagnostics` | both | 4 | the manuscript diagnostic suites in `matchmaker_eval/run_diagnostics.py` |
-| `offline` | audio | 8 | the offline reference in `matchmaker_eval/run_offline.py` |
-| `amt_reference` | midi | 4 | symbolic followers on frozen AMT output, `matchmaker_eval/run_amt.py` |
-| `ophmm_playthrough` | midi | 4 (fixed) | MIDI OPHMM with global transitions on and off |
-
-Each run uploads one `benchmark-results-<fold>` artifact with every merged
-method directory: `metrics.json`, the full `wp_`/`gt_` paths and the
-`meter_<index>.json` maps.
-
 It mirrors `evaluate.yml` exactly — same data checkout, same eight-way
 round-robin sharding, same merge, same leaderboard rebuild — and fans out over
 every method described in `data/builtin_methods.yaml`. Both workflows pin
 `OMP_NUM_THREADS=1` so a runner's core count cannot move the timing columns
 between one entry and the next.
 
-Every described method runs as one job per shard; the jobs queue against the
-account's concurrency limit rather than all starting at once. To evaluate a single
+11 described methods x 8 shards is 88 jobs, which queue against the account's
+concurrency limit rather than all starting at once. To evaluate a single
 reference instead, `Evaluate submissions` takes a `method` and `input_type`.
 
 Accuracy is unaffected by any of this — an alignment path is a deterministic
@@ -315,27 +300,41 @@ differ on their own.
 
 ### Staging a run before it is published
 
-Evaluation and publication are separate. Evaluation workflows are dispatched
-explicitly and upload merged artifacts and a preview. Publication runs from
-`main` after the code has been squash-merged. Reviewed branch runs can be
-reused when the merged evaluation logic and data match.
+`submissions` is where evaluation happens; `main` is where it is published.
 
-Inspect the required evaluations, then dispatch **Publish leaderboard** on
-`main`:
+| branch | runs the full evaluation | publishes to the site |
+| --- | --- | --- |
+| `submissions` | yes | **no** |
+| `main` | no — just receives the result | yes |
 
-- `source_runs`: the completed run IDs, separated by spaces. Later listed runs
-  replace earlier entries for the same method, so put a corrected method's
-  rerun after the full evaluation. Methods not listed are carried over from the
-  latest release.
-- `release_tag`: a new `benchmark-*` tag. Leave `source_runs` empty to redeploy
-  that release, or both empty to redeploy the latest one.
+The order is:
 
-The workflow attaches the selected artifacts, a `benchmark-snapshot.zip` for
-the site and `SHA256SUMS` to the release, then deploys. Actions artifacts
-expire, so publish final runs before they do.
+1. review the code, then merge the submission's pull request into
+   `submissions`. It is restricted to that one `submissions/<name>/`
+   directory (see `validate-submission.yml`), and CI has only smoke-tested it
+   on the committed example before this point.
+2. That merge is what `evaluate.yml` watches for. It diffs `submissions/`
+   against its own previous commit and evaluates every directory that is new
+   or has changed since — including any other submission that was already
+   waiting there — skipping ones that are unchanged and already evaluated.
+   This is the first time the submitted code actually runs against the real
+   datasets, which is why review has to happen at step 1: nothing re-reviews
+   a submission between merging it and this run.
+3. It rebuilds the leaderboard and commits `results/` to `submissions`.
+   Nothing is published yet — read `results/leaderboard.json` there (or the
+   `leaderboard-site` artifact for the real page) and rerun or withdraw
+   anything that looks wrong.
+4. When you are satisfied, merge `submissions` into `main`. This is a plain
+   merge of the already-computed `results/` — it does not re-run anything —
+   and the resulting commit is what `pages.yml` publishes.
 
-A manually dispatched evaluation runs only the requested methods or submission;
-publication reuses those outputs and never executes a follower.
+`pages.yml` is deliberately `main`-only and only triggers on a change to
+`results/leaderboard.json`, so nothing reaches the site until step 4 — a bad
+run is a branch to fix rather than a page to correct.
+
+To re-run something already evaluated — after a pipeline bug fix, say — the
+diff-based skip in step 2 only applies to the automatic trigger. Dispatch
+`evaluate.yml` manually with that submission's name to force it.
 
 ### Withdrawing or replacing a published result
 
@@ -343,13 +342,11 @@ A leaderboard row is not a database record. It is derived from
 `results/submissions/<entry>/metrics.json` every time `leaderboard.py` runs, so
 results can always be corrected.
 
-**To replace one**, evaluate the corrected code on main and select that run in
-a new result release. Its completed entries replace those entries in the new
-snapshot; the previous release and its raw outputs remain available.
+**To replace one** — a rerun after a bug fix — just evaluate again.
+`run_submission.py` overwrites the same directory and the next rebuild picks up
+the new numbers. Nothing needs deleting.
 
-**To withdraw one**, first download the released snapshot to a working directory
-and set `MATCHMAKER_RESULTS_DIR` to that directory. Use `retract.py` rather than
-deleting by hand: it also
+**To withdraw one**, use `retract.py` rather than deleting by hand: it also
 removes the per-piece detail file, which the site fetches by name and which
 would otherwise stay readable after the row disappeared.
 
@@ -369,8 +366,6 @@ a result that was on the leaderboard and is not any more is itself a fact about
 the leaderboard, so it is published rather than quietly erased. The run is moved
 to `results/retracted/<entry>/`, so `--reason` is required and `--undo` puts it
 back. `--purge` deletes instead of archiving, and cannot be undone.
-These commands edit the local snapshot only; publish the corrected snapshot
-as a new release.
 
 `export_details.py` also removes any detail file whose run has gone, so a
 hand-deleted result cannot leave one behind either.
@@ -480,10 +475,9 @@ somewhere else.
 
 ## Publishing
 
-`.github/workflows/pages.yml` combines `docs/` with the selected release snapshot
-and deploys it to GitHub Pages. A documentation update reuses the latest published
-snapshot. `MATCHMAKER_RESULTS_DIR` points the export and site-building scripts
-at a temporary directory outside the code checkout.
+`.github/workflows/pages.yml` builds the site from `docs/` plus a copy of
+`results/leaderboard*.json`, the CSVs and `results/details/`, and deploys it to
+GitHub Pages. It runs whenever the leaderboard changes.
 
 ### What the site can show
 
@@ -535,6 +529,6 @@ about 1 MB, or 300 KB over the wire once Pages gzips it. `PATH_POINTS` in
 A Hugging Face Space is a reasonable second surface — sorting and filtering are
 easier there than in a static page, and it reaches a different audience. It
 needs nothing new from this repository: a Space can read
-`leaderboard.json` from the published Pages site, so it stays a consumer of
-the same file. Add a push step here only if
+`results/leaderboard.json` straight from the raw GitHub URL, so it stays a
+consumer of the same file and cannot drift from it. Add a push step here only if
 a Space needs to be told to refresh.

@@ -19,7 +19,7 @@ import tarfile
 import zipfile
 from urllib.request import urlretrieve
 
-from matchmaker_eval.load_folds import DATA_ROOT
+from matchmaker_eval.folds import DATA_ROOT
 
 # TODO: update URLs when data hosting is finalized
 DATASETS = {

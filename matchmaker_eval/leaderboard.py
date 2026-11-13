@@ -6,7 +6,7 @@
 Reads every ``results/submissions/*/metrics.json`` produced by
 ``run_submission.py``, keeps the runs made on the **eval** fold, and writes
 
-    results/leaderboard.json            full records, with each fold's evaluation key
+    results/leaderboard.json            full records, with per-fold provenance
     results/leaderboard.csv             the headline columns, for papers
     results/leaderboard-<dataset>.json  the same entries ranked on one dataset
     results/leaderboard-<dataset>.csv
@@ -46,11 +46,12 @@ from datetime import datetime, timezone
 
 from matchmaker.utils.eval import TOLERANCES_IN_BEATS
 
-from matchmaker_eval.load_folds import LEADERBOARD_FOLD, REPO_ROOT, RESULTS_DIR
-from matchmaker_eval.evaluation_key import SHARED_COMPONENTS
+from matchmaker_eval.folds import LEADERBOARD_FOLD, REPO_ROOT
+from matchmaker_eval.provenance import SHARED_COMPONENTS
 from matchmaker_eval.retract import read_retractions
 from matchmaker_eval.submission import read_descriptions
 
+RESULTS_DIR = REPO_ROOT / "results"
 SUBMISSION_RESULTS = RESULTS_DIR / "submissions"
 LEADERBOARD_JSON = RESULTS_DIR / "leaderboard.json"
 LEADERBOARD_CSV = RESULTS_DIR / "leaderboard.csv"
@@ -76,7 +77,7 @@ CSV_COLUMNS = [
     "skewness", "kurtosis", "smoothness", "median_b_all", "rtf",
     "feature_latency_ms", "inference_latency_ms", "n_pieces", "n_tracked",
     "estimated_bpm", "evaluated",
-    # The conditions the row was scored under (see evaluation_key.py). Cite it
+    # The conditions the row was scored under (see provenance.py). Cite it
     # with any number taken from this file.
     "evaluation_key",
 ]
@@ -586,7 +587,7 @@ def main():
 
     written = write(leaderboard)
     print(render_table(leaderboard))
-    print(f"\nwrote {', '.join(written)} to {RESULTS_DIR}")
+    print(f"\nwrote {', '.join(written)} to {RESULTS_DIR.relative_to(REPO_ROOT)}")
     return 0
 
 

@@ -84,7 +84,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-from matchmaker_eval.load_folds import DATA_ROOT, nested_dataset_root
+from matchmaker_eval.folds import DATA_ROOT, nested_dataset_root
 
 DATASET_DIR = {
     "validation": DATA_ROOT,

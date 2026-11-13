@@ -16,9 +16,6 @@ data** — the evaluation runs on GitHub's runners, which fetch what they need.
 | **Library** | [matchmaker](https://github.com/pymatchmaker/matchmaker) |
 | **Metrics** | beat error, ms error, tracking rate, real-time factor |
 
-Full results are published as [Releases](https://github.com/pymatchmaker/matchmaker_benchmark/releases).
-See [publishing results](docs/maintaining.md#staging-a-run-before-it-is-published).
-
 ## Submit a score follower
 
 ```bash
@@ -86,14 +83,13 @@ code; after merge it is evaluated and appears on the leaderboard.
   │                 │                            │        fetches its own data,
   │                 │                            │        runs 146 pieces in
   │                 │                            │        parallel shards,
-  │                 │                            │        uploads results for release
+  │                 │                            │        commits the leaderboard
   │                 │                            │                    │
   └──────────────── leaderboard on GitHub Pages ◄─────────────────────┘
 ```
 
 Review is the trust boundary: CI executes submitted code, it does not sandbox
-it. A maintainer starts full evaluation and publication explicitly;
-publication runs from `main`.
+it. Everything after merge is automatic.
 
 ## Folds
 
@@ -238,7 +234,7 @@ matchmaker_eval/
   merge_references.py     — regroup and merge a sharded multi-method run
   export_details.py       — every pooled metric per dataset, per-piece
                             detail and decimated alignment paths
-  load_folds.py, make_folds.py — fold definitions and their integrity checks
+  folds.py, make_folds.py — fold definitions and their integrity checks
   fetch_data.py           — locate a fold's data (--source), check it is all
                             present (--verify), or download just what it needs
   verify_equivalence.py   — proves submissions are scored like built-in methods
@@ -266,8 +262,8 @@ docs/                     — contributor and maintainer documentation, and the
                             GitHub Pages leaderboard
 .github/workflows/
   validate-submission.yml — pull-request checks (no secrets, read-only token)
-  evaluate.yml            — explicitly dispatched evaluation in parallel shards
-  pages.yml               — preserves selected CI runs in a release and publishes its snapshot
+  evaluate.yml            — post-merge evaluation in parallel shards
+  pages.yml               — publishes the leaderboard
 ```
 
 ## Acknowledgments

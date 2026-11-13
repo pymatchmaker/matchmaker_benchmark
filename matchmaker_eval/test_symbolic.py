@@ -26,7 +26,7 @@ import partitura as pt
 from matchmaker_eval.eval import run_evaluation
 from matchmaker import Matchmaker
 from matchmaker.utils.eval import resolve_gt
-from matchmaker_eval.load_folds import (
+from matchmaker_eval.folds import (
     DATA_REPO_DATASETS,
     data_repo_metadata,
     explain_missing_dataset,

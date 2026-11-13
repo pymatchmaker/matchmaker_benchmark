@@ -1,86 +1,48 @@
 # Publish the leaderboard to GitHub Pages.
 #
-# Selected completed runs are preserved in a release before deployment.
-# Documentation-only rebuilds reuse the last published result snapshot.
+# The site is docs/ plus a copy of results/leaderboard.json, so the page is a
+# static read of exactly the file the evaluation workflow committed.
 name: Publish leaderboard
 
 on:
   push:
+    # `main` only, deliberately. The `submissions` branch evaluates and commits
+    # results without publishing them, so a run can be checked or withdrawn
+    # before it reaches the site. See the note in evaluate.yml.
     branches: [main]
     paths:
+      - "results/leaderboard.json"
       - "docs/**"
-      - "matchmaker_eval/build_site.py"
-      - "matchmaker_eval/release_results.py"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
-    inputs:
-      source_runs:
-        description: "Completed CI run IDs, separated by spaces; later runs replace entries (empty = republish)"
-        required: false
-        default: ""
-      release_tag:
-        description: "New benchmark-* tag when releasing; otherwise existing tag or empty for latest"
-        required: false
-        default: ""
 
 permissions:
-  contents: write
-  actions: read
+  contents: read
   pages: write
   id-token: write
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    outputs:
-      ready: ${{ steps.results.outputs.ready }}
-    env:
-      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Keep published results outside the code checkout
-        run: echo "MATCHMAKER_RESULTS_DIR=$RUNNER_TEMP/benchmark-published-results" >> "$GITHUB_ENV"
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install result export dependencies
-        if: inputs.source_runs != ''
-        run: |
-          python .github/install_matchmaker.py
-          pip install pyyaml pydantic-settings
-
-      - name: Preserve selected runs or fetch published results
-        id: results
-        env:
-          SOURCE_RUNS: ${{ inputs.source_runs }}
-          RELEASE_TAG: ${{ inputs.release_tag }}
-        run: |
-          python matchmaker_eval/release_results.py --source-runs "$SOURCE_RUNS" --tag "$RELEASE_TAG"
 
       - name: Assemble the site
-        if: steps.results.outputs.ready == 'true'
+        # Same script the staging preview uses, so what a maintainer looked at
+        # on the `submissions` branch is assembled exactly like what goes live.
         run: python matchmaker_eval/build_site.py _site
 
       - uses: actions/configure-pages@v5
-        if: steps.results.outputs.ready == 'true'
       - uses: actions/upload-pages-artifact@v3
-        if: steps.results.outputs.ready == 'true'
         with:
           path: _site
 
   deploy:
     needs: build
-    if: needs.build.outputs.ready == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

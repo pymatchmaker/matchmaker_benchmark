@@ -27,7 +27,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import soundfile as sf
-from matchmaker_eval.load_folds import DATA_ROOT
+from matchmaker_eval.folds import DATA_ROOT
 from matchmaker import Matchmaker
 
 WORKING_DIR = Path(__file__).parent.parent

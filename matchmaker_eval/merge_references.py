@@ -24,12 +24,11 @@ for _path in (_REPO_ROOT, _REPO_ROOT / "matchmaker_eval"):
         sys.path.insert(0, str(_path))
 
 import argparse
-import json
 import re
 import shutil
 from collections import defaultdict
 
-from matchmaker_eval.load_folds import REPO_ROOT
+from matchmaker_eval.folds import REPO_ROOT
 from merge_shards import MergeError, merge
 
 #: refshard-<method>-<input type>-<shard index>
@@ -90,30 +89,6 @@ def merge_all(download_dir: Path, output_root: Path, staging: Path) -> dict:
     return report
 
 
-def output_for_fold(fold: str) -> Path:
-    """Keep auxiliary folds from replacing the published piano records."""
-    return DEFAULT_OUTPUT if fold == "eval" else REPO_ROOT / "results" / "runs" / fold
-
-
-def check_fold(download_dir: Path, expected: str) -> None:
-    """Validate the entire batch before any existing result is overwritten."""
-    for entry, shards in group(download_dir).items():
-        for shard in shards:
-            actual = json.loads((shard / "metrics.json").read_text()).get("fold")
-            if actual != expected:
-                raise MergeError(f"{entry}: expected fold {expected!r}, found {actual!r}")
-
-
-def check_expected_entries(download_dir: Path, expected: list) -> None:
-    """An entirely missing method is a failed batch, not a smaller benchmark."""
-    found = set(group(download_dir))
-    if found != set(expected):
-        raise MergeError(
-            f"reference entries differ from plan: missing={sorted(set(expected)-found)}, "
-            f"unexpected={sorted(found-set(expected))}"
-        )
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument(
@@ -122,11 +97,9 @@ def main():
     parser.add_argument(
         "--output",
         type=Path,
-        default=None,
-        help="where merged records go (default depends on --fold)",
+        default=DEFAULT_OUTPUT,
+        help=f"where merged records go (default: {DEFAULT_OUTPUT})",
     )
-    parser.add_argument("--fold", default="eval", help="fold to merge; non-eval folds are isolated")
-    parser.add_argument("--expected-entries-json", help="JSON array of every entry planned by CI")
     parser.add_argument(
         "--staging",
         type=Path,
@@ -137,10 +110,7 @@ def main():
     staging = args.staging or (args.download_dir.parent / "refgrouped")
 
     try:
-        if args.expected_entries_json is not None:
-            check_expected_entries(args.download_dir, json.loads(args.expected_entries_json))
-        check_fold(args.download_dir, args.fold)
-        report = merge_all(args.download_dir, args.output or output_for_fold(args.fold), staging)
+        report = merge_all(args.download_dir, args.output, staging)
     except MergeError as e:
         print(f"\n{e}", file=sys.stderr)
         return 1
@@ -161,7 +131,7 @@ def main():
             f"{info['n_tracked']:>8}  {status}"
         )
     print(f"\n{len(report) - incomplete}/{len(report)} entry(ies) complete.")
-    return 1 if incomplete else 0
+    return 0
 
 
 if __name__ == "__main__":

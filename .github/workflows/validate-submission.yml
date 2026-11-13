@@ -54,8 +54,11 @@ jobs:
         # matchmaker_eval/utils.py, and nothing else.
         run: |
           python -m pip install --upgrade pip
-          # The shared installer fixes the library sources for every job.
-          python .github/install_matchmaker.py
+          # Pinned to the matchmaker 0.4.0 release (tag v0.4.0, main after #73):
+          # its sources are part of the evaluation key, so every row of a run
+          # must be scored by the same matchmaker. Move every workflow together
+          # when the pin changes, and re-run the entries: their keys will change.
+          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.4.0"
           pip install pyyaml pydantic-settings
 
       - name: Find the submissions touched by this pull request

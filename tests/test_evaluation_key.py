@@ -18,7 +18,7 @@ for _p in (REPO_ROOT, REPO_ROOT / "matchmaker_eval"):
         sys.path.insert(0, str(_p))
 
 import matchmaker_eval.leaderboard as L
-from matchmaker_eval import evaluation_key as P
+from matchmaker_eval import provenance as P
 from matchmaker_eval.export_details import export
 from merge_shards import MergeError, merge
 
@@ -331,7 +331,7 @@ class TestTheArchive:
 
 
 class TestTheDetailExport:
-    def test_the_data_hash_is_an_input_not_a_metric(self, tmp_path):
+    def test_the_data_hash_is_provenance_not_a_metric(self, tmp_path):
         run = tmp_path / "run"
         run.mkdir()
         (run / "metrics.json").write_text(json.dumps({

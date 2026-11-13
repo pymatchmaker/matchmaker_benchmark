@@ -39,7 +39,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from matchmaker_eval.load_folds import LEADERBOARD_FOLD, REPO_ROOT, load_fold
+from matchmaker_eval.folds import LEADERBOARD_FOLD, REPO_ROOT, load_fold
 from matchmaker_eval.submission import (
     BUILTIN_METHODS_PATH,
     read_descriptions,
