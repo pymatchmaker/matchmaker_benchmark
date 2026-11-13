@@ -6,63 +6,63 @@
 <title>Matchmaker Leaderboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-  /* Light palette — the complete token set. Neutrals carry a slight green
-     bias so they sit with the spruce accent instead of fighting it. */
+  /* Light palette — the complete token set: white and slate neutrals with a
+     single blue accent. */
   :root {
-    --paper:      #f4f5f3;
+    --paper:      #ffffff;
     --surface:    #ffffff;
-    --surface-2:  #eceeea;
-    --ink:        #14181a;
-    --ink-soft:   #4a534e;
-    --ink-mute:   #79837d;
-    --rule:       #d9ddd7;
-    --rule-firm:  #b9c0b8;
-    --accent:     #1f6b4f;
-    --accent-dim: #dfe9e3;
-    --warn:       #b4762a;
-    --crit:       #a33b32;
-    --shadow:     0 1px 2px rgba(20, 24, 26, .05), 0 8px 24px -16px rgba(20, 24, 26, .25);
+    --surface-2:  #f8fafc;
+    --ink:        #0f172a;
+    --ink-soft:   #475569;
+    --ink-mute:   #94a3b8;
+    --rule:       #e2e8f0;
+    --rule-firm:  #cbd5e1;
+    --accent:     #2563eb;
+    --accent-dim: #eff6ff;
+    --warn:       #b45309;
+    --crit:       #dc2626;
+    --shadow:     0 1px 3px rgba(15, 23, 42, .06);
 
-    --display: "Spectral", Georgia, "Times New Roman", serif;
-    --ui: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   }
   /* Default "system" setting stamps nothing on the root, so this media query
      is what most dark-mode viewers actually get. */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --paper:      #101412;
-      --surface:    #171d1a;
-      --surface-2:  #1e2622;
-      --ink:        #e7ebe7;
-      --ink-soft:   #a8b3ac;
-      --ink-mute:   #7c8880;
-      --rule:       #2a332e;
-      --rule-firm:  #3c4740;
-      --accent:     #4fbf8b;
-      --accent-dim: #1c2f27;
-      --warn:       #d09a4d;
-      --crit:       #d4655a;
-      --shadow:     0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -16px rgba(0, 0, 0, .8);
+      --paper:      #0b1120;
+      --surface:    #111827;
+      --surface-2:  #1e293b;
+      --ink:        #f1f5f9;
+      --ink-soft:   #cbd5e1;
+      --ink-mute:   #64748b;
+      --rule:       #1e293b;
+      --rule-firm:  #334155;
+      --accent:     #60a5fa;
+      --accent-dim: #172554;
+      --warn:       #f59e0b;
+      --crit:       #f87171;
+      --shadow:     0 1px 3px rgba(0, 0, 0, .4);
     }
   }
   /* Explicit dark choice wins over a light OS. */
   :root[data-theme="dark"] {
-    --paper:      #101412;
-    --surface:    #171d1a;
-    --surface-2:  #1e2622;
-    --ink:        #e7ebe7;
-    --ink-soft:   #a8b3ac;
-    --ink-mute:   #7c8880;
-    --rule:       #2a332e;
-    --rule-firm:  #3c4740;
-    --accent:     #4fbf8b;
-    --accent-dim: #1c2f27;
-    --warn:       #d09a4d;
-    --crit:       #d4655a;
-    --shadow:     0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -16px rgba(0, 0, 0, .8);
+    --paper:      #0b1120;
+    --surface:    #111827;
+    --surface-2:  #1e293b;
+    --ink:        #f1f5f9;
+    --ink-soft:   #cbd5e1;
+    --ink-mute:   #64748b;
+    --rule:       #1e293b;
+    --rule-firm:  #334155;
+    --accent:     #60a5fa;
+    --accent-dim: #172554;
+    --warn:       #f59e0b;
+    --crit:       #f87171;
+    --shadow:     0 1px 3px rgba(0, 0, 0, .4);
   }
 
   * { box-sizing: border-box; }
@@ -94,9 +94,9 @@
   .masthead { display: flex; flex-direction: column; gap: 14px; }
 
   .eyebrow {
-    font-family: var(--mono);
-    font-size: 11.5px;
-    letter-spacing: .16em;
+    font-family: var(--ui);
+    font-size: 12px;
+    letter-spacing: .08em;
     text-transform: uppercase;
     color: var(--accent);
     margin: 0;
@@ -113,8 +113,7 @@
   }
 
   .lede {
-    font-family: var(--display);
-    font-style: italic;
+    font-family: var(--ui);
     font-size: clamp(16px, 2.2vw, 19px);
     color: var(--ink-soft);
     max-width: 62ch;
@@ -124,16 +123,15 @@
   /* Double rule, the way a system divider is drawn in engraving. */
   .staff {
     border-top: 1px solid var(--rule-firm);
-    border-bottom: 1px solid var(--rule);
-    height: 4px;
-    margin-top: 6px;
+    margin-top: 4px;
   }
 
   .provenance {
     display: flex;
     flex-wrap: wrap;
     gap: 6px 26px;
-    font-family: var(--mono);
+    font-family: var(--ui);
+    font-variant-numeric: tabular-nums;
     font-size: 12px;
     color: var(--ink-mute);
   }
@@ -158,7 +156,7 @@
     color: var(--ink-soft);
     background: transparent;
     border: 1px solid var(--rule-firm);
-    border-radius: 2px;
+    border-radius: 6px;
     padding: 6px 15px;
     cursor: pointer;
     transition: background .12s ease, color .12s ease, border-color .12s ease;
@@ -191,13 +189,13 @@
      huge intrinsic width up through its <td>, and the columns above drift
      apart to accommodate it. With it, the colgroup below decides the widths
      and the nested table scrolls inside its own container.
-     min-width is the fixed columns (950px) plus room for the submission
+     min-width is the fixed columns (952px) plus room for the submission
      column, which gets what is left: below it, narrow screens scroll the
      table sideways instead of squeezing that column to nothing. */
   table.board {
     border-collapse: collapse;
     width: 100%;
-    min-width: 1150px;
+    min-width: 1192px;
     table-layout: fixed;
   }
 
@@ -206,17 +204,16 @@
     top: 0;
     z-index: 2;
     background: var(--surface);
-    font-family: var(--mono);
-    font-size: 10.5px;
-    font-weight: 500;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: var(--ink-mute);
+    font-family: var(--ui);
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--ink-soft);
     text-align: right;
+    vertical-align: bottom;
     padding: 14px 16px 11px;
     border-bottom: 1px solid var(--rule-firm);
     cursor: pointer;
-    white-space: nowrap;
     user-select: none;
   }
   table.board > thead th:first-child, table.board > thead th:nth-child(2) { text-align: left; }
@@ -238,15 +235,22 @@
   tbody tr.entry:hover { background: var(--surface-2); }
   tbody tr.entry:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-  .rank {
-    font-family: var(--display);
-    font-size: 26px;
-    font-weight: 600;
-    color: var(--ink-mute);
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
+  /* The tracker's own key (method name or submission folder): an identifier,
+     not a place in a ranking. A long key wraps at its - and _ rather than
+     being cut off; the caret stays beside it. */
+  .tracker-id {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--ink-soft);
+    background: var(--surface-2);
+    border-radius: 4px;
+    padding: 3px 6px;
+    display: inline-block;
+    max-width: calc(100% - 20px);
+    vertical-align: middle;
   }
-  tbody tr.entry:first-child .rank { color: var(--accent); }
 
   .entry-name {
     font-weight: 600;
@@ -258,15 +262,24 @@
     min-width: 0;
   }
   .entry-name > span:not(.caret):not(.kind) { overflow: hidden; text-overflow: ellipsis; }
-  .entry-authors { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* The caret travels with the name, so a name that wraps onto two lines
-     does not leave its caret alone on the line above. */
-  .entry-name .caret {
-    font-size: 10px;
+  /* The citation, then the badges. Every row puts them in the same place: on
+     the citation line where the longest citation and its badges fit, on a
+     line of their own on narrower screens. The citation is never cut short. */
+  .entry-authors { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 6px; }
+  .entry-cite { white-space: nowrap; }
+  .entry-badges { display: inline-flex; gap: 6px; }
+  .entry-badges:empty { display: none; }
+  /* All rows fit beside the citation from about 1430px; the margin covers
+     fonts that render a little wider on other systems. */
+  @media (max-width: 1459px) { .entry-badges { flex-basis: 100%; } }
+  /* Beside the tracker key, so names line up with their citations. */
+  .caret {
+    font-size: 9px;
     color: var(--ink-mute);
     transition: transform .15s ease;
     display: inline-block;
-    margin-right: 8px;
+    margin-left: 8px;
+    vertical-align: middle;
   }
   tr.entry.open .caret { transform: rotate(90deg); }
   .entry-authors {
@@ -276,12 +289,11 @@
   }
 
   .kind {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: .09em;
-    text-transform: uppercase;
-    padding: 1px 6px;
-    border-radius: 2px;
+    font-family: var(--ui);
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 0 7px;
+    border-radius: 999px;
     border: 1px solid var(--rule-firm);
     color: var(--ink-mute);
     white-space: nowrap;
@@ -293,13 +305,11 @@
   }
   .kind.tempo { cursor: help; }
   .tag {
-    font-family: var(--mono);
-    font-size: 10.5px;
-    letter-spacing: .06em;
-    text-transform: uppercase;
+    font-family: var(--ui);
+    font-size: 11.5px;
     color: var(--ink-soft);
     border: 1px solid var(--rule-firm);
-    border-radius: 2px;
+    border-radius: 4px;
     padding: 2px 7px;
   }
 
@@ -322,7 +332,7 @@
     display: block;
   }
   .span.zero > i { background: var(--crit); }
-  .num { font-family: var(--mono); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  .num { font-family: var(--ui); font-size: 14px; font-variant-numeric: tabular-nums; }
   .num.dim { color: var(--ink-mute); }
   .num.lead { color: var(--accent); font-weight: 500; }
 
@@ -344,7 +354,7 @@
   @media (max-width: 720px) { .detail-grid { grid-template-columns: 1fr; } }
   .detail p {
     margin: 0;
-    font-family: var(--display);
+    font-family: var(--ui);
     font-size: 15px;
     line-height: 1.6;
     color: var(--ink-soft);
@@ -355,8 +365,9 @@
     display: flex;
     justify-content: space-between;
     gap: 16px;
-    font-family: var(--mono);
-    font-size: 11.5px;
+    font-family: var(--ui);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
     border-bottom: 1px dotted var(--rule-firm);
     padding-bottom: 6px;
   }
@@ -558,7 +569,7 @@
       <button class="chip" data-filter="reference" aria-pressed="false">Reference</button>
     </div>
     <p class="ranking-note">
-      Ranked by how many pieces a follower stayed with, then by its error on
+      Sorted by how many pieces a follower stayed with, then by its error on
       those pieces. Open a row for its per-dataset and per-piece results, and to
       plot any piece against the ground truth. Rows marked
       <span class="kind tempo">* tempo given</span> were given the
@@ -570,20 +581,20 @@
   <div class="table-wrap">
     <table class="board">
       <colgroup>
-        <col style="width:58px">
+        <col style="width:140px">
         <col><!-- submission: takes the remaining space -->
-        <col style="width:76px">
+        <col style="width:72px">
         <col style="width:150px">
-        <col style="width:104px">
-        <col style="width:118px">
-        <col style="width:124px">
-        <col style="width:104px">
-        <col style="width:124px">
         <col style="width:92px">
+        <col style="width:100px">
+        <col style="width:104px">
+        <col style="width:110px">
+        <col style="width:100px">
+        <col style="width:84px">
       </colgroup>
       <thead>
         <tr>
-          <th data-key="rank" data-dir="asc" scope="col">#<span class="arrow"></span></th>
+          <th data-key="tracker_id" data-dir="asc" scope="col">Tracker<span class="arrow"></span></th>
           <th data-key="name" data-dir="asc" scope="col">Submission<span class="arrow"></span></th>
           <th data-key="input_type" data-dir="asc" scope="col">Input<span class="arrow"></span></th>
           <th data-key="tracking_rate" data-dir="desc" aria-sort="descending" scope="col">Tracked ↑<span class="arrow"></span></th>
@@ -1333,8 +1344,6 @@ function detailRow(entry) {
         <div class="detail-grid">
           <p>
             ${escapeHtml(entry.description)}
-            ${entry.url ? ` <a href="${escapeHtml(entry.url)}">Source &rarr;</a>` : ""}
-            ${entry.citation_url ? ` <a href="${escapeHtml(entry.citation_url)}" target="_blank" rel="noopener">Bibliography entry &rarr;</a>` : ""}
           </p>
           <div class="facts">
             ${facts.map(([k, v]) => `<div class="fact"><span>${k}</span><span>${escapeHtml(v)}</span></div>`).join("")}
@@ -1368,19 +1377,15 @@ function render() {
     return `
       <tr class="entry" data-key="${escapeHtml(entry.submission)}" tabindex="0"
           role="button" aria-expanded="false">
-        <td><span class="rank">${entry.rank}</span></td>
+        <td><span class="tracker-id" title="${escapeHtml(entry.submission)}">${escapeHtml(entry.tracker_id).replace(/([-_])/g, "$1<wbr>")}</span><span class="caret">&#9654;</span></td>
         <td>
-          <div class="entry-name">
-            <span class="entry-title"><span class="caret">&#9654;</span>${escapeHtml(entry.name)}</span>
-            ${entry.kind === "reference"
-              ? '<span class="kind reference" title="ships with matchmaker">reference</span>'
-              : ""}
-            ${entry.estimated_bpm ? TEMPO_BADGE : ""}
-          </div>
-          <div class="entry-authors">${entry.citation_url
+          <div class="entry-name"><span class="entry-title">${escapeHtml(entry.name)}</span></div>
+          <div class="entry-authors"><span class="entry-cite">${entry.citation_url
             ? `<a href="${escapeHtml(entry.citation_url)}" target="_blank" rel="noopener"
                   title="Full reference in the Score Following Bibliography">${escapeHtml(entry.authors)}</a>`
-            : escapeHtml(entry.authors)}</div>
+            : escapeHtml(entry.authors)}</span><span class="entry-badges">${entry.kind === "reference"
+              ? '<span class="kind reference" title="ships with matchmaker">reference</span>'
+              : ""}${entry.estimated_bpm ? TEMPO_BADGE : ""}</span></div>
         </td>
         <td><span class="tag">${escapeHtml(entry.input_type)}</span></td>
         <td>
@@ -1497,6 +1502,9 @@ loadBoard().then((board) => {
     return;
   }
   entries = board.entries || [];
+  // A tracker is identified by its own key: the matchmaker method for a
+  // reference, the submission's folder name otherwise.
+  entries.forEach((e) => { e.tracker_id = e.kind === "reference" ? e.method : e.submission; });
   const pieces = entries.length ? entries[0].n_pieces : 0;
   el("provenance").innerHTML = [
     ["fold", board.fold],
