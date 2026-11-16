@@ -1,25 +1,4 @@
-# Evaluate matchmaker's built-in methods on GitHub's runners.
-#
-# The reference rows are what a submission is trying to beat, so they have to be
-# measured the way submissions are measured. Until this workflow existed they
-# were produced by run_references.py on whoever's laptop was free, which made
-# them a different kind of measurement from the rows they are compared against:
-# different CPU, different thread count, different corpus on disk.
-#
-# Everything here mirrors evaluate.yml - the same data checkout, the same
-# eight-way round-robin sharding, the same merge and the same leaderboard
-# rebuild. The only difference is that it fans out over every described method
-# instead of one submission.
-#
-# Which methods run comes from data/builtin_methods.yaml: a method matchmaker
-# has but nobody has described yet is not a leaderboard row, so it is not run.
-#
-#   Actions -> Evaluate references -> Run workflow
-#     input_type: both      shards: 8
-#
-# 15 described entries x 8 shards is 120 jobs. They queue against the account's
-# concurrency limit rather than all starting at once, so expect this to take a
-# while; that is the price of every row being measured the same way.
+# Evaluate the built-in methods described in data/builtin_methods.yaml.
 name: Evaluate references
 
 on:
@@ -36,7 +15,7 @@ on:
         required: false
         default: ""
       fold:
-        description: "Fold to evaluate on"
+        description: "Fold: eval, beyond_piano, diagnostics, offline, or amt_reference"
         required: false
         default: eval
       shards:
@@ -45,11 +24,10 @@ on:
         default: "8"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  # Shares evaluate.yml's group: both commit results/, and two at once would
-  # race on the leaderboard.
+  # Shares evaluate.yml's group: one evaluation runs at a time.
   group: evaluate
   cancel-in-progress: false
 
@@ -57,7 +35,28 @@ env:
   FOLD: ${{ github.event.inputs.fold || 'eval' }}
 
 jobs:
+  amt_reference:
+    if: github.event.inputs.fold == 'amt_reference'
+    uses: ./.github/workflows/evaluate-amt.yml
+    with:
+      shards: ${{ github.event.inputs.shards || '4' }}
+
+  offline:
+    if: github.event.inputs.fold == 'offline'
+    uses: ./.github/workflows/evaluate-offline.yml
+    with:
+      shards: ${{ github.event.inputs.shards || '8' }}
+
+  diagnostics:
+    if: github.event.inputs.fold == 'diagnostics'
+    uses: ./.github/workflows/evaluate-diagnostics.yml
+    with:
+      shards: ${{ github.event.inputs.shards || '4' }}
+      only: ${{ github.event.inputs.only || '' }}
+      input_type: ${{ github.event.inputs.input_type || 'both' }}
+
   plan:
+    if: github.event.inputs.fold != 'diagnostics' && github.event.inputs.fold != 'offline' && github.event.inputs.fold != 'amt_reference'
     runs-on: ubuntu-latest
     outputs:
       jobs: ${{ steps.plan.outputs.jobs }}
@@ -141,11 +140,7 @@ jobs:
       - name: Install the benchmark environment
         run: |
           python -m pip install --upgrade pip
-          # Pinned to the matchmaker 0.4.0 release (tag v0.4.0, main after #73):
-          # its sources are part of the evaluation key, so every row of a run
-          # must be scored by the same matchmaker. Move every workflow together
-          # when the pin changes, and re-run the entries: their keys will change.
-          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.4.0"
+          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.5.0"
           pip install pyyaml pydantic-settings
 
       - name: Check out the benchmark data
@@ -198,8 +193,7 @@ jobs:
             --num-shards ${{ needs.plan.outputs.num_shards }}
 
       - name: Run the shard
-        # Pinned to one BLAS thread so a runner's core count cannot change what
-        # the timing columns report between one reference and the next.
+        # One BLAS thread keeps the timing columns comparable across runners.
         env:
           OMP_NUM_THREADS: "1"
           OPENBLAS_NUM_THREADS: "1"
@@ -222,20 +216,10 @@ jobs:
 
   merge:
     needs: [plan, evaluate]
-    if: always() && needs.plan.outputs.count != '0'
+    if: always() && needs.plan.result == 'success' && needs.plan.outputs.count != '0'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Catch up with anything committed while this run was queued or evaluating
-        # actions/checkout pins to the commit that existed when this run was
-        # dispatched, not now. The `evaluate` concurrency group serializes the
-        # actual pushes, but a run can still sit queued -- or just take a long
-        # time evaluating -- behind another one that lands a commit in the
-        # meantime. leaderboard.py rewrites the whole file rather than
-        # appending, so building on a stale base produces a real content
-        # conflict at push time instead of a clean fast-forward.
-        run: git pull
 
       - uses: actions/setup-python@v5
         with:
@@ -243,7 +227,7 @@ jobs:
 
       - name: Install what the merge needs
         run: |
-          pip install --quiet "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.4.0"
+          pip install --quiet "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.5.0"
           pip install --quiet pyyaml pydantic-settings
 
       - uses: actions/download-artifact@v4
@@ -252,10 +236,16 @@ jobs:
           path: results/refshards
 
       - name: Merge each reference
-        # One run produces shards for many entries; this regroups them by entry
-        # and merges each separately. An entry missing shards stays partial and
-        # off the leaderboard.
-        run: python matchmaker_eval/merge_references.py results/refshards
+        run: python matchmaker_eval/merge_references.py results/refshards --output "results/ci/$FOLD"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ env.FOLD }}
+          path: results/ci/${{ env.FOLD }}
+          retention-days: 30
+
+      - name: Stage the results for the preview
+        run: cp -a "results/ci/$FOLD/." results/submissions/
 
       - name: Export the per-piece detail
         run: python matchmaker_eval/export_details.py
@@ -271,18 +261,3 @@ jobs:
           name: leaderboard-site
           path: _site
           retention-days: 14
-
-      - name: Commit the results
-        run: |
-          git config user.name "matchmaker-benchmark[bot]"
-          git config user.email "actions@github.com"
-          git add results/
-          if git diff --cached --quiet; then
-            echo "Leaderboard unchanged."
-            exit 0
-          fi
-          git commit -m "benchmark: evaluate references on the ${{ env.FOLD }} fold
-
-          Run ${{ github.run_id }}, ${{ needs.plan.outputs.count }} shard jobs."
-          git pull --rebase --autostash
-          git push

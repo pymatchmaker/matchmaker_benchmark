@@ -1,53 +1,8 @@
-# Full evaluation, after merge — on GitHub's own runners.
-#
-# Contributors download nothing. The data lives in its own public repository,
-# pymatchmaker/matchmaker-benchmark-data, laid out exactly as the benchmark
-# expects — so a checkout of it *is* MATCHMAKER_DATA_DIR and no file is
-# downloaded piece by piece. Which repository and branch a fold reads is
-# data/data_sources.yaml; the plan job reads it there so the address is written
-# down once (`fetch_data.py --source`).
-#
-# This is the only workflow that writes to the repository, and it runs only on
-# `submissions` — on code a maintainer has already reviewed and merged there.
-#
-# Two branches, on purpose:
-#
-#   submissions  a contributor's pull request lands here first. validate-
-#                submission.yml smoke-tests it on one piece before merge; that
-#                merge is what this workflow watches for. It diffs
-#                `submissions/` against its own previous commit, evaluates
-#                every submission that is new or has changed since — skipping
-#                ones that are unchanged and already evaluated — and commits
-#                the result here. Nothing is published from this branch.
-#   main         merging `submissions` into it just carries the already-
-#                computed results over; nothing is re-evaluated. That merge
-#                is what publishes (see pages.yml), so it is also the moment
-#                to read `results/leaderboard.json` on `submissions` first and
-#                decide whether this batch is ready to go live.
-#
-# So review has to happen before merging a submission's pull request into
-# `submissions` (see docs/maintaining.md#reviewing-a-submission): that merge
-# is what starts this workflow, which is the first time the submitted code
-# actually runs against the real datasets. To withdraw a result after the
-# fact, see matchmaker_eval/retract.py.
-#
-# Sharding is what makes this fit: a job on a GitHub runner is capped at 6
-# hours, and audio evaluation over 146 pieces does not fit in one. Shards are
-# round-robin, so the merged numbers are identical to an unsharded run. A push
-# that brings several new or changed submissions fans out over all of them at
-# once — one (submission x shard) matrix, mirroring evaluate-references.yml.
-#
-# It also works unchanged on a self-hosted runner that already holds the data:
-# set the repository variable MATCHMAKER_DATA_DIR to that copy and the checkout
-# is skipped. Set BENCHMARK_RUNNER to the runner's label.
+# Evaluate new or changed submissions after they merge into `submissions`.
 name: Evaluate submissions
 
 on:
   push:
-    # `submissions` only, deliberately — see the branch note above. Evaluating
-    # on `main` too would re-run everything a merge to `main` brings with it;
-    # `main` only ever receives already-computed results. `branches:` cannot
-    # take a variable, so the branch is named here.
     branches: [submissions]
     paths:
       - "submissions/**"
@@ -77,10 +32,10 @@ on:
         default: "8"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  # One evaluation at a time: two would race on results/leaderboard.json.
+  # One evaluation at a time, shared with evaluate-references.yml.
   group: evaluate
   cancel-in-progress: false
 
@@ -108,13 +63,6 @@ jobs:
 
       - name: Decide what to evaluate
         id: plan
-        # A manual `method` dispatch is a single reference row. A manual
-        # `submission` dispatch is that one directory, changed or not --
-        # useful for a forced rerun after a pipeline fix. Otherwise (a push to
-        # `submissions`, i.e. a submission's pull request just got merged)
-        # every submissions/<name>/ directory touched since the previous
-        # commit on `submissions` is new or changed, and anything not in that
-        # diff is already evaluated and skipped.
         run: |
           pip install --quiet pyyaml
           python - <<'PY' >> "$GITHUB_OUTPUT"
@@ -165,8 +113,6 @@ jobs:
               for d in dirs:
                   metadata_path = f"{d}/metadata.yaml"
                   if not os.path.exists(metadata_path):
-                      # A directory can show up as "changed" because a pull
-                      # request deleted it -- nothing to evaluate there.
                       print(f"{d} no longer exists, skipping")
                       continue
                   input_type = yaml.safe_load(open(metadata_path))["input_type"]
@@ -193,9 +139,6 @@ jobs:
 
       - name: Locate this fold's data
         id: source
-        # data/data_sources.yaml maps a fold to a branch of the data
-        # repository. Reading it here means the address is not repeated in this
-        # file, so moving or renaming the data repository stays a one-line edit.
         run: |
           eval "$(python matchmaker_eval/fetch_data.py --source --fold "$FOLD")"
           echo "data_repo=${owner}/${repo}" >> "$GITHUB_OUTPUT"
@@ -229,26 +172,13 @@ jobs:
       - name: Install the benchmark environment
         run: |
           python -m pip install --upgrade pip
-          # Pinned to the matchmaker 0.4.0 release (tag v0.4.0, main after #73):
-          # its sources are part of the evaluation key, so every row of a run
-          # must be scored by the same matchmaker. Move every workflow together
-          # when the pin changes, and re-run the entries: their keys will change.
-          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.4.0"
+          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.5.0"
           pip install pyyaml pydantic-settings
           if [ -d "${{ matrix.job.target }}" ] && [ -s "${{ matrix.job.target }}/requirements.txt" ]; then
             pip install -r "${{ matrix.job.target }}/requirements.txt"
           fi
 
       - name: Check out the benchmark data
-        # The data repository's layout is the one MATCHMAKER_DATA_DIR expects,
-        # so this checkout is the whole data step: one shallow clone of the
-        # branch this fold reads, and nothing fetched file by file.
-        #
-        # MATCHMAKER_DATA_TOKEN is only needed while the data repository is
-        # private. Add it as a repository secret with read access to that repo;
-        # once the repository is public, delete the secret and this keeps
-        # working. Skipped entirely when MATCHMAKER_DATA_DIR is set to a copy
-        # the runner already holds.
         if: vars.MATCHMAKER_DATA_DIR == ''
         uses: actions/checkout@v4
         with:
@@ -267,9 +197,6 @@ jobs:
           fi
 
       - name: Check this shard's files are all present
-        # Names anything the fold asks for that the checkout did not provide,
-        # before spending an hour discovering it piece by piece. Allowed to
-        # fail so the fetch below can fill the gap.
         id: verify
         continue-on-error: true
         run: |
@@ -280,9 +207,6 @@ jobs:
             --num-shards ${{ needs.plan.outputs.num_shards }}
 
       - name: Fetch anything the checkout did not provide
-        # The checkout is the fast path, not the only one. A fold whose data is
-        # not all in that branch — or a dataset served from somewhere else via
-        # `url_template` — is downloaded file by file into the same directory.
         if: steps.verify.outcome == 'failure'
         env:
           MATCHMAKER_DATA_TOKEN: ${{ secrets.MATCHMAKER_DATA_TOKEN }}
@@ -295,8 +219,6 @@ jobs:
             --num-shards ${{ needs.plan.outputs.num_shards }}
 
       - name: Confirm the data is complete
-        # The hard gate: whichever route got the files here, the shard does not
-        # start until everything the fold names is on disk.
         if: steps.verify.outcome == 'failure'
         run: |
           python matchmaker_eval/fetch_data.py --verify \
@@ -306,12 +228,8 @@ jobs:
             --num-shards ${{ needs.plan.outputs.num_shards }}
 
       - name: Run the shard
-        # `target` is either a submission directory or `--method X --input-type Y`
-        # for a built-in reference, so it is deliberately unquoted.
-        #
-        # One BLAS thread, matching evaluate-references.yml: a runner's core
-        # count would otherwise move the timing columns between one entry and
-        # the next, and those columns are compared across entries.
+        # `target` may hold several arguments, so it is unquoted.
+        # One BLAS thread keeps the timing columns comparable across runners.
         env:
           OMP_NUM_THREADS: "1"
           OPENBLAS_NUM_THREADS: "1"
@@ -338,26 +256,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Catch up with anything committed while this run was queued or evaluating
-        # actions/checkout pins to the commit that existed when this run was
-        # dispatched, not now. The `evaluate` concurrency group serializes the
-        # actual pushes, but a run can still sit queued -- or just take a long
-        # time evaluating -- behind another one that lands a commit in the
-        # meantime (evaluate-references.yml shares this group). leaderboard.py
-        # rewrites the whole file rather than appending, so building on a
-        # stale base produces a real content conflict at push time instead of
-        # a clean fast-forward.
-        run: git pull
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install what the merge needs
-        # Merging only recomputes the pooled summary from the shards' alignment
-        # paths, so it needs numpy and the eval helpers, not matchmaker itself.
         run: |
-          pip install --quiet "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.4.0"
+          pip install --quiet "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.5.0"
           pip install --quiet pyyaml pydantic-settings
 
       - uses: actions/download-artifact@v4
@@ -366,26 +271,24 @@ jobs:
           path: results/refshards
 
       - name: Merge each submission
-        # One run can bring shards for several new or changed submissions;
-        # this regroups them by entry (see refshard-<entry>-<shard> above) and
-        # merges each separately. An entry missing shards stays partial and
-        # off the leaderboard rather than being merged into a bad record.
-        run: python matchmaker_eval/merge_references.py results/refshards
+        run: python matchmaker_eval/merge_references.py results/refshards --output "results/ci/$FOLD"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ env.FOLD }}
+          path: results/ci/${{ env.FOLD }}
+          retention-days: 30
+
+      - name: Stage the results for the preview
+        run: cp -a "results/ci/$FOLD/." results/submissions/
 
       - name: Export the per-piece detail
-        # Dataset breakdowns, per-piece rows and the decimated alignment paths
-        # the leaderboard page plots. Written per entry and loaded on demand.
         run: python matchmaker_eval/export_details.py
 
       - name: Rebuild the leaderboard
         run: python matchmaker_eval/leaderboard.py
 
       - name: Assemble the site for review
-        # `submissions` does not publish (see pages.yml), so the only way to
-        # see what this run did to the leaderboard would otherwise be to read
-        # JSON. This uploads the real page as an artifact: download it,
-        # `python -m http.server` inside it, and you are looking at what
-        # merging `submissions` into `main` would publish.
         run: python matchmaker_eval/build_site.py _site
 
       - uses: actions/upload-artifact@v4
@@ -393,18 +296,3 @@ jobs:
           name: leaderboard-site
           path: _site
           retention-days: 14
-
-      - name: Commit the results
-        run: |
-          git config user.name "matchmaker-benchmark[bot]"
-          git config user.email "actions@github.com"
-          git add results/
-          if git diff --cached --quiet; then
-            echo "Leaderboard unchanged."
-            exit 0
-          fi
-          git commit -m "benchmark: evaluate ${{ needs.plan.outputs.entries }} on the ${{ env.FOLD }} fold
-
-          Run ${{ github.run_id }}, ${{ needs.plan.outputs.num_shards }} shards each."
-          git pull --rebase --autostash
-          git push

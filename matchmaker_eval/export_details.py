@@ -38,11 +38,11 @@ import json
 import numpy as np
 from matchmaker.utils.eval import transfer_positions
 
-from matchmaker_eval.folds import LEADERBOARD_FOLD, REPO_ROOT
+from matchmaker_eval.folds import LEADERBOARD_FOLD, REPO_ROOT, RESULTS_DIR
 from matchmaker_eval.leaderboard import ACCURACY_COLUMNS, without_nan
 
-SUBMISSION_RESULTS = REPO_ROOT / "results" / "submissions"
-DETAILS_DIR = REPO_ROOT / "results" / "details"
+SUBMISSION_RESULTS = RESULTS_DIR / "submissions"
+DETAILS_DIR = RESULTS_DIR / "details"
 
 #: Points kept per polyline. A leaderboard plot is a few hundred pixels wide;
 #: beyond roughly this many points the extra coordinates are invisible.
@@ -353,7 +353,7 @@ def main():
         # evaluation it follows had already succeeded.
         print(f"No complete {args.fold}-fold runs to export.")
         return 0
-    print(f"\nwrote {written} file(s) to {DETAILS_DIR.relative_to(REPO_ROOT)}")
+    print(f"\nwrote {written} file(s) to {DETAILS_DIR}")
     return 0
 
 

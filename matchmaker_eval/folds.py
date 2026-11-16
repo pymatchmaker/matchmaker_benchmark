@@ -41,6 +41,7 @@ from typing import Iterator, List, Optional, Union
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FOLD_DIR = REPO_ROOT / "data" / "folds"
+RESULTS_DIR = Path(os.environ.get("MATCHMAKER_RESULTS_DIR", REPO_ROOT / "results"))
 
 #: Root under which the (undistributed) datasets are expected.
 DATA_ROOT = Path(os.environ.get("MATCHMAKER_DATA_DIR", "~/data")).expanduser()
