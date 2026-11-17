@@ -101,6 +101,9 @@ def merge(root: Path, output: Path) -> dict:
                 source = shard_dir / f"{prefix}_{index}.tsv"
                 if source.exists():
                     shutil.copy2(source, output / source.name)
+            meter_path = shard_dir / f"meter_{index}.json"
+            if meter_path.exists():
+                shutil.copy2(meter_path, output / meter_path.name)
         failures.extend(record.get("failures", []))
 
     pieces.sort(key=lambda p: p["index"])
