@@ -163,8 +163,25 @@ the threshold, and the piece counts as **lost** if any evaluated window fails.
 
 | Input | Threshold |
 | --- | --- |
-| audio | 1.0 beat |
-| MIDI | 0.5 beat |
+| audio | 1.0 musical beat |
+| MIDI | 0.1 musical beat |
+
+A musical beat contains three denominator-note units in compound time
+signatures (numerators 6, 9, 12, and larger multiples of three), and one in
+other meters. Simple triple meters such as 3/4 and 3/8 are not grouped.
+At every reference onset, the absolute position error is divided by the factor
+for the time signature at that reference score position **before** computing
+the window median. This uses the follower's actual unfolded score, so meter
+changes within a performance apply, even inside a single evaluation window.
+The factor follows the reference position, not a potentially incorrect estimate.
+
+Thus the native-coordinate tolerance in a compound passage is 3.0
+denominator-note beats for audio and 0.3 for MIDI. The output paths, ground
+truth, MeanAE, MedAE, standard deviations, and tolerance accuracies use
+denominator-note units; only TR uses musical beats. Each run saves a
+`meter_<index>.json` alongside its full paths so the criterion can be reproduced.
+Scores without a time signature use the parser's 4/4 default, recorded as
+`assumed_time_signature` in that file.
 
 Accuracy metrics are reported over tracked pieces only. A piece that crashes or
 times out counts as lost.
