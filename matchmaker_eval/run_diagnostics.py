@@ -14,26 +14,20 @@ import urllib.request
 from collections import defaultdict
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
 for p in (ROOT, ROOT / "matchmaker_eval"):
     sys.path.insert(0, str(p))
 
-PERTURBATION_METHODS = {
-    "audio": ["dixon", "arzt", "outerhmm", "skf"],
-    "midi": ["pthmm", "hmm", "outerhmm", "dixon", "arzt", "SLT_OLTW", "dannenberg"],
-}
+EXPERIMENTS = yaml.safe_load((ROOT / "data" / "diagnosis_methods.yaml").read_text())
 CONFIGS = {
-    **{f"perturbations-{t}-{m}": {"suite": "perturbations", "input_type": t, "method": m}
-       for t, methods in PERTURBATION_METHODS.items() for m in methods},
-    **{f"repeat_examples-audio-{m}": {"suite": "repeat_examples", "input_type": "audio", "method": m}
-       for m in ["arzt", "arzt_multi_fold", "outerhmm"]},
-    **{f"folded_batik-audio-{m}": {"suite": "folded_batik", "input_type": "audio", "method": m,
-                                   "kwargs": {"s_j": 1e-5} if m == "outerhmm" else {}}
-       for m in ["dixon", "arzt", "skf", "outerhmm", "arzt_multi_fold"]},
-    **{f"global_skip-midi-{s}": {"suite": "global_skip", "input_type": "midi", "method": "outerhmm",
-                                 "disable_global_skip": s == "off"}
-       for s in ["on", "off"]},
+    f"{suite}-{t}-{m}": {"suite": suite, "input_type": t, "method": m}
+    for suite, types in EXPERIMENTS.items()
+    for t, methods in types.items()
+    for m in methods
 }
+CONFIGS["folded_batik-audio-outerhmm"]["kwargs"] = {"s_j": 1e-5}
 
 
 def select_configs(only="", input_type="both"):
@@ -45,8 +39,15 @@ def select_configs(only="", input_type="both"):
 
 def select_cases(manifest, config, shard=0, shards=1):
     """The (index, case) pairs of one shard, round-robin over the suite's cases."""
-    cases = [c for c in manifest["cases"]
-             if c["suite"] == config["suite"] and c["input_type"] == config["input_type"]]
+    cases = []
+    for case in manifest["cases"]:
+        # K.282 replaces BWV 858 as the repetition case, for both modalities.
+        if case["id"] == "synthetic/Section_Repetition/bwv858-two_jump-m9-10_m17-27-bpm_65":
+            continue
+        if case["suite"] == "repeat_examples":
+            case = {**case, "input_type": config["input_type"]}
+        if case["suite"] == config["suite"] and case["input_type"] == config["input_type"]:
+            cases.append(case)
     return [(i, c) for i, c in enumerate(cases) if i % shards == shard]
 
 
@@ -91,9 +92,10 @@ def run_case(case, config, paths, out):
 
     input_type, method = config["input_type"], config["method"]
     performance = paths[f"{input_type}_performance"]
+    repeat = config["suite"] == "repeat_examples"
     kwargs = dict(DEFAULT_KWARGS[input_type][method])
     if input_type == "audio" and method == "outerhmm":
-        kwargs["s_j"] = 1e-100  # the diagnostics test jumps, which the default disables
+        kwargs["s_j"] = 1e-100 if repeat else 0.0
     kwargs.update(config.get("kwargs", {}))
     out.mkdir(parents=True, exist_ok=True)
 
@@ -102,8 +104,8 @@ def run_case(case, config, paths, out):
                         method=method, input_type=input_type, wait=False,
                         unfold_score=case["unfold_score"], tempo=case["tempo"], kwargs=kwargs)
         check_follower(mm.score_follower)
-        if config.get("disable_global_skip"):
-            mm.score_follower.S[:] = 0.0  # OPHMM's skip-from distribution
+        if input_type == "midi" and method == "outerhmm" and not repeat:
+            mm.score_follower.S[:] = 0.0
         for _ in mm.run(verbose=False):
             pass
         times, beats = resolve_gt(paths["match"], mm.score_part.note_array(),
@@ -144,7 +146,6 @@ def run_case(case, config, paths, out):
         "case_id": case["id"], "category": case["category"],
         "method": method, "input_type": input_type, "kwargs": kwargs,
         "unfold_score": case["unfold_score"], "tempo": case["tempo"],
-        "disable_global_skip": config.get("disable_global_skip", False),
         "tracked": bool(tracking["tracked"]), "max_deviation": float(tracking["max_deviation"]),
         "tracking_criterion": {k: tracking[k] for k in ("error_unit", "threshold", "window_duration")},
         "mean_b": float(np.nanmean(errors)), "n_events": int(valid.sum()),

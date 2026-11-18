@@ -243,6 +243,8 @@ experiment folds below only upload artifacts.
 | `offline` | audio | 8 | the offline reference in `matchmaker_eval/run_offline.py` |
 | `amt_reference` | midi | 4 | symbolic followers on frozen AMT output, `matchmaker_eval/run_amt.py` |
 
+The methods the `diagnostics` and `amt_reference` folds run are listed in
+`data/diagnosis_methods.yaml` and `data/amt_methods.yaml`.
 The experiment folds each upload one `benchmark-results-<name>` artifact with
 the merged results, full paths and `meter_<index>.json` maps.
 
@@ -252,7 +254,7 @@ every method described in `data/builtin_methods.yaml`. Both workflows pin
 `OMP_NUM_THREADS=1` so a runner's core count cannot move the timing columns
 between one entry and the next.
 
-11 described methods x 8 shards is 88 jobs, which queue against the account's
+Each method and shard is one job; the jobs queue against the account's
 concurrency limit rather than all starting at once. To evaluate a single
 reference instead, `Evaluate submissions` takes a `method` and `input_type`.
 
@@ -316,7 +318,8 @@ differ on their own.
 ### Staging a run before it is published
 
 `submissions` is where evaluation happens; a GitHub release is what is
-published.
+published. `evaluate.yml` runs from `submissions`, so fast-forward it to
+`main` after changing the pipeline.
 
 1. Review the code, then merge the submission's pull request into
    `submissions`. It is restricted to that one `submissions/<name>/`

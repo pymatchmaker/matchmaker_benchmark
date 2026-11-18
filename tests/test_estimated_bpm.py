@@ -299,3 +299,41 @@ class TestManifestShapes:
             "match/Chopin_op10_no3_p08.match,1\n"
         )
         assert list(read_metadata_rows("vienna", path))[0].estimated_bpm == ""
+
+
+def test_playthrough_midi_ophmm_disables_global_transition(tmp_path, monkeypatch):
+    import numpy as np
+    from matchmaker_eval import run_submission as rs
+    from matchmaker_eval.folds import load_fold
+
+    original = rs.Matchmaker
+    def matchmaker(**kwargs):
+        mm = original(**kwargs)
+        assert np.any(mm.score_follower.S > 0)
+        run = mm.run
+        def checked_run(**options):
+            assert np.all(mm.score_follower.S == 0)
+            return run(**options)
+        mm.run = checked_run
+        return mm
+    monkeypatch.setattr(rs, "Matchmaker", matchmaker)
+    piece = load_fold("example", input_type="midi")[0]
+    metrics = rs.run_piece("outerhmm", piece, "midi", 1, tmp_path, False)
+    assert metrics["global_transition_enabled"] is False
+
+
+def test_playthrough_audio_ophmm_disables_global_transition(tmp_path, monkeypatch):
+    import numpy as np
+    from matchmaker_eval import run_submission as rs
+    from matchmaker_eval.folds import load_fold
+
+    original = rs.Matchmaker
+    def matchmaker(**kwargs):
+        assert kwargs["kwargs"]["s_j"] == 0.0
+        mm = original(**kwargs)
+        assert np.all(mm.score_follower.S == 0)
+        return mm
+    monkeypatch.setattr(rs, "Matchmaker", matchmaker)
+    piece = load_fold("example", input_type="audio")[0]
+    metrics = rs.run_piece("outerhmm", piece, "audio", 1, tmp_path, False)
+    assert metrics["global_transition_enabled"] is False

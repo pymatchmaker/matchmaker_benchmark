@@ -148,6 +148,7 @@ jobs:
   evaluate:
     needs: plan
     if: needs.plan.outputs.count != '0'
+    # On a self-hosted runner, set BENCHMARK_RUNNER to its label and MATCHMAKER_DATA_DIR to its data copy.
     runs-on: ${{ vars.BENCHMARK_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 350
     strategy:
@@ -179,6 +180,7 @@ jobs:
           fi
 
       - name: Check out the benchmark data
+        # MATCHMAKER_DATA_TOKEN grants read access to the data repository if it is private.
         if: vars.MATCHMAKER_DATA_DIR == ''
         uses: actions/checkout@v4
         with:

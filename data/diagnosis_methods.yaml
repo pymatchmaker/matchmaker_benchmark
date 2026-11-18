@@ -1,0 +1,8 @@
+perturbations:
+  midi: [OPTM, OTM, SLT_OLTW, SL_OLTW, arzt, dannenberg, dixon, hmm, outerhmm, pfkorz, pthmm]
+  audio: [arzt, arzt_tempo, dixon, outerhmm, pfkorz, skf]
+repeat_examples:
+  midi: [OPTM, OTM, SLT_OLTW, SL_OLTW, arzt, dannenberg, dixon, hmm, outerhmm, pfkorz, pthmm]
+  audio: [arzt, arzt_multi_fold, arzt_tempo, dixon, outerhmm, pfkorz, skf]
+folded_batik:
+  audio: [arzt, arzt_multi_fold, arzt_tempo, dixon, outerhmm, pfkorz, skf]

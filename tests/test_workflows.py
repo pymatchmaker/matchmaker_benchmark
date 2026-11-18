@@ -411,3 +411,11 @@ class TestReleasedResults:
         build_site.build(tmp_path / "site")
         for name in ("index.html", "leaderboard.json"):
             assert (tmp_path / "site" / name).exists()
+
+    @pytest.mark.parametrize("status,conclusion", [("in_progress", None), ("completed", "failure"),
+                                                  ("completed", "cancelled")])
+    def test_unfinished_or_failed_run_is_not_published(self, tmp_path, monkeypatch, status, conclusion):
+        from matchmaker_eval import release_results
+        monkeypatch.setattr(release_results, "api", lambda path: {"status": status, "conclusion": conclusion})
+        with pytest.raises(ValueError, match="successful runs"):
+            release_results.publish("test/repo", "benchmark-test", ["1"], [], tmp_path)
