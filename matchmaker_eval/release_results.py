@@ -87,6 +87,8 @@ def snapshot(results, output):
 
 def publish(repo, tag, run_ids, records, destination):
     runs = [api(f"repos/{repo}/actions/runs/{run}") for run in run_ids]
+    if any(run["conclusion"] != "success" for run in runs):
+        raise ValueError("Only successful runs can be published")
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, text=True).strip()
 
     base = latest(records)

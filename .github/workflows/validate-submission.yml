@@ -52,6 +52,7 @@ jobs:
           echo "Submissions touched: ${dirs:-none}"
 
       - name: A pull request into `submissions` may touch only one submission
+        # Keeps contributor pull requests out of the pipeline, the workflows and other submissions.
         if: github.base_ref == 'submissions'
         run: |
           other=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" \
@@ -81,6 +82,7 @@ jobs:
           done
 
       - name: Validate and smoke-test
+        # Proves the follower runs; code safety and eval-fold tuning remain the reviewer's job.
         if: steps.changed.outputs.dirs != ''
         run: |
           python matchmaker_eval/validate_submission.py ${{ steps.changed.outputs.dirs }} --smoke

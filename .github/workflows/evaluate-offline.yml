@@ -19,10 +19,13 @@ jobs:
           SHARDS: ${{ inputs.shards }}
         run: |
           python - <<'PY' >> "$GITHUB_OUTPUT"
-          import json,os
-          n=int(os.environ['SHARDS'])
-          jobs=[{'fold':fold,'shard':s} for fold in ['eval','beyond_piano'] for s in range(n)]
-          print('matrix='+json.dumps(jobs));print('shards='+str(n))
+          import json
+          import os
+
+          shards = int(os.environ["SHARDS"])
+          jobs = [{"fold": fold, "shard": s} for fold in ["eval", "beyond_piano"] for s in range(shards)]
+          print("matrix=" + json.dumps(jobs))
+          print(f"shards={shards}")
           PY
   evaluate:
     needs: plan

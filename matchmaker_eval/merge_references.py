@@ -131,7 +131,7 @@ def main():
             f"{info['n_tracked']:>8}  {status}"
         )
     print(f"\n{len(report) - incomplete}/{len(report)} entry(ies) complete.")
-    return 0
+    return 1 if incomplete else 0
 
 
 if __name__ == "__main__":

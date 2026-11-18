@@ -14,15 +14,25 @@ jobs:
       matrix: ${{ steps.plan.outputs.matrix }}
       shards: ${{ steps.plan.outputs.shards }}
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - id: plan
         env:
           SHARDS: ${{ inputs.shards }}
         run: |
+          pip install --quiet pyyaml
           python - <<'PY' >> "$GITHUB_OUTPUT"
-          import json,os
-          n=int(os.environ['SHARDS'])
-          print('matrix='+json.dumps({'method':['arzt','pthmm','SLT_OLTW'],'shard':list(range(n))}))
-          print('shards='+str(n))
+          import json
+          import os
+
+          import yaml
+
+          methods = yaml.safe_load(open("data/amt_methods.yaml"))["midi"]
+          shards = int(os.environ["SHARDS"])
+          print("matrix=" + json.dumps({"method": methods, "shard": list(range(shards))}))
+          print(f"shards={shards}")
           PY
   evaluate:
     needs: plan
@@ -90,13 +100,15 @@ jobs:
           import sys
           from pathlib import Path
 
+          import yaml
+
           sys.path.insert(0, 'matchmaker_eval')
           from merge_shards import merge
           from matchmaker_eval.fetch_data import frozen_source
 
           out = Path('results/amt-reference')
           out.mkdir(parents=True, exist_ok=True)
-          for method in ['arzt', 'pthmm', 'SLT_OLTW']:
+          for method in yaml.safe_load(open('data/amt_methods.yaml'))['midi']:
               stage = Path('results/staging') / method
               for i in range(int(os.environ['SHARDS'])):
                   shutil.copytree(Path('results/shards') / f'amt-{method}-{i}', stage / str(i))

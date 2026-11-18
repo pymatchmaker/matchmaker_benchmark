@@ -10,6 +10,8 @@ import json
 import sys
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
 for p in (ROOT, ROOT / "matchmaker_eval"):
     sys.path.insert(0, str(p))
@@ -40,7 +42,8 @@ def load_cases(cache):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--method", choices=["arzt", "pthmm", "SLT_OLTW"], default="arzt")
+    methods = yaml.safe_load((ROOT / "data" / "amt_methods.yaml").read_text())["midi"]
+    parser.add_argument("--method", choices=methods, default="arzt")
     parser.add_argument("--shard", type=int, default=0)
     parser.add_argument("--num-shards", type=int, default=1)
     parser.add_argument("--output", type=Path, required=True)
