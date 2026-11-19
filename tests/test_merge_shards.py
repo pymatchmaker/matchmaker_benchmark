@@ -17,6 +17,7 @@ for _p in (REPO_ROOT, REPO_ROOT / "matchmaker_eval"):
         sys.path.insert(0, str(_p))
 
 from matchmaker_eval.leaderboard import row_from_metrics
+from matchmaker_eval import run_diagnostics
 from merge_shards import MergeError, merge
 
 
@@ -221,3 +222,19 @@ class TestTheTempoLabelSurvivesMerging:
         root = write_shards(tmp_path / "shards", [one, two])
         merged = merge(root, tmp_path / "merged")
         assert merged["n_estimated_bpm"] == 1
+
+
+class TestDiagnostics:
+    """The manuscript diagnostics run every selected case exactly once."""
+
+    def test_shards_cover_every_case_once(self):
+        manifest = {"cases": [{"id": str(i), "suite": "perturbations", "input_type": "audio"}
+                              for i in range(41)]}
+        config = {"suite": "perturbations", "input_type": "audio"}
+        shards = [run_diagnostics.select_cases(manifest, config, s, 4) for s in range(4)]
+        assert sorted(i for shard in shards for i, _ in shard) == list(range(41))
+
+    def test_selection_filters_by_method_and_input_type(self):
+        selected = run_diagnostics.select_configs("dixon", "midi")
+        assert selected
+        assert all(c["method"] == "dixon" and c["input_type"] == "midi" for c in selected.values())

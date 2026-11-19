@@ -187,7 +187,7 @@ class TestReferencesWorkflow:
     REFERENCES = WORKFLOWS / "evaluate-references.yml"
 
     def test_it_shares_the_leaderboard_concurrency_group(self):
-        """Two workflows committing results/ at once would race."""
+        """The two evaluation workflows run one at a time."""
         mine = load_workflow(self.REFERENCES)["concurrency"]["group"]
         theirs = load_workflow(EVALUATE)["concurrency"]["group"]
         assert mine == theirs
@@ -331,11 +331,7 @@ class TestValidateWorkflow:
 
 
 class TestRunProvenance:
-    """A published row should say which matchmaker produced it.
-
-    The version string is "0.3.0" on every branch, so while the workflows
-    install from a feature branch it cannot distinguish one run from another.
-    """
+    """A published row should say which matchmaker produced it."""
 
     def test_the_environment_records_the_benchmark_commit(self):
         import sys as _sys
@@ -381,3 +377,45 @@ class TestRunProvenance:
             "importlib.metadata.distribution", lambda name: NoDirectUrl()
         )
         assert R._matchmaker_source() == {}
+
+class TestReleasedResults:
+    """A release replaces the entries it brings and keeps a site-ready snapshot."""
+
+    def test_a_staged_entry_replaces_only_itself(self, tmp_path):
+        from matchmaker_eval.release_results import stage_piano
+
+        source = tmp_path / "source" / "method-midi"
+        source.mkdir(parents=True)
+        (source / "metrics.json").write_text("new")
+        published = tmp_path / "published" / "submissions"
+        for name in ("method-midi", "other-midi"):
+            (published / name).mkdir(parents=True)
+            (published / name / "metrics.json").write_text("previous")
+
+        assert stage_piano(source.parent, tmp_path / "published") == ["method-midi"]
+        assert (published / "method-midi" / "metrics.json").read_text() == "new"
+        assert (published / "other-midi" / "metrics.json").read_text() == "previous"
+
+    def test_the_site_builds_from_a_snapshot(self, tmp_path, monkeypatch):
+        import build_site
+        from matchmaker_eval.release_results import extract, snapshot
+
+        results = tmp_path / "results"
+        (results / "submissions" / "method-midi").mkdir(parents=True)
+        (results / "submissions" / "method-midi" / "metrics.json").write_text("{}")
+        (results / "leaderboard.json").write_text('{"entries": []}')
+        snapshot(results, tmp_path / "snapshot.zip")
+        extract(tmp_path / "snapshot.zip", tmp_path / "restored")
+
+        monkeypatch.setattr(build_site, "RESULTS_DIR", tmp_path / "restored")
+        build_site.build(tmp_path / "site")
+        for name in ("index.html", "leaderboard.json"):
+            assert (tmp_path / "site" / name).exists()
+
+    @pytest.mark.parametrize("status,conclusion", [("in_progress", None), ("completed", "failure"),
+                                                  ("completed", "cancelled")])
+    def test_unfinished_or_failed_run_is_not_published(self, tmp_path, monkeypatch, status, conclusion):
+        from matchmaker_eval import release_results
+        monkeypatch.setattr(release_results, "api", lambda path: {"status": status, "conclusion": conclusion})
+        with pytest.raises(ValueError, match="successful runs"):
+            release_results.publish("test/repo", "benchmark-test", ["1"], [], tmp_path)

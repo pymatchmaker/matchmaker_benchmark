@@ -52,6 +52,7 @@ from verify_tracking import (
 )
 
 from matchmaker import Matchmaker
+from matchmaker.matchmaker import DEFAULT_KWARGS
 from matchmaker.base import OnlineAlignment
 
 from matchmaker_eval.fetch_data import FetchError, fetch_for_pieces, load_config
@@ -233,6 +234,9 @@ def run_piece(
     then visible rather than assumed.
     """
     tempo = piece.performance_tempo if estimated_bpm else None
+    kwargs = None
+    if method == "outerhmm" and input_type == "audio":
+        kwargs = {**DEFAULT_KWARGS["audio"][method], "s_j": 0.0}
 
     mm = Matchmaker(
         score_file=str(piece.score_path),
@@ -242,8 +246,11 @@ def run_piece(
         wait=False,
         unfold_score=True,
         tempo=tempo,
+        kwargs=kwargs,
     )
     check_follower(mm.score_follower)
+    if method == "outerhmm" and mm.input_type == "midi":
+        mm.score_follower.S[:] = 0.0  # play-through evaluation uses local transitions
     list(mm.run(verbose=False))
 
     wp = mm.score_follower.alignment_path
@@ -305,6 +312,8 @@ def run_piece(
     # entry never asked and when it asked and the fold had none — the run
     # summary separates the two, since only the second is worth reporting.
     metrics["used_estimated_bpm"] = tempo is not None
+    if method == "outerhmm":
+        metrics["global_transition_enabled"] = False
 
     with open(run_dir / f"{index}.json", "w") as f:
         json.dump(metrics, f, indent=4, default=float)

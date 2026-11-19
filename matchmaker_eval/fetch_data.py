@@ -113,10 +113,18 @@ def load_config() -> dict:
         value = os.environ.get(variable)
         if value:
             config[key] = value
+            if key == "branch":
+                config["branches"] = {}
             # An override of the address implies fetching is wanted, even if the
             # committed config still has it switched off.
             config["enabled"] = True
     return config
+
+
+def frozen_source(name: str) -> dict:
+    config = load_config()
+    return {"repository": f"{config['owner']}/{config['repo']}",
+            **config["frozen_sources"][name]}
 
 
 #: Prefixes GitHub uses for access tokens. If one of these turns up where an

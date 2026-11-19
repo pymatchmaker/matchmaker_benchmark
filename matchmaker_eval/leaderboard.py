@@ -46,12 +46,11 @@ from datetime import datetime, timezone
 
 from matchmaker.utils.eval import TOLERANCES_IN_BEATS
 
-from matchmaker_eval.folds import LEADERBOARD_FOLD, REPO_ROOT
+from matchmaker_eval.folds import LEADERBOARD_FOLD, REPO_ROOT, RESULTS_DIR
 from matchmaker_eval.provenance import SHARED_COMPONENTS
 from matchmaker_eval.retract import read_retractions
 from matchmaker_eval.submission import read_descriptions
 
-RESULTS_DIR = REPO_ROOT / "results"
 SUBMISSION_RESULTS = RESULTS_DIR / "submissions"
 LEADERBOARD_JSON = RESULTS_DIR / "leaderboard.json"
 LEADERBOARD_CSV = RESULTS_DIR / "leaderboard.csv"
@@ -587,7 +586,7 @@ def main():
 
     written = write(leaderboard)
     print(render_table(leaderboard))
-    print(f"\nwrote {', '.join(written)} to {RESULTS_DIR.relative_to(REPO_ROOT)}")
+    print(f"\nwrote {', '.join(written)} to {RESULTS_DIR}")
     return 0
 
 
