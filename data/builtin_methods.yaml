@@ -45,7 +45,8 @@ midi:
     bib: Nakamura2014Outer
     description: >
       Outer-product HMM score follower, factorising the state space over score
-      position and tempo.
+      position and tempo. Global transitions (repeats and skips) are turned off
+      here, unlike matchmaker's default.
   arzt:
     name: OLTW (Arzt)
     authors: ["Arzt et al. (2008)"]
