@@ -1,5 +1,4 @@
 # Publish selected runs as a release and deploy the leaderboard from its snapshot.
-# Every published release is also served under v/<tag>/ (version menu).
 name: Publish leaderboard
 
 on:
@@ -8,15 +7,14 @@ on:
     paths:
       - "docs/**"
       - ".github/workflows/pages.yml"
-      - "data/full_versions.yaml"
   workflow_dispatch:
     inputs:
       source_runs:
-        description: "Completed CI run IDs, separated by spaces; later runs replace entries (empty = republish)"
+        description: "Completed CI run IDs, separated by spaces; later runs replace entries (empty = redeploy the latest release)"
         required: false
         default: ""
       release_tag:
-        description: "New benchmark-* tag when releasing; otherwise existing tag or empty for latest"
+        description: "New release tag vX.Y.Z (needed with source_runs)"
         required: false
         default: ""
 
@@ -64,9 +62,6 @@ jobs:
 
       - name: Assemble the site
         if: steps.results.outputs.ready == 'true'
-        # Every published release is also kept under v/<tag>/, so a cited
-        # version stays viewable; data/full_versions.yaml decides which keep
-        # their per-piece views.
         run: python matchmaker_eval/build_site.py _site --versions "$RUNNER_TEMP/benchmark-versions"
 
       - uses: actions/configure-pages@v5

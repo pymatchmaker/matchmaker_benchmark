@@ -2,20 +2,15 @@
 
     python matchmaker_eval/build_site.py _site      # what Pages publishes
     python matchmaker_eval/build_site.py --serve    # ...and open it locally
-    python matchmaker_eval/build_site.py _site --versions DIR   # plus v/<tag>/
+    python matchmaker_eval/build_site.py _site --versions DIR   # plus versions/<tag>/
 
 The site is ``docs/`` plus what the page reads and links to: the leaderboard
 JSON and CSV, the same pair per dataset, and the per-entry detail files. Both
 the publish workflow and the staging preview call this, so what you look at
 before merging is assembled by the same code as what goes live.
 
-With ``--versions``, every published result release found in DIR (as written
-by ``release_results.py --versions-dir``) is also assembled under
-``v/<tag>/``, and ``versions.json`` lists them for the page's version menu.
-``data/full_versions.yaml`` decides which versions keep their per-piece views
-(the newest few and any cited version); the others show their tables only.
-Each version uses the current page with that release's data, so a link such
-as ``v/benchmark-v1/`` keeps showing the numbers a paper cites.
+With ``--versions``, every published release is also assembled under
+``versions/<tag>/`` (see docs/maintaining.md, "Older result versions").
 
 The page also reads ``../results/`` when it is served from a checkout, so
 ``--serve`` from the repository root works without assembling anything; the
@@ -33,21 +28,20 @@ for _path in (_REPO_ROOT, _REPO_ROOT / "matchmaker_eval"):
 
 import argparse
 import json
-import re
 import shutil
 
 from matchmaker_eval.folds import REPO_ROOT, RESULTS_DIR
 
 DOCS_DIR = REPO_ROOT / "docs"
-FULL_VERSIONS = REPO_ROOT / "data" / "full_versions.yaml"
+
+#: Releases that keep their per-piece views under versions/: the newest few,
+#: plus any pinned ones, such as the release our paper cites.
+NEWEST_FULL_VERSIONS = 3
+PINNED_FULL_VERSIONS = ("v1.0.0",)
 
 
 class SiteError(Exception):
     """Raised when the site cannot be assembled."""
-
-
-#: A published result tag, as release_results.py creates them.
-VERSION_TAG = re.compile(r"benchmark-[A-Za-z0-9][A-Za-z0-9._-]*")
 
 
 def build(destination: Path, results_dir: Path = None, details: bool = True) -> dict:
@@ -100,53 +94,19 @@ def build(destination: Path, results_dir: Path = None, details: bool = True) -> 
     return summary
 
 
-def full_version_rule(path: Path = None) -> dict:
-    """Read data/full_versions.yaml: how many newest versions, and which tags,
-    keep their per-piece views on the site."""
-    import yaml
+def add_versions(destination: Path, versions_dir: Path) -> list:
+    """Assemble each release in ``versions_dir/versions.json`` under ``versions/<tag>/``.
 
-    path = Path(path or FULL_VERSIONS)
-    config = (yaml.safe_load(path.read_text()) if path.is_file() else None) or {}
-    newest = config.get("newest", 3)
-    keep = config.get("keep") or []
-    if not isinstance(newest, int) or newest < 1:
-        raise SiteError(f"{path}: 'newest' must be a positive whole number")
-    if not isinstance(keep, list) or not all(isinstance(t, str) for t in keep):
-        raise SiteError(f"{path}: 'keep' must be a list of release tags")
-    return {"newest": newest, "keep": keep}
-
-
-def add_versions(destination: Path, versions_dir: Path, rule: dict = None) -> list:
-    """Assemble every downloaded release under ``destination/v/<tag>/``.
-
-    ``versions_dir/versions.json`` (newest first) decides what is listed; a
-    release whose snapshot is missing is left out rather than linked broken.
-    The newest versions and those kept by name (``full_version_rule``) are
-    assembled in full, the rest without per-piece views. Returns the listed
-    versions, also written to ``destination/versions.json``.
+    The newest ``NEWEST_FULL_VERSIONS`` and the ``PINNED_FULL_VERSIONS`` keep
+    their per-piece views; the others keep their tables only. The list is also written to ``versions.json``.
     """
     destination, versions_dir = Path(destination), Path(versions_dir)
-    rule = rule or full_version_rule()
-    index = versions_dir / "versions.json"
-    if not index.is_file():
-        raise SiteError(f"{index} is missing — run release_results.py --versions-dir first.")
-    listed = []
-    for version in json.loads(index.read_text()).get("versions", []):
-        tag = version.get("tag", "")
-        if not VERSION_TAG.fullmatch(tag) or not (versions_dir / tag / "leaderboard.json").is_file():
-            continue
-        full = len(listed) < rule["newest"] or tag in rule["keep"]
-        summary = build(destination / "v" / tag, versions_dir / tag, details=full)
-        if "release.json" in summary["missing"]:
-            raise SiteError(f"release {tag} has no release.json")
-        listed.append({**{key: version.get(key) for key in ("tag", "published_at", "url", "evaluation_keys")},
-                       "full": full})
-    missing = [tag for tag in rule["keep"] if tag not in {v["tag"] for v in listed}]
-    for tag in missing:
-        # Expected until that version is published (e.g. the paper's release).
-        print(f"::warning::{tag} is kept in full by data/full_versions.yaml but is not published yet")
-    (destination / "versions.json").write_text(
-        json.dumps({"versions": listed}, indent=2) + "\n")
+    listed = json.loads((versions_dir / "versions.json").read_text())["versions"]
+    for index, version in enumerate(listed):
+        version["full"] = index < NEWEST_FULL_VERSIONS or version["tag"] in PINNED_FULL_VERSIONS
+        build(destination / "versions" / version["tag"], versions_dir / version["tag"],
+              details=version["full"])
+    (destination / "versions.json").write_text(json.dumps({"versions": listed}, indent=2) + "\n")
     return listed
 
 
@@ -191,7 +151,7 @@ def main():
         type=Path,
         default=None,
         help="folder of downloaded releases (release_results.py --versions-dir); "
-             "each is added under v/<tag>/",
+             "each is added under versions/<tag>/",
     )
     args = parser.parse_args()
 
@@ -209,7 +169,7 @@ def main():
         f"{summary['archives']} archived key(s)"
     )
     if args.versions:
-        print(f"  {len(versions)} published version(s) under v/: "
+        print(f"  {len(versions)} published version(s) under versions/: "
               + (", ".join(v["tag"] + ("" if v["full"] else " (tables only)") for v in versions)
                  or "none"))
     for name in summary["missing"]:

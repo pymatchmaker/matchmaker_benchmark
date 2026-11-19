@@ -1526,12 +1526,11 @@ async function loadBoard() {
   return null;
 }
 
-// Published result versions. Pages serves the latest release at the root and
-// every release under v/<tag>/ (build_site.py --versions); versions.json at
-// the root lists them, newest first. Without it (a local checkout) the menu
-// stays hidden.
-const VERSION_PATH = location.pathname.match(/\/v\/(benchmark-[A-Za-z0-9][A-Za-z0-9._-]*)\/(?:index\.html)?$/);
-const SITE_ROOT = VERSION_PATH ? "../../" : "./";
+// Published result versions: the latest release at the root, every release
+// under versions/<tag>/, listed newest first in versions.json at the root.
+// Without that file (a local checkout) the menu stays hidden.
+const IN_VERSION = /\/versions\/v\d+\.\d+\.\d+\/(?:index\.html)?$/.test(location.pathname);
+const SITE_ROOT = IN_VERSION ? "../../" : "./";
 
 async function fetchJson(url) {
   try {
@@ -1540,7 +1539,7 @@ async function fetchJson(url) {
   } catch (error) { return null; }
 }
 
-// Set to this version's release URL when the site has its tables only.
+// This version's release URL when it is shown with its tables only.
 let tablesOnly = null;
 
 async function showVersions() {
@@ -1548,39 +1547,31 @@ async function showVersions() {
     fetchJson(SITE_ROOT + "versions.json"), fetchJson("./release.json"),
   ]);
   const versions = (index && index.versions) || [];
-  const shown = release && release.tag;
-  if (!shown || !versions.length) return;
-  if (!versions.some((v) => v.tag === shown)) versions.unshift({ tag: shown });
-  const newest = versions[0].tag;
-  const date = (v) => (v.published_at || "").slice(0, 10);
+  const current = release && versions.find((v) => v.tag === release.tag);
+  if (!current) return;
+  const newest = versions[0];
+  const date = (v) => v.published_at.slice(0, 10);
   const select = el("version-select");
   select.innerHTML = versions.map((v) => `<option value="${escapeHtml(v.tag)}"
-      ${v.tag === shown ? "selected" : ""}>${escapeHtml(v.tag)}${date(v) ? " · " + escapeHtml(date(v)) : ""}${v.tag === newest ? " (latest)" : ""}</option>`).join("");
+      ${v === current ? "selected" : ""}>${escapeHtml(v.tag)} · ${escapeHtml(date(v))}${v === newest ? " (latest)" : ""}</option>`).join("");
   select.addEventListener("change", () => {
-    // The newest version lives at the root; every version, newest included,
-    // also has a permanent address under v/<tag>/.
-    location.href = SITE_ROOT + (select.value === newest ? "" : `v/${encodeURIComponent(select.value)}/`);
+    location.href = SITE_ROOT + (select.value === newest.tag ? "" : `versions/${select.value}/`);
   });
-  const current = versions.find((v) => v.tag === shown);
-  const link = el("version-release");
-  link.href = (current && current.url)
-    || `https://github.com/pymatchmaker/matchmaker_benchmark/releases/tag/${encodeURIComponent(shown)}`;
-  // Older versions may be published with their tables only (full_versions.yaml).
-  if (VERSION_PATH && current && current.full === false) tablesOnly = link.href;
+  el("version-release").href = current.url;
+  if (!current.full) tablesOnly = current.url;
   el("versions").hidden = false;
 
   const note = el("version-note");
-  if (shown !== newest) {
-    note.innerHTML = `You are viewing <b>${escapeHtml(shown)}</b>${current && date(current) ? `, published ${escapeHtml(date(current))}` : ""}.
-      Newer results exist: <a href="${SITE_ROOT}">see the latest version (${escapeHtml(newest)})</a>.${
+  if (current !== newest) {
+    note.innerHTML = `You are viewing <b>${escapeHtml(current.tag)}</b>, published ${escapeHtml(date(current))}.
+      Newer results exist: <a href="${SITE_ROOT}">see the latest version (${escapeHtml(newest.tag)})</a>.${
       tablesOnly ? " Per-piece plots for this version are in its release files." : ""}`;
-    note.hidden = false;
   } else {
-    const permanent = new URL(`v/${encodeURIComponent(shown)}/`, new URL(SITE_ROOT, location.href)).href;
+    const permanent = new URL(`versions/${current.tag}/`, new URL(SITE_ROOT, location.href)).href;
     note.innerHTML = `To cite these exact numbers, link this version: <a href="${escapeHtml(permanent)}">${escapeHtml(permanent)}</a>`;
-    note.hidden = false;
     note.style.borderLeftColor = "var(--accent)";
   }
+  note.hidden = false;
 }
 showVersions();
 

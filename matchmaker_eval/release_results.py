@@ -20,6 +20,9 @@ from matchmaker_eval.folds import REPO_ROOT, RESULTS_DIR
 
 SNAPSHOT = "benchmark-snapshot.zip"
 
+#: Result release tags, vMAJOR.MINOR.PATCH (see docs/maintaining.md).
+TAG = re.compile(r"v\d+\.\d+\.\d+")
+
 
 def gh(*args):
     return subprocess.check_output(["gh", *args], text=True).strip()
@@ -36,7 +39,7 @@ def releases(repo):
 
 def published(records):
     """Published result releases with a website snapshot, newest first."""
-    candidates = [r for r in records if r["tag_name"].startswith("benchmark-")
+    candidates = [r for r in records if TAG.fullmatch(r["tag_name"])
                   and not r["draft"] and not r["prerelease"]
                   and any(a["name"] == SNAPSHOT for a in r["assets"])]
     return sorted(candidates, key=lambda r: r["published_at"], reverse=True)
@@ -86,6 +89,8 @@ def snapshot(results, output):
 
 
 def publish(repo, tag, run_ids, records, destination):
+    if not TAG.fullmatch(tag):
+        raise ValueError(f"Release tag must look like v1.0.0, not {tag!r}")
     runs = [api(f"repos/{repo}/actions/runs/{run}") for run in run_ids]
     if any(run["conclusion"] != "success" for run in runs):
         raise ValueError("Only successful runs can be published")
@@ -157,8 +162,6 @@ def fetch_versions(repo, records, destination):
     versions = []
     for release in published(records):
         tag = release["tag_name"]
-        if not re.fullmatch(r"benchmark-[A-Za-z0-9][A-Za-z0-9._-]*", tag):
-            continue
         fetch(repo, release, destination / tag)
         manifest = json.loads((destination / tag / "release.json").read_text())
         versions.append({"tag": tag, "published_at": release["published_at"],
@@ -181,10 +184,10 @@ def main():
     if args.source_runs:
         tag = publish(args.repo, args.tag, args.source_runs.split(), records, RESULTS_DIR)
     else:
+        # Without new runs, redeploy the latest release; older ones stay at versions/<tag>/.
         if args.tag:
-            release = next(r for r in records if r["tag_name"] == args.tag)
-        else:
-            release = latest(records)
+            parser.error("--tag needs --source-runs; an older release is served at versions/<tag>/")
+        release = latest(records)
         tag = release["tag_name"] if release else ""
         if release:
             fetch(args.repo, release, RESULTS_DIR)

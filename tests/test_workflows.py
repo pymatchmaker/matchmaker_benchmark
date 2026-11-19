@@ -149,92 +149,57 @@ class TestSiteAssembly:
         assert (site / "leaderboard.json").exists()
         assert summary["details"] >= 0
 
+    @staticmethod
+    def _downloaded_versions(root, tags):
+        """Release snapshots as release_results.py --versions-dir leaves them."""
+        import json
+
+        for tag in tags:
+            (root / tag / "details").mkdir(parents=True)
+            (root / tag / "details" / "m-midi.json").write_text("{}")
+            (root / tag / "leaderboard.json").write_text(json.dumps({"tag": tag}))
+            (root / tag / "release.json").write_text(json.dumps({"tag": tag}))
+        (root / "versions.json").write_text(json.dumps({"versions": [
+            {"tag": tag, "published_at": "2026-12-01T00:00:00Z", "url": f"u/{tag}"}
+            for tag in tags]}))
+
     def test_every_published_version_gets_its_own_path(self, tmp_path):
         """A cited release stays viewable after newer results are published."""
         import json
         import build_site
 
-        versions = tmp_path / "versions"
-        for tag, generated in (("benchmark-v2", "new"), ("benchmark-v1", "old")):
-            (versions / tag / "details").mkdir(parents=True)
-            (versions / tag / "leaderboard.json").write_text(json.dumps({"generated": generated}))
-            (versions / tag / "release.json").write_text(json.dumps({"tag": tag}))
-        (versions / "benchmark-v0").mkdir()  # listed, but its snapshot is missing
-        (versions / "versions.json").write_text(json.dumps({"versions": [
-            {"tag": "benchmark-v2", "published_at": "2026-12-01T00:00:00Z", "url": "u2"},
-            {"tag": "benchmark-v1", "published_at": "2026-11-20T00:00:00Z", "url": "u1"},
-            {"tag": "benchmark-v0"},
-            {"tag": "../escape"},
-        ]}))
+        self._downloaded_versions(tmp_path / "versions", ["v1.1.0", "v1.0.0"])
         site = tmp_path / "site"
         build_site.build(site)
-        listed = build_site.add_versions(site, versions, {"newest": 3, "keep": []})
+        listed = build_site.add_versions(site, tmp_path / "versions")
 
-        assert [v["tag"] for v in listed] == ["benchmark-v2", "benchmark-v1"]
-        assert all(v["full"] for v in listed)
+        assert [v["tag"] for v in listed] == ["v1.1.0", "v1.0.0"]
         assert json.loads((site / "versions.json").read_text())["versions"] == listed
-        for tag, generated in (("benchmark-v2", "new"), ("benchmark-v1", "old")):
-            assert (site / "v" / tag / "index.html").exists()
-            assert json.loads((site / "v" / tag / "leaderboard.json").read_text()) == {"generated": generated}
-        assert not (site / "v" / "benchmark-v0").exists()
-        # The root site is left as built from the current results.
-        assert (site / "leaderboard.json").exists()
+        for tag in ("v1.1.0", "v1.0.0"):
+            assert (site / "versions" / tag / "index.html").exists()
+            assert json.loads((site / "versions" / tag / "leaderboard.json").read_text()) == {"tag": tag}
+        assert (site / "leaderboard.json").exists()  # the root keeps the current results
 
-    def test_only_the_newest_and_kept_versions_keep_per_piece_views(self, tmp_path, capsys):
-        """Older versions shrink to their tables, so the site stays under the
-        Pages size limit, while a version a paper cites is never trimmed."""
-        import json
+    def test_only_the_newest_and_pinned_versions_keep_per_piece_views(self, tmp_path, monkeypatch):
+        """Older versions shrink to their tables, keeping the site under the Pages
+        limit, while a pinned version (e.g. the one a paper cites) stays complete."""
         import build_site
 
-        versions = tmp_path / "versions"
-        tags = [f"benchmark-v{n}" for n in (5, 4, 3, 2, 1)]  # newest first
-        for tag in tags:
-            (versions / tag / "details").mkdir(parents=True)
-            (versions / tag / "details" / "m-midi.json").write_text("{}")
-            (versions / tag / "leaderboard.json").write_text("{}")
-            (versions / tag / "release.json").write_text(json.dumps({"tag": tag}))
-        (versions / "versions.json").write_text(json.dumps(
-            {"versions": [{"tag": tag} for tag in tags]}))
+        monkeypatch.setattr(build_site, "NEWEST_FULL_VERSIONS", 2)
+        monkeypatch.setattr(build_site, "PINNED_FULL_VERSIONS", ("v1.0.0",))
+        tags = ["v3.0.0", "v2.1.0", "v2.0.0", "v1.0.0"]  # newest first
+        self._downloaded_versions(tmp_path / "versions", tags)
         site = tmp_path / "site"
         build_site.build(site)
-        rule = {"newest": 2, "keep": ["benchmark-v1", "benchmark-v9"]}
-        listed = build_site.add_versions(site, versions, rule)
+        listed = build_site.add_versions(site, tmp_path / "versions")
 
-        full = {v["tag"]: v["full"] for v in listed}
-        assert full == {"benchmark-v5": True, "benchmark-v4": True, "benchmark-v3": False,
-                        "benchmark-v2": False, "benchmark-v1": True}
-        for tag, kept in full.items():
-            assert (site / "v" / tag / "details" / "m-midi.json").exists() is kept
-            assert (site / "v" / tag / "leaderboard.json").exists()
-        # A kept tag that is not published yet is a reminder, not an error.
-        assert "benchmark-v9 is kept in full" in capsys.readouterr().out
+        assert [v["full"] for v in listed] == [True, True, False, True]
+        for version in listed:
+            folder = site / "versions" / version["tag"]
+            assert (folder / "details" / "m-midi.json").exists() is version["full"]
+            assert (folder / "leaderboard.json").exists()
 
-    def test_the_committed_full_version_rule_is_valid(self):
-        import build_site
-
-        rule = build_site.full_version_rule()
-        assert rule["newest"] >= 1
-        assert all(build_site.VERSION_TAG.fullmatch(tag) for tag in rule["keep"])
-
-    def test_a_malformed_full_version_rule_is_refused(self, tmp_path):
-        import build_site
-
-        path = tmp_path / "full_versions.yaml"
-        path.write_text("newest: 0\n")
-        with pytest.raises(build_site.SiteError, match="newest"):
-            build_site.full_version_rule(path)
-        path.write_text("keep: benchmark-v1\n")
-        with pytest.raises(build_site.SiteError, match="keep"):
-            build_site.full_version_rule(path)
-
-    def test_versions_need_the_downloaded_index(self, tmp_path):
-        import build_site
-
-        build_site.build(tmp_path / "site")
-        with pytest.raises(build_site.SiteError, match="versions.json is missing"):
-            build_site.add_versions(tmp_path / "site", tmp_path / "nothing")
-
-    def test_release_versions_are_downloaded_newest_first(self, tmp_path, monkeypatch):
+    def test_release_versions_are_filtered_and_newest_first(self, tmp_path, monkeypatch):
         import json
         from matchmaker_eval import release_results as R
 
@@ -244,36 +209,26 @@ class TestSiteAssembly:
                     "assets": [{"name": R.SNAPSHOT}] if snapshot else []}
 
         records = [
-            release("benchmark-v1", "2026-11-20T00:00:00Z"),
-            release("benchmark-v2", "2026-12-01T00:00:00Z"),
-            release("benchmark-v3", "2026-12-05T00:00:00Z", draft=True),
-            release("benchmark-v4", "2026-12-06T00:00:00Z", snapshot=False),
-            release("v0.4.0", "2026-10-27T00:00:00Z"),
+            release("v1.0.0", "2026-11-20T00:00:00Z"),
+            release("v1.1.0", "2026-12-01T00:00:00Z"),
+            release("v1.2.0", "2026-12-05T00:00:00Z", draft=True),
+            release("v1.3.0", "2026-12-06T00:00:00Z", snapshot=False),
+            release("benchmark-v9", "2026-12-07T00:00:00Z"),
         ]
         fetched = []
 
         def fake_fetch(repo, rel, destination):
             fetched.append(rel["tag_name"])
             destination.mkdir(parents=True)
-            (destination / "release.json").write_text(json.dumps(
-                {"evaluation_keys": {"midi": "ek2-" + rel["tag_name"][-2:]}}))
+            (destination / "release.json").write_text(json.dumps({"evaluation_keys": {}}))
 
         monkeypatch.setattr(R, "fetch", fake_fetch)
         versions = R.fetch_versions("owner/repo", records, tmp_path / "versions")
 
-        assert fetched == ["benchmark-v2", "benchmark-v1"]
-        assert [v["tag"] for v in versions] == ["benchmark-v2", "benchmark-v1"]
-        assert versions[0]["url"] == "https://example/benchmark-v2"
-        assert versions[0]["evaluation_keys"] == {"midi": "ek2-v2"}
-        on_disk = json.loads((tmp_path / "versions" / "versions.json").read_text())
-        assert on_disk["versions"] == versions
-        assert R.latest(records)["tag_name"] == "benchmark-v2"
-
-    def test_the_publish_workflow_builds_the_version_paths(self):
-        pages = (WORKFLOWS / "pages.yml").read_text()
-        assert '--versions-dir "$RUNNER_TEMP/benchmark-versions"' in pages
-        assert 'build_site.py _site --versions "$RUNNER_TEMP/benchmark-versions"' in pages
-        assert "data/full_versions.yaml" in pages  # editing the rule redeploys
+        assert fetched == ["v1.1.0", "v1.0.0"]
+        assert [v["tag"] for v in versions] == ["v1.1.0", "v1.0.0"]
+        assert versions[0]["url"] == "https://example/v1.1.0"
+        assert R.latest(records)["tag_name"] == "v1.1.0"
 
     def test_it_refuses_to_build_without_a_leaderboard(self, tmp_path, monkeypatch):
         import build_site
@@ -544,4 +499,4 @@ class TestReleasedResults:
         from matchmaker_eval import release_results
         monkeypatch.setattr(release_results, "api", lambda path: {"status": status, "conclusion": conclusion})
         with pytest.raises(ValueError, match="successful runs"):
-            release_results.publish("test/repo", "benchmark-test", ["1"], [], tmp_path)
+            release_results.publish("test/repo", "v1.0.0", ["1"], [], tmp_path)
