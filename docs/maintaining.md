@@ -337,8 +337,8 @@ published. `evaluate.yml` runs from `submissions`, so fast-forward it to
    - `source_runs`: the completed run IDs, separated by spaces. Later listed
      runs replace earlier entries for the same method. Entries not listed are
      carried over from the latest release.
-   - `release_tag`: a new `benchmark-*` tag. Leave `source_runs` empty to
-     redeploy that release, or both empty to redeploy the latest one.
+   - `release_tag`: a new version `vMAJOR.MINOR.PATCH` (see "Older result
+     versions" below). Leave both empty to redeploy the latest release.
 
    The workflow attaches the selected artifacts and a `benchmark-snapshot.zip`
    for the site to the release, then deploys it. Actions artifacts
@@ -491,6 +491,28 @@ somewhere else.
 `.github/workflows/pages.yml` builds the site from `docs/` plus the leaderboard
 files, CSVs and details of a release snapshot, and deploys it to GitHub Pages.
 Documentation changes redeploy the latest release.
+
+### Older result versions
+
+Result releases are numbered `vMAJOR.MINOR.PATCH`:
+
+- **major**: a new evaluation key, e.g. changed scoring, data or matchmaker version
+- **minor**: new entries under the same key
+- **patch**: a fix to already published entries
+
+Every deployment serves the latest release at the root and every release at
+`versions/<tag>/`, e.g.
+`https://pymatchmaker.github.io/matchmaker_benchmark/versions/v1.0.0/`, with a
+**Results version** menu on the page. Link a paper to its `versions/<tag>/`
+address so readers see exactly the numbers it cites. Each version is shown with
+the current page code.
+
+Per-piece views take almost all of a version's space (about 25–30 MB, against
+under 1 MB for its tables), and GitHub Pages allows 1 GB. So only the newest
+releases (`NEWEST_FULL_VERSIONS`) and pinned ones (`PINNED_FULL_VERSIONS`, e.g.
+the release a paper cites) keep them, both in `matchmaker_eval/build_site.py`.
+Other versions show their tables, and their per-piece results stay in the
+release files.
 
 ### What the site can show
 

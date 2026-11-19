@@ -8,6 +8,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -18,6 +19,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from matchmaker_eval.folds import REPO_ROOT, RESULTS_DIR
 
 SNAPSHOT = "benchmark-snapshot.zip"
+
+#: Result release tags, vMAJOR.MINOR.PATCH (see docs/maintaining.md).
+TAG = re.compile(r"v\d+\.\d+\.\d+")
 
 
 def gh(*args):
@@ -33,9 +37,16 @@ def releases(repo):
     return [release for page in pages for release in page]
 
 
+def published(records):
+    """Published result releases with a website snapshot, newest first."""
+    candidates = [r for r in records if TAG.fullmatch(r["tag_name"])
+                  and not r["draft"] and not r["prerelease"]
+                  and any(a["name"] == SNAPSHOT for a in r["assets"])]
+    return sorted(candidates, key=lambda r: r["published_at"], reverse=True)
+
+
 def latest(records):
-    candidates = [r for r in records if r["tag_name"].startswith("benchmark-")]
-    return max(candidates, key=lambda r: r["published_at"], default=None)
+    return next(iter(published(records)), None)
 
 
 def extract(archive, destination):
@@ -78,6 +89,8 @@ def snapshot(results, output):
 
 
 def publish(repo, tag, run_ids, records, destination):
+    if not TAG.fullmatch(tag):
+        raise ValueError(f"Release tag must look like v1.0.0, not {tag!r}")
     runs = [api(f"repos/{repo}/actions/runs/{run}") for run in run_ids]
     if any(run["conclusion"] != "success" for run in runs):
         raise ValueError("Only successful runs can be published")
@@ -139,24 +152,49 @@ def publish(repo, tag, run_ids, records, destination):
     return tag
 
 
+def fetch_versions(repo, records, destination):
+    """Download every published snapshot to ``destination/<tag>/`` for the site.
+
+    ``versions.json`` lists them newest first, for the page's version menu.
+    """
+    destination = Path(destination)
+    destination.mkdir(parents=True, exist_ok=True)
+    versions = []
+    for release in published(records):
+        tag = release["tag_name"]
+        fetch(repo, release, destination / tag)
+        manifest = json.loads((destination / tag / "release.json").read_text())
+        versions.append({"tag": tag, "published_at": release["published_at"],
+                         "url": release["html_url"],
+                         "evaluation_keys": manifest.get("evaluation_keys", {})})
+    (destination / "versions.json").write_text(json.dumps({"versions": versions}, indent=2) + "\n")
+    return versions
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY"))
     parser.add_argument("--tag", default="")
     parser.add_argument("--source-runs", default="", help="space-separated completed CI run IDs")
+    parser.add_argument("--versions-dir", type=Path, default=None,
+                        help="also download every published release here, for the site's version menu")
     args = parser.parse_args()
 
     records = releases(args.repo)
     if args.source_runs:
         tag = publish(args.repo, args.tag, args.source_runs.split(), records, RESULTS_DIR)
     else:
+        # Without new runs, redeploy the latest release; older ones stay at versions/<tag>/.
         if args.tag:
-            release = next(r for r in records if r["tag_name"] == args.tag)
-        else:
-            release = latest(records)
+            parser.error("--tag needs --source-runs; an older release is served at versions/<tag>/")
+        release = latest(records)
         tag = release["tag_name"] if release else ""
         if release:
             fetch(args.repo, release, RESULTS_DIR)
+    if tag and args.versions_dir:
+        # Listed again: a release created just now is not in `records`.
+        versions = fetch_versions(args.repo, releases(args.repo), args.versions_dir)
+        print(f"Versions for the site: {', '.join(v['tag'] for v in versions)}")
     if os.environ.get("GITHUB_OUTPUT"):
         with open(os.environ["GITHUB_OUTPUT"], "a") as stream:
             stream.write(f"ready={'true' if tag else 'false'}\ntag={tag}\n")

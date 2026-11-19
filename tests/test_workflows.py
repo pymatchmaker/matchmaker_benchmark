@@ -149,6 +149,87 @@ class TestSiteAssembly:
         assert (site / "leaderboard.json").exists()
         assert summary["details"] >= 0
 
+    @staticmethod
+    def _downloaded_versions(root, tags):
+        """Release snapshots as release_results.py --versions-dir leaves them."""
+        import json
+
+        for tag in tags:
+            (root / tag / "details").mkdir(parents=True)
+            (root / tag / "details" / "m-midi.json").write_text("{}")
+            (root / tag / "leaderboard.json").write_text(json.dumps({"tag": tag}))
+            (root / tag / "release.json").write_text(json.dumps({"tag": tag}))
+        (root / "versions.json").write_text(json.dumps({"versions": [
+            {"tag": tag, "published_at": "2026-12-01T00:00:00Z", "url": f"u/{tag}"}
+            for tag in tags]}))
+
+    def test_every_published_version_gets_its_own_path(self, tmp_path):
+        """A cited release stays viewable after newer results are published."""
+        import json
+        import build_site
+
+        self._downloaded_versions(tmp_path / "versions", ["v1.1.0", "v1.0.0"])
+        site = tmp_path / "site"
+        build_site.build(site)
+        listed = build_site.add_versions(site, tmp_path / "versions")
+
+        assert [v["tag"] for v in listed] == ["v1.1.0", "v1.0.0"]
+        assert json.loads((site / "versions.json").read_text())["versions"] == listed
+        for tag in ("v1.1.0", "v1.0.0"):
+            assert (site / "versions" / tag / "index.html").exists()
+            assert json.loads((site / "versions" / tag / "leaderboard.json").read_text()) == {"tag": tag}
+        assert (site / "leaderboard.json").exists()  # the root keeps the current results
+
+    def test_only_the_newest_and_pinned_versions_keep_per_piece_views(self, tmp_path, monkeypatch):
+        """Older versions shrink to their tables, keeping the site under the Pages
+        limit, while a pinned version (e.g. the one a paper cites) stays complete."""
+        import build_site
+
+        monkeypatch.setattr(build_site, "NEWEST_FULL_VERSIONS", 2)
+        monkeypatch.setattr(build_site, "PINNED_FULL_VERSIONS", ("v1.0.0",))
+        tags = ["v3.0.0", "v2.1.0", "v2.0.0", "v1.0.0"]  # newest first
+        self._downloaded_versions(tmp_path / "versions", tags)
+        site = tmp_path / "site"
+        build_site.build(site)
+        listed = build_site.add_versions(site, tmp_path / "versions")
+
+        assert [v["full"] for v in listed] == [True, True, False, True]
+        for version in listed:
+            folder = site / "versions" / version["tag"]
+            assert (folder / "details" / "m-midi.json").exists() is version["full"]
+            assert (folder / "leaderboard.json").exists()
+
+    def test_release_versions_are_filtered_and_newest_first(self, tmp_path, monkeypatch):
+        import json
+        from matchmaker_eval import release_results as R
+
+        def release(tag, published, draft=False, snapshot=True):
+            return {"tag_name": tag, "published_at": published, "draft": draft,
+                    "prerelease": False, "html_url": f"https://example/{tag}",
+                    "assets": [{"name": R.SNAPSHOT}] if snapshot else []}
+
+        records = [
+            release("v1.0.0", "2026-11-20T00:00:00Z"),
+            release("v1.1.0", "2026-12-01T00:00:00Z"),
+            release("v1.2.0", "2026-12-05T00:00:00Z", draft=True),
+            release("v1.3.0", "2026-12-06T00:00:00Z", snapshot=False),
+            release("benchmark-v9", "2026-12-07T00:00:00Z"),
+        ]
+        fetched = []
+
+        def fake_fetch(repo, rel, destination):
+            fetched.append(rel["tag_name"])
+            destination.mkdir(parents=True)
+            (destination / "release.json").write_text(json.dumps({"evaluation_keys": {}}))
+
+        monkeypatch.setattr(R, "fetch", fake_fetch)
+        versions = R.fetch_versions("owner/repo", records, tmp_path / "versions")
+
+        assert fetched == ["v1.1.0", "v1.0.0"]
+        assert [v["tag"] for v in versions] == ["v1.1.0", "v1.0.0"]
+        assert versions[0]["url"] == "https://example/v1.1.0"
+        assert R.latest(records)["tag_name"] == "v1.1.0"
+
     def test_it_refuses_to_build_without_a_leaderboard(self, tmp_path, monkeypatch):
         import build_site
 
@@ -418,4 +499,4 @@ class TestReleasedResults:
         from matchmaker_eval import release_results
         monkeypatch.setattr(release_results, "api", lambda path: {"status": status, "conclusion": conclusion})
         with pytest.raises(ValueError, match="successful runs"):
-            release_results.publish("test/repo", "benchmark-test", ["1"], [], tmp_path)
+            release_results.publish("test/repo", "v1.0.0", ["1"], [], tmp_path)

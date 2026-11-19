@@ -10,11 +10,11 @@ on:
   workflow_dispatch:
     inputs:
       source_runs:
-        description: "Completed CI run IDs, separated by spaces; later runs replace entries (empty = republish)"
+        description: "Completed CI run IDs, separated by spaces; later runs replace entries (empty = redeploy the latest release)"
         required: false
         default: ""
       release_tag:
-        description: "New benchmark-* tag when releasing; otherwise existing tag or empty for latest"
+        description: "New release tag vX.Y.Z (needed with source_runs)"
         required: false
         default: ""
 
@@ -57,11 +57,12 @@ jobs:
           SOURCE_RUNS: ${{ inputs.source_runs }}
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
-          python matchmaker_eval/release_results.py --source-runs "$SOURCE_RUNS" --tag "$RELEASE_TAG"
+          python matchmaker_eval/release_results.py --source-runs "$SOURCE_RUNS" --tag "$RELEASE_TAG" \
+            --versions-dir "$RUNNER_TEMP/benchmark-versions"
 
       - name: Assemble the site
         if: steps.results.outputs.ready == 'true'
-        run: python matchmaker_eval/build_site.py _site
+        run: python matchmaker_eval/build_site.py _site --versions "$RUNNER_TEMP/benchmark-versions"
 
       - uses: actions/configure-pages@v5
         if: steps.results.outputs.ready == 'true'
