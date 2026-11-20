@@ -1,4 +1,4 @@
-name: Evaluate offline reference
+name: "Evaluate - Matchmaker (offline)"
 on:
   workflow_call:
     inputs:
@@ -54,8 +54,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends fluidsynth libsndfile1 ffmpeg
-          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.5.0"
-          pip install pyyaml pydantic-settings
+          pip install -r requirements-eval.txt
       - name: Install the offline numerical environment
         run: |
           pip install 'numpy==1.26.4' 'scipy==1.14.1' 'pandas==2.2.3' 'librosa==0.10.2' 'numba==0.64.0' ipython pretty_midi music21
@@ -84,8 +83,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: |
-          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.5.0"
-          pip install pyyaml pydantic-settings
+          pip install -r requirements-eval.txt
       - uses: actions/download-artifact@v4
         with:
           pattern: offline-*

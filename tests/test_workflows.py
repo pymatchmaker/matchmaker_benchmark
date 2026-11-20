@@ -116,27 +116,6 @@ class TestEvaluateWorkflow:
         assert (run.get("env") or {}).get("OMP_NUM_THREADS") == "1"
 
 
-class TestMatchmakerPin:
-    """All workflows must install the same matchmaker, or jobs disagree."""
-
-    def _pins(self) -> dict:
-        import re
-
-        found = {}
-        for path in sorted(WORKFLOWS.glob("*.yml")):
-            for match in re.finditer(r"matchmaker\.git@([\w./-]+)", path.read_text()):
-                found.setdefault(path.name, set()).add(match.group(1))
-        return found
-
-    def test_every_workflow_pins_the_same_ref(self):
-        refs = {ref for refs in self._pins().values() for ref in refs}
-        assert len(refs) == 1, (
-            f"workflows install different matchmaker refs: {sorted(refs)}. "
-            "A partial revert leaves the merge job on a different version "
-            "from the shards."
-        )
-
-
 class TestSiteAssembly:
     """One script builds the site, so preview and publish cannot diverge."""
 

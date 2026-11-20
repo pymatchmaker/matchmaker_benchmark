@@ -1,4 +1,4 @@
-name: Evaluate diagnostic suites
+name: "Evaluate - Matchmaker (diagnostics)"
 on:
   workflow_call:
     inputs:
@@ -67,8 +67,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends fluidsynth libsndfile1 ffmpeg
-          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.5.0"
-          pip install pyyaml pydantic-settings
+          pip install -r requirements-eval.txt
       - name: Run frozen diagnostic cases
         run: |
           python matchmaker_eval/run_diagnostics.py run \

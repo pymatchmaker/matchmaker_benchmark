@@ -1,5 +1,5 @@
 # Evaluate the built-in methods described in data/builtin_methods.yaml.
-name: Evaluate references
+name: "Evaluate - Matchmaker"
 
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ on:
         required: false
         default: ""
       fold:
-        description: "Fold: eval, beyond_piano, diagnostics, offline, or amt_reference"
+        description: "Fold: eval, beyond_piano, diagnostics, offline, or delay"
         required: false
         default: eval
       shards:
@@ -35,12 +35,6 @@ env:
   FOLD: ${{ github.event.inputs.fold || 'eval' }}
 
 jobs:
-  amt_reference:
-    if: github.event.inputs.fold == 'amt_reference'
-    uses: ./.github/workflows/evaluate-amt.yml
-    with:
-      shards: ${{ github.event.inputs.shards || '4' }}
-
   offline:
     if: github.event.inputs.fold == 'offline'
     uses: ./.github/workflows/evaluate-offline.yml
@@ -55,8 +49,14 @@ jobs:
       only: ${{ github.event.inputs.only || '' }}
       input_type: ${{ github.event.inputs.input_type || 'both' }}
 
+  delay:
+    if: github.event.inputs.fold == 'delay'
+    uses: ./.github/workflows/evaluate-delay.yml
+    with:
+      shards: ${{ github.event.inputs.shards || '2' }}
+
   plan:
-    if: github.event.inputs.fold != 'diagnostics' && github.event.inputs.fold != 'offline' && github.event.inputs.fold != 'amt_reference'
+    if: github.event.inputs.fold != 'diagnostics' && github.event.inputs.fold != 'offline' && github.event.inputs.fold != 'delay'
     runs-on: ubuntu-latest
     outputs:
       jobs: ${{ steps.plan.outputs.jobs }}
@@ -92,6 +92,14 @@ jobs:
               if not only or method in only
               for s in range(n)
           ]
+          amt = yaml.safe_load(open("data/amt_methods.yaml"))["midi"]
+          if os.environ["FOLD"] == "eval" and "audio" in types:
+              jobs += [
+                  {"method": f"amt-{method}", "amt": method, "input_type": "audio", "shard": s}
+                  for method in amt
+                  if not only or f"amt-{method}" in only
+                  for s in range(n)
+              ]
           print(f"jobs={json.dumps(jobs)}")
           print(f"count={len(jobs)}")
           print(f"num_shards={n}")
@@ -140,8 +148,7 @@ jobs:
       - name: Install the benchmark environment
         run: |
           python -m pip install --upgrade pip
-          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.5.0"
-          pip install pyyaml pydantic-settings
+          pip install -r requirements-eval.txt
 
       - name: Check out the benchmark data
         if: vars.MATCHMAKER_DATA_DIR == ''
@@ -193,6 +200,7 @@ jobs:
             --num-shards ${{ needs.plan.outputs.num_shards }}
 
       - name: Run the shard
+        if: ${{ !matrix.job.amt }}
         # One BLAS thread keeps the timing columns comparable across runners.
         env:
           OMP_NUM_THREADS: "1"
@@ -204,6 +212,20 @@ jobs:
             --method "${{ matrix.job.method }}" \
             --input-type "${{ matrix.job.input_type }}" \
             --fold "$FOLD" \
+            --shard ${{ matrix.job.shard }} \
+            --num-shards ${{ needs.plan.outputs.num_shards }} \
+            --output "results/shards/current"
+
+      - name: Run the shard on frozen AMT output
+        if: ${{ matrix.job.amt }}
+        env:
+          OMP_NUM_THREADS: "1"
+          OPENBLAS_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
+          NUMEXPR_NUM_THREADS: "1"
+        run: |
+          python matchmaker_eval/run_amt.py \
+            --method "${{ matrix.job.amt }}" \
             --shard ${{ matrix.job.shard }} \
             --num-shards ${{ needs.plan.outputs.num_shards }} \
             --output "results/shards/current"
@@ -227,8 +249,7 @@ jobs:
 
       - name: Install what the merge needs
         run: |
-          pip install --quiet "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.5.0"
-          pip install --quiet pyyaml pydantic-settings
+          pip install --quiet -r requirements-eval.txt
 
       - uses: actions/download-artifact@v4
         with:

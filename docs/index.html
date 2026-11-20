@@ -150,6 +150,7 @@
     background: var(--surface); border: 1px solid var(--rule-firm);
     border-radius: 2px; padding: 5px 9px; max-width: 100%;
   }
+  .versions[hidden] { display: none; }
   .versions a { color: var(--ink-soft); text-underline-offset: 2px; }
   .version-note {
     border-left: 3px solid var(--warn); background: var(--surface);
@@ -534,6 +535,18 @@
     color: var(--ink-mute);
     font-size: 13px;
   }
+  .dataset-board + .dataset-board { margin-top: 32px; }
+  .dataset-board h2 { margin: 0 0 10px; font-size: 16px; }
+  .dataset-board h2 span { color: var(--ink-mute); font-weight: 400; }
+  .dataset-board h3 {
+    margin: 16px 0 8px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    font-weight: 500;
+  }
   .earlier h2 { margin: 0 0 6px; font-size: 14px; color: var(--ink); }
   .earlier ul { margin: 6px 0 0; padding-left: 18px; }
   .earlier code, .provenance code { font-family: var(--mono); }
@@ -542,12 +555,25 @@
   .entry-authors a:hover { color: var(--ink); text-decoration-style: solid; }
   footer {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-    gap: 22px 40px;
+    gap: 28px;
     padding-top: 8px;
     border-top: 1px solid var(--rule);
   }
-  footer section { display: flex; flex-direction: column; gap: 5px; }
+  footer section { display: flex; flex-direction: column; gap: 8px; }
+  footer dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 6px 20px;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  footer dt { color: var(--ink-soft); font-weight: 500; }
+  footer dd { margin: 0; color: var(--ink-mute); }
+  @media (max-width: 600px) {
+    footer dl { grid-template-columns: 1fr; gap: 2px; }
+    footer dd { margin-bottom: 8px; }
+  }
   footer h2 {
     font-family: var(--mono);
     font-size: 10.5px;
@@ -590,132 +616,103 @@
       <button class="chip" data-filter="midi" aria-pressed="false">MIDI</button>
       <button class="chip" data-filter="audio" aria-pressed="false">Audio</button>
       <button class="chip" data-filter="submission" aria-pressed="false">Submissions</button>
-      <button class="chip" data-filter="reference" aria-pressed="false">Reference</button>
+      <button class="chip" data-filter="reference" aria-pressed="false">Matchmaker</button>
     </div>
     <p class="ranking-note">
-      Sorted by how many pieces a follower stayed with, then by its error on
-      those pieces. Open a row for its per-dataset and per-piece results, and to
-      plot any piece against the ground truth. Rows marked
-      <span class="kind tempo">* tempo given</span> were given the
-      performance's estimated tempo rather than only the score's notated one,
-      which is an easier task.
+      Ranked by pieces tracked, then by error. Open a row for per-piece
+      results and plots.
     </p>
   </div>
 
-  <div class="table-wrap">
-    <table class="board">
-      <colgroup>
-        <col style="width:140px">
-        <col><!-- submission: takes the remaining space -->
-        <col style="width:72px">
-        <col style="width:150px">
-        <col style="width:92px">
-        <col style="width:100px">
-        <col style="width:104px">
-        <col style="width:110px">
-        <col style="width:100px">
-        <col style="width:84px">
-      </colgroup>
-      <thead>
-        <tr>
-          <th data-key="tracker_id" data-dir="asc" scope="col">Tracker<span class="arrow"></span></th>
-          <th data-key="name" data-dir="asc" scope="col">Submission<span class="arrow"></span></th>
-          <th data-key="input_type" data-dir="asc" scope="col">Input<span class="arrow"></span></th>
-          <th data-key="tracking_rate" data-dir="desc" aria-sort="descending" scope="col">Tracked ↑<span class="arrow"></span></th>
-          <th data-key="accuracy_0.3b" data-dir="desc" scope="col">&le; 0.3 beat ↑<span class="arrow"></span></th>
-          <th data-key="median_b" data-dir="asc" scope="col">Beat err (med) ↓<span class="arrow"></span></th>
-          <th data-key="mean_b" data-dir="asc" scope="col">Beat err (mean) ↓<span class="arrow"></span></th>
-          <th data-key="smoothness" data-dir="desc" scope="col">Smoothness ↑<span class="arrow"></span></th>
-          <th data-key="median_b_all" data-dir="asc" scope="col">Beat err · all ↓<span class="arrow"></span></th>
-          <th data-key="rtf" data-dir="asc" scope="col">RTF ↓<span class="arrow"></span></th>
-        </tr>
-      </thead>
-      <tbody id="rows"></tbody>
-    </table>
-    <div class="empty" id="empty" hidden></div>
-    <div class="earlier" id="earlier" hidden></div>
-  </div>
+  <template id="board-head">
+    <colgroup>
+      <col style="width:140px">
+      <col><!-- submission: takes the remaining space -->
+      <col style="width:72px">
+      <col style="width:150px">
+      <col style="width:104px">
+      <col style="width:100px">
+      <col style="width:120px">
+      <col style="width:120px">
+      <col style="width:136px">
+      <col style="width:84px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-key="tracker_id" data-dir="asc" scope="col">Tracker<span class="arrow"></span></th>
+        <th data-key="name" data-dir="asc" scope="col">Submission<span class="arrow"></span></th>
+        <th data-key="input_type" data-dir="asc" scope="col">Input<span class="arrow"></span></th>
+        <th data-key="tracking_rate" data-dir="desc" scope="col">Tracked ↑<span class="arrow"></span></th>
+        <th data-key="mean_b" data-dir="asc" scope="col">Beat error (mean) ↓<span class="arrow"></span></th>
+        <th data-key="median_b" data-dir="asc" scope="col">Beat error (med) ↓<span class="arrow"></span></th>
+        <th data-key="ar_strict" data-dir="desc" scope="col">AR &le; <span class="tolerance"></span> ↑<span class="arrow"></span></th>
+        <th data-key="ar_loose" data-dir="desc" scope="col">AR &le; <span class="tolerance"></span> ↑<span class="arrow"></span></th>
+        <th data-key="smoothness" data-dir="desc" scope="col">Smoothness ↑<span class="arrow"></span></th>
+        <th data-key="rtf" data-dir="asc" scope="col">RTF ↓<span class="arrow"></span></th>
+      </tr>
+    </thead>
+  </template>
+  <div id="dataset-boards"></div>
+  <div class="empty" id="empty" hidden></div>
+  <div class="earlier" id="earlier" hidden></div>
 
   <footer>
     <section>
-      <h2>Tracked</h2>
-      <p>
-        The performance is walked in 30-second windows, one starting at every
-        annotated onset. A piece counts as tracked unless the median beat error
-        in any window exceeds the tolerance — 0.1 musical beat for MIDI, 1.0 for
-        audio. In compound meter, three denominator-note units form one musical
-        beat. The reference meter is applied at each onset, including changes
-        within a piece. Position-error summaries use denominator-note units.
-        A follower that loses the performer produces meaningless errors,
-        so accuracy is only reported over the pieces it held onto.
-      </p>
+      <h2>Metrics</h2>
+      <dl>
+        <dt>Tracked</dt>
+        <dd>Share of pieces the follower never lost: no 30-second window has a
+          median error above 0.1 musical beat (MIDI) or 1.0 (audio). The other
+          columns cover successfully tracked pieces only.</dd>
+        <dt>Beat error</dt>
+        <dd>Mean and median absolute position error, in denominator-note beats.
+          MIDI medians are often 0, since most onsets land exactly.</dd>
+        <dt>AR</dt>
+        <dd>Share of onsets within 0.05 / 0.1 beat (MIDI) or 0.5 / 1.0 beat (audio).</dd>
+        <dt>Smoothness</dt>
+        <dd>SPARC of the reported position; higher is smoother. Compare within
+          one input type.</dd>
+        <dt>RTF</dt>
+        <dd>Processing time over performance duration; 1.0 or more cannot keep
+          up live.</dd>
+        <dt><span class="kind tempo">* tempo given</span></dt>
+        <dd>Given the performance's estimated tempo, an easier task.</dd>
+      </dl>
     </section>
     <section>
-      <h2>Why medians read 0.000</h2>
-      <p>
-        On MIDI the ground truth is note onsets and a follower reports score
-        onsets, so more than half of all events land exactly right and the
-        median collapses to zero. <em>Beat err (mean)</em> and
-        <em>&le; 0.3 beat</em> are what separate the methods there.
-      </p>
-    </section>
-    <section>
-      <h2>Beat err · all</h2>
-      <p>
-        The median error over <em>every</em> piece, lost ones included. It keeps
-        a follower from looking flawless by tracking two easy pieces and
-        abandoning the rest.
-      </p>
-    </section>
-    <section>
-      <h2>RTF</h2>
-      <p>
-        Processing time divided by performance duration. Anything at or above
-        1.0 cannot keep up with a live performer, however accurate it is
-        offline.
-      </p>
-    </section>
-    <section>
-      <h2>Per-piece and per-dataset results</h2>
-      <p>
-        Opening a row loads its full record: every pooled metric for each
-        dataset and for the whole fold, a table of all 146 pieces — or of one
-        dataset's, by clicking it — and the alignment of any piece against the
-        ground truth. The plots are drawn here from the raw path coordinates —
-        no images are stored.
-      </p>
-    </section>
-    <section>
-      <h2>Evaluation key</h2>
-      <p>
-        Every ranked row was scored under the same conditions: the same fold,
-        scoring code, matchmaker sources and score parser, and, within an input
-        type, the same data files. MIDI and audio stream different files, so
-        each has its own key above, a hash of all of these. Cite the key of the
-        row's input type with any number you take from here;
-        <a href="archive/index.json">every key's table is archived</a> and
-        stays at <code>archive/&lt;key&gt;/leaderboard.json</code>.
-      </p>
-    </section>
-    <section>
-      <h2>Reference rows</h2>
-      <p>
-        Entries marked <span class="kind reference">reference</span> are the
-        methods that ship with matchmaker, run on the same fold by the same
-        code. They are what a new score follower is trying to beat, not
-        competitors. Each one's citation links to its entry, with the full
-        reference, in the
-        <a href="https://pymatchmaker.github.io/score-following-bibliography/">Score Following Bibliography</a>.
-      </p>
+      <h2>Datasets</h2>
+      <dl>
+        <dt><a href="https://github.com/fosfrancesco/asap-dataset">ASAP</a></dt>
+        <dd>F. Foscarin, A. McLeod, P. Rigaux, F. Jacquemard, and M. Sakai, “ASAP: A
+          dataset of aligned scores and performances for piano transcription,” in
+          <i>Proc. ISMIR</i>, 2020. Test split only; audio from MAESTRO concert recordings.</dd>
+        <dt><a href="https://github.com/huispaty/batik_plays_mozart">Batik-plays-Mozart</a></dt>
+        <dd>P. Hu and G. Widmer, “The Batik-plays-Mozart corpus: Linking performance to
+          score to musicological annotations,” in <i>Proc. ISMIR</i>, 2023. Audio from
+          the MIDI replayed on a Disklavier.</dd>
+        <dt><a href="https://github.com/CPJKU/vienna4x22">Vienna4x22</a></dt>
+        <dd>W. Goebl, “The Vienna 4x22 piano corpus,” 1999. The original recordings.</dd>
+      </dl>
     </section>
     <section>
       <h2>Submitting</h2>
       <p>
         Write one Python file and open a pull request.
         <a href="https://github.com/pymatchmaker/matchmaker_benchmark/blob/main/docs/submitting.md">How to submit</a> ·
-        <a href="https://github.com/pymatchmaker/matchmaker_benchmark/blob/main/docs/eval-protocol.md">Evaluation protocol</a> ·
-        <a href="leaderboard.csv">Download CSV</a><span id="dataset-downloads"></span>
+        <a href="https://github.com/pymatchmaker/matchmaker_benchmark/blob/main/docs/eval-protocol.md">Evaluation protocol</a>
       </p>
+    </section>
+    <section>
+      <h2>References</h2>
+      <dl>
+        <dt><a href="https://github.com/pymatchmaker/matchmaker">Matchmaker</a></dt>
+        <dd>J. Park, C. Cancino-Chacón, S. Chiruthapudi, and J. Nam, “Matchmaker: An
+          open-source library for real-time piano score following and systematic
+          evaluation,” in <i>Proc. ISMIR</i>, 2025. Rows marked
+          <span class="kind reference">matchmaker</span> ship with it; their
+          citations link to the
+          <a href="https://pymatchmaker.github.io/score-following-bibliography/">Score Following Bibliography</a>.</dd>
+      </dl>
     </section>
   </footer>
 </div>
@@ -733,8 +730,8 @@
 // results/. Inlined data, when present, wins over both.
 const SOURCES = ["./", "../results/"];
 const NUMERIC = new Set([
-  "rank", "tracking_rate", "accuracy_0.3b", "median_b", "mean_b",
-  "smoothness", "median_b_all", "rtf",
+  "rank", "tracking_rate", "mean_b", "median_b", "ar_strict", "ar_loose",
+  "smoothness", "rtf",
 ]);
 
 // Metrics where a smaller number is better.
@@ -756,6 +753,9 @@ let filter = "all";
 let sort = { key: "tracking_rate", dir: "desc" };
 
 const el = (id) => document.getElementById(id);
+
+const DATASET_NAMES = { asap: "ASAP", batik: "Batik-plays-Mozart", vienna: "Vienna4x22" };
+const datasetName = (dataset) => DATASET_NAMES[dataset] || dataset;
 
 function escapeHtml(text) {
   return String(text ?? "").replace(/[&<>"']/g, (c) => ({
@@ -787,6 +787,13 @@ function metricCell(value, digits) {
     return '<span class="num dim" title="not measured — no piece was tracked">&mdash;</span>';
   }
   return `<span class="num">${text}</span>`;
+}
+
+function percentCell(value) {
+  if (value === null || value === undefined) {
+    return '<span class="num dim" title="not measured — no piece was tracked">&mdash;</span>';
+  }
+  return `<span class="num">${Math.round(value * 100)}%</span>`;
 }
 
 // ── Plotting ─────────────────────────────────────────────────────────────────
@@ -1057,7 +1064,7 @@ function datasetTable(detail, other, pool, active) {
     const selected = row.total ? active === null : active === row.name;
     return `
       <tr data-dataset="${escapeHtml(dataset)}" class="${row.total ? "total" : ""}${selected ? " selected" : ""}">
-        <td class="sticky c0">${escapeHtml(row.name)}</td>
+        <td class="sticky c0">${escapeHtml(row.total ? row.name : datasetName(row.name))}</td>
         ${tracked}${cells}
       </tr>`;
   }).join("");
@@ -1225,7 +1232,7 @@ async function fillDetail(entry, container) {
     const shown = detail.pieces.filter((p) => state.dataset === null || p.dataset === state.dataset).length;
     const filter = state.dataset === null ? "" : `
       <div class="filter-bar">
-        <span><b>${escapeHtml(state.dataset)}</b> · ${shown} of ${detail.pieces.length} pieces</span>
+        <span><b>${escapeHtml(datasetName(state.dataset))}</b> · ${shown} of ${detail.pieces.length} pieces</span>
         <button class="dtab" data-clear-dataset>show all pieces</button>
       </div>`;
     host.innerHTML =
@@ -1386,26 +1393,20 @@ function detailRow(entry) {
     </tr>`;
 }
 
-function render() {
-  const tbody = el("rows");
-  const empty = el("empty");
-  const shown = entries.filter(
-    (e) => filter === "all" || e.input_type === filter || e.kind === filter
-  );
+function compareRows(a, b) {
+  const dir = sort.dir === "asc" ? 1 : -1;
+  if (NUMERIC.has(sort.key)) {
+    const x = a?.[sort.key] ?? Infinity;
+    const y = b?.[sort.key] ?? Infinity;
+    return (x - y) * dir;
+  }
+  return String(a[sort.key] ?? "").localeCompare(String(b[sort.key] ?? "")) * dir;
+}
 
-  shown.sort((a, b) => {
-    const dir = sort.dir === "asc" ? 1 : -1;
-    if (NUMERIC.has(sort.key)) {
-      const x = a?.[sort.key] ?? Infinity;
-      const y = b?.[sort.key] ?? Infinity;
-      return (x - y) * dir;
-    }
-    return String(a[sort.key] ?? "").localeCompare(String(b[sort.key] ?? "")) * dir;
-  });
-
-  tbody.innerHTML = shown.map((entry, i) => {
+// `entry` is the row's numbers, the whole fold's or one dataset's.
+function boardRows(rows) {
+  return [...rows].sort(compareRows).map((entry, i) => {
     const pct = Math.round((entry.tracking_rate || 0) * 100);
-    const within = entry["accuracy_0.3b"];
     return `
       <tr class="entry" data-key="${escapeHtml(entry.submission)}" tabindex="0"
           role="button" aria-expanded="false">
@@ -1416,7 +1417,7 @@ function render() {
             ? `<a href="${escapeHtml(entry.citation_url)}" target="_blank" rel="noopener"
                   title="Full reference in the Score Following Bibliography">${escapeHtml(entry.authors)}</a>`
             : escapeHtml(entry.authors)}</span><span class="entry-badges">${entry.kind === "reference"
-              ? '<span class="kind reference" title="ships with matchmaker">reference</span>'
+              ? '<span class="kind reference" title="ships with matchmaker">matchmaker</span>'
               : ""}${entry.estimated_bpm ? TEMPO_BADGE : ""}</span></div>
         </td>
         <td><span class="tag">${escapeHtml(entry.input_type)}</span></td>
@@ -1427,17 +1428,70 @@ function render() {
             <span class="num${i === 0 && pct > 0 ? " lead" : ""}">${pct}%</span>
           </div>
         </td>
-        <td>${within === null || within === undefined
-              ? '<span class="num dim">&mdash;</span>'
-              : `<span class="num">${Math.round(within * 100)}%</span>`}</td>
-        <td>${metricCell(entry.median_b, 3)}</td>
         <td>${metricCell(entry.mean_b, 3)}</td>
+        <td>${metricCell(entry.median_b, 3)}</td>
+        <td>${percentCell(entry.ar_strict)}</td>
+        <td>${percentCell(entry.ar_loose)}</td>
         <td>${metricCell(entry.smoothness, 4)}</td>
-        <td>${metricCell(entry.median_b_all, 3)}</td>
         <td>${metricCell(entry.rtf, 4)}</td>
       </tr>
-      ${detailRow(entry)}`;
+      ${detailRow(entry.whole || entry)}`;
   }).join("");
+}
+
+// MIDI followers land far closer than audio ones, so each input type has its own AR tolerances.
+const AR_TOLERANCES = { midi: [0.05, 0.1], audio: [0.5, 1] };
+const INPUT_NAMES = { midi: "MIDI", audio: "Audio" };
+
+function alignmentRates(row) {
+  const [strict, loose] = AR_TOLERANCES[row.input_type];
+  return { ...row, ar_strict: row[`accuracy_${strict}b`], ar_loose: row[`accuracy_${loose}b`] };
+}
+
+function boardHead(inputType) {
+  const table = document.createElement("table");
+  table.append(el("board-head").content.cloneNode(true));
+  table.querySelectorAll(".tolerance").forEach((cell, i) => {
+    const beats = AR_TOLERANCES[inputType][i];
+    cell.textContent = `${beats.toFixed(beats < 0.1 ? 2 : 1)}b`;
+  });
+  return table.innerHTML;
+}
+
+function datasetBoards(shown) {
+  const datasets = [...new Set(shown.flatMap((e) => Object.keys(e.datasets || {})))].sort();
+  return datasets.map((dataset) => {
+    const rows = shown.filter((e) => e.datasets?.[dataset])
+      .map((e) => alignmentRates({ ...e, ...e.datasets[dataset], whole: e }));
+    const boards = Object.keys(AR_TOLERANCES).map((inputType) => {
+      const typed = rows.filter((row) => row.input_type === inputType);
+      return typed.length ? `
+        <h3>${INPUT_NAMES[inputType]}</h3>
+        <div class="table-wrap">
+          <table class="board">${boardHead(inputType)}<tbody>${boardRows(typed)}</tbody></table>
+        </div>` : "";
+    }).join("");
+    return `
+      <section class="dataset-board">
+        <h2>${escapeHtml(datasetName(dataset))} <span>· ${rows[0].n_pieces} pieces</span></h2>
+        ${boards}
+      </section>`;
+  }).join("");
+}
+
+function render() {
+  const empty = el("empty");
+  const shown = entries.filter(
+    (e) => filter === "all" || e.input_type === filter || e.kind === filter
+  );
+  el("dataset-boards").innerHTML = datasetBoards(shown);
+  document.querySelectorAll("table.board th[data-key]").forEach((th) => {
+    if (th.dataset.key === sort.key) {
+      th.setAttribute("aria-sort", sort.dir === "asc" ? "ascending" : "descending");
+    } else {
+      th.removeAttribute("aria-sort");
+    }
+  });
 
   empty.hidden = shown.length > 0;
   if (!shown.length) {
@@ -1480,17 +1534,16 @@ function wireRows() {
   });
 }
 
-document.querySelectorAll("th[data-key]").forEach((th) => {
-  th.addEventListener("click", () => {
-    const key = th.dataset.key;
-    const dir = sort.key === key
-      ? (sort.dir === "asc" ? "desc" : "asc")
-      : (th.dataset.dir || "asc");
-    sort = { key, dir };
-    document.querySelectorAll("th[data-key]").forEach((o) => o.removeAttribute("aria-sort"));
-    th.setAttribute("aria-sort", dir === "asc" ? "ascending" : "descending");
-    render();
-  });
+// Every board shares one sort, so a header click on any of them sorts all.
+document.addEventListener("click", (event) => {
+  const th = event.target.closest("table.board th[data-key]");
+  if (!th) return;
+  const key = th.dataset.key;
+  const dir = sort.key === key
+    ? (sort.dir === "asc" ? "desc" : "asc")
+    : (th.dataset.dir || "asc");
+  sort = { key, dir };
+  render();
 });
 
 document.querySelectorAll(".chip").forEach((chip) => {
@@ -1614,14 +1667,6 @@ loadBoard().then((board) => {
         evaluated ${escapeHtml((e.evaluated || "").slice(0, 10))};
         changed since: ${escapeHtml((e.evaluation_changed || []).join(", ") || "recorded before keys existed")}</li>`).join("")}
     </ul>` : "";
-
-  // leaderboard-<dataset>.csv sits next to leaderboard.csv wherever the page
-  // found it; the datasets are whichever the entries were evaluated on.
-  const datasets = [...new Set(entries.flatMap((e) => Object.keys(e.datasets || {})))].sort();
-  el("dataset-downloads").innerHTML = datasets.length
-    ? " · per dataset: " + datasets.map((d) =>
-        `<a href="leaderboard-${encodeURIComponent(d)}.csv">${escapeHtml(d)}</a>`).join(" · ")
-    : "";
   render();
 });
 </script>
