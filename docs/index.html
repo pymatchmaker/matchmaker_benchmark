@@ -150,6 +150,7 @@
     background: var(--surface); border: 1px solid var(--rule-firm);
     border-radius: 2px; padding: 5px 9px; max-width: 100%;
   }
+  .versions[hidden] { display: none; }
   .versions a { color: var(--ink-soft); text-underline-offset: 2px; }
   .version-note {
     border-left: 3px solid var(--warn); background: var(--surface);
@@ -609,11 +610,11 @@
         <col><!-- submission: takes the remaining space -->
         <col style="width:72px">
         <col style="width:150px">
-        <col style="width:92px">
-        <col style="width:100px">
         <col style="width:104px">
-        <col style="width:110px">
         <col style="width:100px">
+        <col style="width:120px">
+        <col style="width:120px">
+        <col style="width:136px">
         <col style="width:84px">
       </colgroup>
       <thead>
@@ -622,11 +623,11 @@
           <th data-key="name" data-dir="asc" scope="col">Submission<span class="arrow"></span></th>
           <th data-key="input_type" data-dir="asc" scope="col">Input<span class="arrow"></span></th>
           <th data-key="tracking_rate" data-dir="desc" aria-sort="descending" scope="col">Tracked ↑<span class="arrow"></span></th>
-          <th data-key="accuracy_0.3b" data-dir="desc" scope="col">&le; 0.3 beat ↑<span class="arrow"></span></th>
-          <th data-key="median_b" data-dir="asc" scope="col">Beat err (med) ↓<span class="arrow"></span></th>
           <th data-key="mean_b" data-dir="asc" scope="col">Beat err (mean) ↓<span class="arrow"></span></th>
+          <th data-key="median_b" data-dir="asc" scope="col">Beat err (med) ↓<span class="arrow"></span></th>
+          <th data-key="accuracy_0.5b" data-dir="desc" scope="col">AR &le; 0.5b ↑<span class="arrow"></span></th>
+          <th data-key="accuracy_1b" data-dir="desc" scope="col">AR &le; 1.0b ↑<span class="arrow"></span></th>
           <th data-key="smoothness" data-dir="desc" scope="col">Smoothness ↑<span class="arrow"></span></th>
-          <th data-key="median_b_all" data-dir="asc" scope="col">Beat err · all ↓<span class="arrow"></span></th>
           <th data-key="rtf" data-dir="asc" scope="col">RTF ↓<span class="arrow"></span></th>
         </tr>
       </thead>
@@ -655,16 +656,15 @@
       <p>
         On MIDI the ground truth is note onsets and a follower reports score
         onsets, so more than half of all events land exactly right and the
-        median collapses to zero. <em>Beat err (mean)</em> and
-        <em>&le; 0.3 beat</em> are what separate the methods there.
+        median collapses to zero. <em>Beat err (mean)</em> and the
+        <em>AR</em> columns are what separate the methods there.
       </p>
     </section>
     <section>
-      <h2>Beat err · all</h2>
+      <h2>AR</h2>
       <p>
-        The median error over <em>every</em> piece, lost ones included. It keeps
-        a follower from looking flawless by tracking two easy pieces and
-        abandoning the rest.
+        Alignment rate: the share of onsets in the tracked pieces whose beat
+        error is within 0.5 or 1.0 beat.
       </p>
     </section>
     <section>
@@ -733,8 +733,8 @@
 // results/. Inlined data, when present, wins over both.
 const SOURCES = ["./", "../results/"];
 const NUMERIC = new Set([
-  "rank", "tracking_rate", "accuracy_0.3b", "median_b", "mean_b",
-  "smoothness", "median_b_all", "rtf",
+  "rank", "tracking_rate", "mean_b", "median_b", "accuracy_0.5b", "accuracy_1b",
+  "smoothness", "rtf",
 ]);
 
 // Metrics where a smaller number is better.
@@ -787,6 +787,13 @@ function metricCell(value, digits) {
     return '<span class="num dim" title="not measured — no piece was tracked">&mdash;</span>';
   }
   return `<span class="num">${text}</span>`;
+}
+
+function percentCell(value) {
+  if (value === null || value === undefined) {
+    return '<span class="num dim" title="not measured — no piece was tracked">&mdash;</span>';
+  }
+  return `<span class="num">${Math.round(value * 100)}%</span>`;
 }
 
 // ── Plotting ─────────────────────────────────────────────────────────────────
@@ -1405,7 +1412,6 @@ function render() {
 
   tbody.innerHTML = shown.map((entry, i) => {
     const pct = Math.round((entry.tracking_rate || 0) * 100);
-    const within = entry["accuracy_0.3b"];
     return `
       <tr class="entry" data-key="${escapeHtml(entry.submission)}" tabindex="0"
           role="button" aria-expanded="false">
@@ -1427,13 +1433,11 @@ function render() {
             <span class="num${i === 0 && pct > 0 ? " lead" : ""}">${pct}%</span>
           </div>
         </td>
-        <td>${within === null || within === undefined
-              ? '<span class="num dim">&mdash;</span>'
-              : `<span class="num">${Math.round(within * 100)}%</span>`}</td>
-        <td>${metricCell(entry.median_b, 3)}</td>
         <td>${metricCell(entry.mean_b, 3)}</td>
+        <td>${metricCell(entry.median_b, 3)}</td>
+        <td>${percentCell(entry["accuracy_0.5b"])}</td>
+        <td>${percentCell(entry["accuracy_1b"])}</td>
         <td>${metricCell(entry.smoothness, 4)}</td>
-        <td>${metricCell(entry.median_b_all, 3)}</td>
         <td>${metricCell(entry.rtf, 4)}</td>
       </tr>
       ${detailRow(entry)}`;
