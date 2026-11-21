@@ -1,0 +1,33 @@
+name: Transcribe and follow (streaming piano transcription + event OLTW)
+authors:
+  - Matthias Nagl
+  - Klaus Lex
+  - Kevin Eberl
+affiliation: Johannes Kepler University Linz (Music Informatics WS26)
+input_type: audio
+description: >
+  Turns the audio into notes while it arrives, with madmom's piano note CNN
+  (Kelz, Böck and Widmer, ICASSP 2019) computed one frame at a time in numpy,
+  and follows the notes with Matchmaker's event-level online time warping.
+  Between notes the position moves on at the followed tempo, which makes up
+  for the transcriber's delay of about 170 ms.
+license: Apache-2.0 for the code. notes_cnn_2019.npz holds madmom's model weights under CC BY-NC-SA 4.0, see README.md.
+
+# How this submission was developed.
+tuned_on: [valid]
+external_data: >
+  Pre-trained weights of madmom's piano note CNN (CPJKU/madmom_models,
+  notes/2019/notes_cnn.pkl), released with the ICASSP 2019 paper by Kelz,
+  Böck and Widmer, whose experiments use MAPS. MAPS renders MIDI files from
+  piano-midi.de and contains no recordings from ASAP, Batik or Vienna 4x22.
+  We trained nothing ourselves.
+
+# Required declaration. See docs/eval-protocol.md.
+eval_fold_untouched: true
+
+notes: >
+  numpy only, weights load from the 1.2 MB npz file at import. Real-time
+  factor about 0.08 on the validation fold (one process per piece on a
+  2-core machine). Validation fold, one run: 20 of 20 performances tracked.
+  The design (moving on between notes, the onset rule) was chosen on the
+  validation fold.
