@@ -69,9 +69,9 @@ Only successful runs are accepted. The release stores the run artifacts and a
 - **minor**: new entries under the same key
 - **patch**: a fix to already published entries
 
-Every release is served at `versions/<tag>/`; cite that address in a paper.
-Only the newest releases and those in `PINNED_FULL_VERSIONS`
-(`matchmaker_eval/build_site.py`) keep per-piece views.
+The site serves the newest releases at `versions/<tag>/` (`SITE_VERSIONS` in
+`matchmaker_eval/release_results.py`). Cite the GitHub release in a paper; it
+stays after the site drops that version.
 
 ### Withdrawing a result
 

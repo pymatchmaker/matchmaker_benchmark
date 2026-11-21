@@ -93,14 +93,13 @@
   /* ── Masthead, set like the header of an engraved score ───────────────── */
   .masthead { display: flex; flex-direction: column; gap: 14px; }
 
-  .eyebrow {
+  .powered {
     font-family: var(--ui);
-    font-size: 12px;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin: 0;
+    font-size: 13px;
+    color: var(--ink-mute);
+    margin: -6px 0 0;
   }
+  .powered a { color: var(--ink-soft); text-underline-offset: 2px; }
 
   h1 {
     font-family: var(--display);
@@ -112,13 +111,6 @@
     text-wrap: balance;
   }
 
-  .lede {
-    font-family: var(--ui);
-    font-size: clamp(16px, 2.2vw, 19px);
-    color: var(--ink-soft);
-    max-width: 62ch;
-    margin: 0;
-  }
 
   /* Double rule, the way a system divider is drawn in engraving. */
   .staff {
@@ -208,13 +200,13 @@
      huge intrinsic width up through its <td>, and the columns above drift
      apart to accommodate it. With it, the colgroup below decides the widths
      and the nested table scrolls inside its own container.
-     min-width is the fixed columns (952px) plus room for the submission
+     min-width is the fixed columns (1026px) plus room for the submission
      column, which gets what is left: below it, narrow screens scroll the
      table sideways instead of squeezing that column to nothing. */
   table.board {
     border-collapse: collapse;
     width: 100%;
-    min-width: 1192px;
+    min-width: 1266px;
     table-layout: fixed;
   }
 
@@ -322,7 +314,7 @@
     color: var(--accent);
     background: var(--accent-dim);
   }
-  .kind.tempo { cursor: help; }
+  .kind.tempo, .kind.amt { cursor: help; }
   .tag {
     font-family: var(--ui);
     font-size: 11.5px;
@@ -593,13 +585,8 @@
 <div class="page">
 
   <header class="masthead">
-    <p class="eyebrow">Real-time score following</p>
-    <h1>Matchmaker Benchmark</h1>
-    <p class="lede">
-      How well can a machine follow a live performer through a score? Every entry
-      below was measured on the same frozen set of performances, by the same
-      evaluation code.
-    </p>
+    <h1>Leaderboard for real&#8209;time score following</h1>
+    <p class="powered">powered by <a href="https://github.com/pymatchmaker/matchmaker_benchmark">matchmaker-benchmark</a></p>
     <div class="staff" role="presentation"></div>
     <div class="provenance" id="provenance"></div>
     <div class="versions" id="versions" hidden>
@@ -619,7 +606,7 @@
       <button class="chip" data-filter="reference" aria-pressed="false">Matchmaker</button>
     </div>
     <p class="ranking-note">
-      Ranked by pieces tracked, then by error. Open a row for per-piece
+      Sorted by pieces tracked, then by error. Open a row for per-piece
       results and plots.
     </p>
   </div>
@@ -675,6 +662,19 @@
         <dt>RTF</dt>
         <dd>Processing time over performance duration; 1.0 or more cannot keep
           up live.</dd>
+      </dl>
+    </section>
+    <section>
+      <h2>Labels</h2>
+      <dl>
+        <dt><span class="kind reference">matchmaker</span></dt>
+        <dd>Ships with Matchmaker <a href="#ref-1">[1]</a>; the citation under each
+          name links to the
+          <a href="https://pymatchmaker.github.io/score-following-bibliography/">Score Following Bibliography</a>.</dd>
+        <dt><span class="kind amt">AMT [2]</span></dt>
+        <dd>A symbolic follower coupled with a privately shared online transcription
+          model <a href="#ref-2">[2]</a>. The transcription is precomputed, so RTF is
+          not shown.</dd>
         <dt><span class="kind tempo">* tempo given</span></dt>
         <dd>Given the performance's estimated tempo, an easier task.</dd>
       </dl>
@@ -683,15 +683,11 @@
       <h2>Datasets</h2>
       <dl>
         <dt><a href="https://github.com/fosfrancesco/asap-dataset">ASAP</a></dt>
-        <dd>F. Foscarin, A. McLeod, P. Rigaux, F. Jacquemard, and M. Sakai, “ASAP: A
-          dataset of aligned scores and performances for piano transcription,” in
-          <i>Proc. ISMIR</i>, 2020. Test split only; audio from MAESTRO concert recordings.</dd>
+        <dd>Test split only; audio from MAESTRO concert recordings <a href="#ref-3">[3]</a>.</dd>
         <dt><a href="https://github.com/huispaty/batik_plays_mozart">Batik-plays-Mozart</a></dt>
-        <dd>P. Hu and G. Widmer, “The Batik-plays-Mozart corpus: Linking performance to
-          score to musicological annotations,” in <i>Proc. ISMIR</i>, 2023. Audio from
-          the MIDI replayed on a Disklavier.</dd>
+        <dd>Audio from the MIDI replayed on a Disklavier <a href="#ref-4">[4]</a>.</dd>
         <dt><a href="https://github.com/CPJKU/vienna4x22">Vienna4x22</a></dt>
-        <dd>W. Goebl, “The Vienna 4x22 piano corpus,” 1999. The original recordings.</dd>
+        <dd>The original recordings <a href="#ref-5">[5]</a>.</dd>
       </dl>
     </section>
     <section>
@@ -705,13 +701,24 @@
     <section>
       <h2>References</h2>
       <dl>
-        <dt><a href="https://github.com/pymatchmaker/matchmaker">Matchmaker</a></dt>
+        <dt id="ref-1">[1]</dt>
         <dd>J. Park, C. Cancino-Chacón, S. Chiruthapudi, and J. Nam, “Matchmaker: An
           open-source library for real-time piano score following and systematic
-          evaluation,” in <i>Proc. ISMIR</i>, 2025. Rows marked
-          <span class="kind reference">matchmaker</span> ship with it; their
-          citations link to the
-          <a href="https://pymatchmaker.github.io/score-following-bibliography/">Score Following Bibliography</a>.</dd>
+          evaluation,” in <i>Proc. ISMIR</i>, 2025.</dd>
+        <dt id="ref-2">[2]</dt>
+        <dd>T. Kwon, D. Jeong, and J. Nam, “Towards efficient and real-time piano
+          transcription using neural autoregressive models,”
+          <i>IEEE/ACM Trans. Audio, Speech, Lang. Process.</i>, vol. 32,
+          pp. 5106–5116, 2024.</dd>
+        <dt id="ref-3">[3]</dt>
+        <dd>F. Foscarin, A. McLeod, P. Rigaux, F. Jacquemard, and M. Sakai, “ASAP: A
+          dataset of aligned scores and performances for piano transcription,” in
+          <i>Proc. ISMIR</i>, 2020.</dd>
+        <dt id="ref-4">[4]</dt>
+        <dd>P. Hu and G. Widmer, “The Batik-plays-Mozart corpus: Linking performance to
+          score to musicological annotations,” in <i>Proc. ISMIR</i>, 2023.</dd>
+        <dt id="ref-5">[5]</dt>
+        <dd>W. Goebl, “The Vienna 4x22 piano corpus,” 1999.</dd>
       </dl>
     </section>
   </footer>
@@ -1178,10 +1185,7 @@ async function fillDetail(entry, container) {
   container.innerHTML = '<p class="plot-hint">Loading the full record…</p>';
   const detail = await loadDetail(entry);
   if (!detail) {
-    container.innerHTML = tablesOnly
-      ? `<p class="plot-hint">This older version is shown with its tables only. Per-piece results
-           are in its <a href="${escapeHtml(tablesOnly)}">release files</a>.</p>`
-      : '<p class="plot-hint">Per-piece results are not published for this entry.</p>';
+    container.innerHTML = '<p class="plot-hint">Per-piece results are not published for this entry.</p>';
     return;
   }
 
@@ -1361,7 +1365,15 @@ async function fillDetail(entry, container) {
 // An entry given the performance's estimated tempo had an easier task than one
 // that only read the score's notated tempo (docs/eval-protocol.md), so its row
 // says so wherever it is shown.
+const AMT_BADGE = '<span class="kind amt">AMT [2]</span>';
+const AMT_RTF = '<span class="num dim" title="the transcription is not run here, so the RTF would cover only the follower">&mdash;</span>';
 const TEMPO_BADGE = '<span class="kind tempo" title="given the performance\'s estimated tempo, not only the score\'s notated one: an easier task">* tempo given</span>';
+
+function amtDescription(entry) {
+  return `Matchmaker's symbolic ${entry.method.replace(/^amt-/, "")} follower coupled with a
+    privately shared online transcription model [2].
+    The transcription is precomputed, so RTF is not shown.`;
+}
 
 function detailRow(entry) {
   const facts = [
@@ -1382,7 +1394,7 @@ function detailRow(entry) {
       <td colspan="10">
         <div class="detail-grid">
           <p>
-            ${escapeHtml(entry.description)}
+            ${escapeHtml(entry.frozen_amt ? amtDescription(entry) : entry.description)}
           </p>
           <div class="facts">
             ${facts.map(([k, v]) => `<div class="fact"><span>${k}</span><span>${escapeHtml(v)}</span></div>`).join("")}
@@ -1416,7 +1428,8 @@ function boardRows(rows) {
           <div class="entry-authors"><span class="entry-cite">${entry.citation_url
             ? `<a href="${escapeHtml(entry.citation_url)}" target="_blank" rel="noopener"
                   title="Full reference in the Score Following Bibliography">${escapeHtml(entry.authors)}</a>`
-            : escapeHtml(entry.authors)}</span><span class="entry-badges">${entry.kind === "reference"
+            : escapeHtml(entry.authors)}</span><span class="entry-badges">${entry.frozen_amt
+              ? AMT_BADGE : ""}${entry.kind === "reference"
               ? '<span class="kind reference" title="ships with matchmaker">matchmaker</span>'
               : ""}${entry.estimated_bpm ? TEMPO_BADGE : ""}</span></div>
         </td>
@@ -1433,7 +1446,7 @@ function boardRows(rows) {
         <td>${percentCell(entry.ar_strict)}</td>
         <td>${percentCell(entry.ar_loose)}</td>
         <td>${metricCell(entry.smoothness, 4)}</td>
-        <td>${metricCell(entry.rtf, 4)}</td>
+        <td>${entry.frozen_amt ? AMT_RTF : metricCell(entry.rtf, 4)}</td>
       </tr>
       ${detailRow(entry.whole || entry)}`;
   }).join("");
@@ -1462,7 +1475,8 @@ function datasetBoards(shown) {
   const datasets = [...new Set(shown.flatMap((e) => Object.keys(e.datasets || {})))].sort();
   return datasets.map((dataset) => {
     const rows = shown.filter((e) => e.datasets?.[dataset])
-      .map((e) => alignmentRates({ ...e, ...e.datasets[dataset], whole: e }));
+      .map((e) => alignmentRates({ ...e, ...e.datasets[dataset], whole: e }))
+      .map((row) => (row.frozen_amt ? { ...row, rtf: null } : row));
     const boards = Object.keys(AR_TOLERANCES).map((inputType) => {
       const typed = rows.filter((row) => row.input_type === inputType);
       return typed.length ? `
@@ -1592,9 +1606,6 @@ async function fetchJson(url) {
   } catch (error) { return null; }
 }
 
-// This version's release URL when it is shown with its tables only.
-let tablesOnly = null;
-
 async function showVersions() {
   const [index, release] = await Promise.all([
     fetchJson(SITE_ROOT + "versions.json"), fetchJson("./release.json"),
@@ -1611,17 +1622,14 @@ async function showVersions() {
     location.href = SITE_ROOT + (select.value === newest.tag ? "" : `versions/${select.value}/`);
   });
   el("version-release").href = current.url;
-  if (!current.full) tablesOnly = current.url;
   el("versions").hidden = false;
 
   const note = el("version-note");
   if (current !== newest) {
     note.innerHTML = `You are viewing <b>${escapeHtml(current.tag)}</b>, published ${escapeHtml(date(current))}.
-      Newer results exist: <a href="${SITE_ROOT}">see the latest version (${escapeHtml(newest.tag)})</a>.${
-      tablesOnly ? " Per-piece plots for this version are in its release files." : ""}`;
+      Newer results exist: <a href="${SITE_ROOT}">see the latest version (${escapeHtml(newest.tag)})</a>.`;
   } else {
-    const permanent = new URL(`versions/${current.tag}/`, new URL(SITE_ROOT, location.href)).href;
-    note.innerHTML = `To cite these exact numbers, link this version: <a href="${escapeHtml(permanent)}">${escapeHtml(permanent)}</a>`;
+    note.innerHTML = `To cite these exact numbers, link this release: <a href="${escapeHtml(current.url)}">${escapeHtml(current.url)}</a>`;
     note.style.borderLeftColor = "var(--accent)";
   }
   note.hidden = false;
@@ -1639,6 +1647,8 @@ loadBoard().then((board) => {
   // A tracker is identified by its own key: the matchmaker method for a
   // reference, the submission's folder name otherwise.
   entries.forEach((e) => { e.tracker_id = e.kind === "reference" ? e.method : e.submission; });
+  // Followers replaying frozen AMT output: their RTF leaves out the transcription.
+  entries.forEach((e) => { e.frozen_amt = e.method?.startsWith("amt-") || false; });
   const pieces = entries.length ? entries[0].n_pieces : 0;
   el("provenance").innerHTML = [
     ["fold", board.fold],

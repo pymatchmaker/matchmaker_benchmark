@@ -23,6 +23,9 @@ SNAPSHOT = "benchmark-snapshot.zip"
 #: Result release tags, vMAJOR.MINOR.PATCH (see docs/maintaining.md).
 TAG = re.compile(r"v\d+\.\d+\.\d+")
 
+#: How many of the newest releases the site serves under versions/<tag>/.
+SITE_VERSIONS = 5
+
 
 def gh(*args):
     return subprocess.check_output(["gh", *args], text=True).strip()
@@ -153,14 +156,14 @@ def publish(repo, tag, run_ids, records, destination):
 
 
 def fetch_versions(repo, records, destination):
-    """Download every published snapshot to ``destination/<tag>/`` for the site.
+    """Download the newest ``SITE_VERSIONS`` snapshots to ``destination/<tag>/`` for the site.
 
     ``versions.json`` lists them newest first, for the page's version menu.
     """
     destination = Path(destination)
     destination.mkdir(parents=True, exist_ok=True)
     versions = []
-    for release in published(records):
+    for release in published(records)[:SITE_VERSIONS]:
         tag = release["tag_name"]
         fetch(repo, release, destination / tag)
         manifest = json.loads((destination / tag / "release.json").read_text())
@@ -177,7 +180,7 @@ def main():
     parser.add_argument("--tag", default="")
     parser.add_argument("--source-runs", default="", help="space-separated completed CI run IDs")
     parser.add_argument("--versions-dir", type=Path, default=None,
-                        help="also download every published release here, for the site's version menu")
+                        help="also download the newest releases here, for the site's version menu")
     args = parser.parse_args()
 
     records = releases(args.repo)

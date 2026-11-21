@@ -9,7 +9,7 @@ JSON and CSV, the same pair per dataset, and the per-entry detail files. Both
 the publish workflow and the staging preview call this, so what you look at
 before merging is assembled by the same code as what goes live.
 
-With ``--versions``, every published release is also assembled under
+With ``--versions``, each downloaded release is also assembled under
 ``versions/<tag>/`` (see docs/maintaining.md, "Older result versions").
 
 The page also reads ``../results/`` when it is served from a checkout, so
@@ -34,22 +34,12 @@ from matchmaker_eval.folds import REPO_ROOT, RESULTS_DIR
 
 DOCS_DIR = REPO_ROOT / "docs"
 
-#: Releases that keep their per-piece views under versions/: the newest few,
-#: plus any pinned ones, such as the release our paper cites.
-NEWEST_FULL_VERSIONS = 3
-PINNED_FULL_VERSIONS = ("v1.0.0",)
-
-
 class SiteError(Exception):
     """Raised when the site cannot be assembled."""
 
 
-def build(destination: Path, results_dir: Path = None, details: bool = True) -> dict:
-    """Copy docs/ and the result files into ``destination``. Returns a summary.
-
-    ``details=False`` leaves out the per-piece views, which are almost all of
-    a version's size; the tables and archived keys are always included.
-    """
+def build(destination: Path, results_dir: Path = None) -> dict:
+    """Copy docs/ and the result files into ``destination``. Returns a summary."""
     destination = Path(destination)
     results_dir = Path(results_dir or RESULTS_DIR)
     if destination.exists():
@@ -72,7 +62,7 @@ def build(destination: Path, results_dir: Path = None, details: bool = True) -> 
             summary["boards"].append(source.name)
 
     details_dir = results_dir / "details"
-    if details and details_dir.is_dir():
+    if details_dir.is_dir():
         target = destination / "details"
         target.mkdir(exist_ok=True)
         for path in sorted(details_dir.glob("*.json")):
@@ -97,15 +87,12 @@ def build(destination: Path, results_dir: Path = None, details: bool = True) -> 
 def add_versions(destination: Path, versions_dir: Path) -> list:
     """Assemble each release in ``versions_dir/versions.json`` under ``versions/<tag>/``.
 
-    The newest ``NEWEST_FULL_VERSIONS`` and the ``PINNED_FULL_VERSIONS`` keep
-    their per-piece views; the others keep their tables only. The list is also written to ``versions.json``.
+    The list is also written to ``versions.json``.
     """
     destination, versions_dir = Path(destination), Path(versions_dir)
     listed = json.loads((versions_dir / "versions.json").read_text())["versions"]
-    for index, version in enumerate(listed):
-        version["full"] = index < NEWEST_FULL_VERSIONS or version["tag"] in PINNED_FULL_VERSIONS
-        build(destination / "versions" / version["tag"], versions_dir / version["tag"],
-              details=version["full"])
+    for version in listed:
+        build(destination / "versions" / version["tag"], versions_dir / version["tag"])
     (destination / "versions.json").write_text(json.dumps({"versions": listed}, indent=2) + "\n")
     return listed
 
@@ -170,8 +157,7 @@ def main():
     )
     if args.versions:
         print(f"  {len(versions)} published version(s) under versions/: "
-              + (", ".join(v["tag"] + ("" if v["full"] else " (tables only)") for v in versions)
-                 or "none"))
+              + (", ".join(v["tag"] for v in versions) or "none"))
     for name in summary["missing"]:
         print(f"  note: results/{name} was not there")
     if args.serve:

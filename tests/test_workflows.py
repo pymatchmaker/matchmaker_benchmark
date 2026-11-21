@@ -159,25 +159,6 @@ class TestSiteAssembly:
             assert json.loads((site / "versions" / tag / "leaderboard.json").read_text()) == {"tag": tag}
         assert (site / "leaderboard.json").exists()  # the root keeps the current results
 
-    def test_only_the_newest_and_pinned_versions_keep_per_piece_views(self, tmp_path, monkeypatch):
-        """Older versions shrink to their tables, keeping the site under the Pages
-        limit, while a pinned version (e.g. the one a paper cites) stays complete."""
-        import build_site
-
-        monkeypatch.setattr(build_site, "NEWEST_FULL_VERSIONS", 2)
-        monkeypatch.setattr(build_site, "PINNED_FULL_VERSIONS", ("v1.0.0",))
-        tags = ["v3.0.0", "v2.1.0", "v2.0.0", "v1.0.0"]  # newest first
-        self._downloaded_versions(tmp_path / "versions", tags)
-        site = tmp_path / "site"
-        build_site.build(site)
-        listed = build_site.add_versions(site, tmp_path / "versions")
-
-        assert [v["full"] for v in listed] == [True, True, False, True]
-        for version in listed:
-            folder = site / "versions" / version["tag"]
-            assert (folder / "details" / "m-midi.json").exists() is version["full"]
-            assert (folder / "leaderboard.json").exists()
-
     def test_release_versions_are_filtered_and_newest_first(self, tmp_path, monkeypatch):
         import json
         from matchmaker_eval import release_results as R
@@ -208,6 +189,11 @@ class TestSiteAssembly:
         assert [v["tag"] for v in versions] == ["v1.1.0", "v1.0.0"]
         assert versions[0]["url"] == "https://example/v1.1.0"
         assert R.latest(records)["tag_name"] == "v1.1.0"
+
+        monkeypatch.setattr(R, "SITE_VERSIONS", 1)
+        fetched.clear()
+        R.fetch_versions("owner/repo", records, tmp_path / "newest")
+        assert fetched == ["v1.1.0"]
 
     def test_it_refuses_to_build_without_a_leaderboard(self, tmp_path, monkeypatch):
         import build_site
