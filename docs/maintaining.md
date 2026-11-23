@@ -63,6 +63,12 @@ Run `Publish - Leaderboard` on `main` with:
 Only successful runs are accepted. The release stores the run artifacts and a
 `benchmark-snapshot.zip`, and the site is rebuilt from it.
 
+Each site version links `per-piece.zip`, built by `build_site.py` from the
+detail files. It unpacks to `matchmaker-benchmark-<tag>-per-piece-results/`,
+with a folder per dataset with one
+`<dataset>-<input type>-<method>.tsv` of per-piece metrics per entry, plus
+`all-entries.tsv` with every entry's rows for comparing methods piece by piece.
+
 ### Older result versions
 
 - **major**: a new evaluation key (scoring, data, fold or matchmaker version)

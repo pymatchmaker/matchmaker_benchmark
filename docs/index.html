@@ -101,6 +101,16 @@
   }
   .powered a { color: var(--ink-soft); text-underline-offset: 2px; }
 
+  .lede {
+    font-family: var(--ui);
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    max-width: 64ch;
+    margin: 0;
+  }
+  .lede a { color: var(--ink); text-underline-offset: 2px; }
+
   h1 {
     font-family: var(--display);
     font-weight: 600;
@@ -585,8 +595,13 @@
 <div class="page">
 
   <header class="masthead">
-    <h1>Leaderboard for real&#8209;time score following</h1>
+    <h1>Real&#8209;Time Score Following Leaderboard</h1>
     <p class="powered">powered by <a href="https://github.com/pymatchmaker/matchmaker_benchmark">matchmaker-benchmark</a></p>
+    <p class="lede">Compare how reliably score followers track a performance to the end, how
+      precisely they align it to the score, and how fast they run, on MIDI and audio
+      performances.</p>
+    <p class="lede">For further details, see our
+      <a href="https://github.com/pymatchmaker/matchmaker_benchmark/blob/main/docs/eval-protocol.md">evaluation protocol</a>.</p>
     <div class="staff" role="presentation"></div>
     <div class="provenance" id="provenance"></div>
     <div class="versions" id="versions" hidden>
@@ -695,7 +710,9 @@
       <p>
         Write one Python file and open a pull request.
         <a href="https://github.com/pymatchmaker/matchmaker_benchmark/blob/main/docs/submitting.md">How to submit</a> ·
-        <a href="https://github.com/pymatchmaker/matchmaker_benchmark/blob/main/docs/eval-protocol.md">Evaluation protocol</a>
+        <a href="https://github.com/pymatchmaker/matchmaker_benchmark/blob/main/docs/eval-protocol.md">Evaluation protocol</a> ·
+        <a href="per-piece.zip" id="per-piece-download"
+          download="matchmaker-benchmark-per-piece-results.zip">Download all per-piece results (ZIP)</a>
       </p>
     </section>
     <section>
@@ -1622,6 +1639,8 @@ async function showVersions() {
     location.href = SITE_ROOT + (select.value === newest.tag ? "" : `versions/${select.value}/`);
   });
   el("version-release").href = current.url;
+  // Same name as the zip's top folder (pieces_folder_name in build_site.py).
+  el("per-piece-download").download = `matchmaker-benchmark-${current.tag}-per-piece-results.zip`;
   el("versions").hidden = false;
 
   const note = el("version-note");

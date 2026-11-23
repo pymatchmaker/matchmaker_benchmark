@@ -128,6 +128,57 @@ class TestSiteAssembly:
         assert (site / "leaderboard.json").exists()
         assert summary["details"] >= 0
 
+    def test_per_piece_zip_has_one_row_per_entry_and_piece(self, tmp_path):
+        import json
+        import zipfile
+        import build_site
+
+        details = tmp_path / "details"
+        details.mkdir()
+        for name, method in (("a-midi", "a"), ("b-midi", "b"), ("a-mine", "a")):
+            pieces = [{"piece_id": f"{dataset}/p{i}", "dataset": dataset, "tracked": True,
+                       "mean_b": 0.1, "wp": [[0, 0]]}
+                      for dataset in ("asap", "batik") for i in range(3)]
+            (details / f"{name}.json").write_text(json.dumps(
+                {"submission": name, "name": name, "method": method, "input_type": "midi",
+                 "pieces": pieces}))
+        (details / "empty.json").write_text("{}")
+
+        assert build_site.write_pieces_zip(details, tmp_path / "per-piece.zip") == 3
+        with zipfile.ZipFile(tmp_path / "per-piece.zip") as archive:
+            # "a-midi" and "a-mine" share method a, so both are named by submission.
+            top = "matchmaker-benchmark-per-piece-results/"
+            assert sorted(archive.namelist()) == [top + name for name in (
+                "all-entries.tsv",
+                "asap/asap-midi-a-midi.tsv", "asap/asap-midi-a-mine.tsv", "asap/asap-midi-b.tsv",
+                "batik/batik-midi-a-midi.tsv", "batik/batik-midi-a-mine.tsv", "batik/batik-midi-b.tsv",
+            )]
+            lines = archive.read(top + "all-entries.tsv").decode().splitlines()
+            asap_lines = archive.read(top + "asap/asap-midi-b.tsv").decode().splitlines()
+        header = lines[0].split("\t")
+        assert header[:3] == ["submission", "method", "input_type"]
+        assert "name" not in header and "wp" not in header
+        assert len(lines) == 1 + 3 * 6
+        assert len(asap_lines) == 1 + 3
+
+    def test_per_piece_zip_is_named_after_the_release(self, tmp_path, monkeypatch):
+        import json
+        import zipfile
+        import build_site
+
+        results = tmp_path / "results"
+        (results / "details").mkdir(parents=True)
+        (results / "leaderboard.json").write_text("{}")
+        (results / "release.json").write_text(json.dumps({"tag": "v1.2.0"}))
+        (results / "details" / "a-midi.json").write_text(json.dumps(
+            {"submission": "a-midi", "method": "a", "input_type": "midi",
+             "pieces": [{"piece_id": "asap/p", "dataset": "asap"}]}))
+        build_site.build(tmp_path / "site", results)
+
+        with zipfile.ZipFile(tmp_path / "site" / "per-piece.zip") as archive:
+            folders = {name.split("/")[0] for name in archive.namelist()}
+        assert folders == {"matchmaker-benchmark-v1.2.0-per-piece-results"}
+
     @staticmethod
     def _downloaded_versions(root, tags):
         """Release snapshots as release_results.py --versions-dir leaves them."""
