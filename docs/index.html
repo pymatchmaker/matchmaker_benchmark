@@ -15,8 +15,8 @@
     --surface:    #ffffff;
     --surface-2:  #f8fafc;
     --ink:        #0f172a;
-    --ink-soft:   #475569;
-    --ink-mute:   #94a3b8;
+    --ink-soft:   #334155;
+    --ink-mute:   #64748b;
     --rule:       #e2e8f0;
     --rule-firm:  #cbd5e1;
     --accent:     #2563eb;
@@ -37,8 +37,8 @@
       --surface:    #111827;
       --surface-2:  #1e293b;
       --ink:        #f1f5f9;
-      --ink-soft:   #cbd5e1;
-      --ink-mute:   #64748b;
+      --ink-soft:   #e2e8f0;
+      --ink-mute:   #94a3b8;
       --rule:       #1e293b;
       --rule-firm:  #334155;
       --accent:     #60a5fa;
@@ -54,8 +54,8 @@
     --surface:    #111827;
     --surface-2:  #1e293b;
     --ink:        #f1f5f9;
-    --ink-soft:   #cbd5e1;
-    --ink-mute:   #64748b;
+    --ink-soft:   #e2e8f0;
+    --ink-mute:   #94a3b8;
     --rule:       #1e293b;
     --rule-firm:  #334155;
     --accent:     #60a5fa;
@@ -570,8 +570,8 @@
     font-size: 13px;
     line-height: 1.5;
   }
-  footer dt { color: var(--ink-soft); font-weight: 500; }
-  footer dd { margin: 0; color: var(--ink-mute); }
+  footer dt { color: var(--ink); font-weight: 500; }
+  footer dd { margin: 0; color: var(--ink-soft); }
   @media (max-width: 600px) {
     footer dl { grid-template-columns: 1fr; gap: 2px; }
     footer dd { margin-bottom: 8px; }
@@ -585,8 +585,8 @@
     margin: 0;
     font-weight: 500;
   }
-  footer p { margin: 0; font-size: 13px; color: var(--ink-mute); line-height: 1.5; }
-  footer a { color: var(--ink-soft); }
+  footer p { margin: 0; font-size: 13px; color: var(--ink-soft); line-height: 1.5; }
+  footer a { color: var(--ink); }
   a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -597,9 +597,9 @@
   <header class="masthead">
     <h1>Real&#8209;Time Score Following Leaderboard</h1>
     <p class="powered">powered by <a href="https://github.com/pymatchmaker/matchmaker_benchmark">matchmaker-benchmark</a></p>
-    <p class="lede">Compare how reliably score followers track a performance to the end, how
-      precisely they align it to the score, and how fast they run, on MIDI and audio
-      performances.</p>
+    <p class="lede">Results of real-time score followers on MIDI and audio performances
+      from shared public datasets. Each score follower reads a symbolic score (MusicXML)
+      and the MIDI or audio performance.</p>
     <p class="lede">For further details, see our
       <a href="https://github.com/pymatchmaker/matchmaker_benchmark/blob/main/docs/eval-protocol.md">evaluation protocol</a>.</p>
     <div class="staff" role="presentation"></div>
@@ -663,7 +663,7 @@
       <h2>Metrics</h2>
       <dl>
         <dt>Tracked</dt>
-        <dd>Share of pieces the follower never lost: no 30-second window has a
+        <dd>Share of pieces the score follower never lost: no 30-second window has a
           median error above 0.1 musical beat (MIDI) or 1.0 (audio). The other
           columns cover successfully tracked pieces only.</dd>
         <dt>Beat error</dt>
@@ -687,7 +687,7 @@
           name links to the
           <a href="https://pymatchmaker.github.io/score-following-bibliography/">Score Following Bibliography</a>.</dd>
         <dt><span class="kind amt">AMT [2]</span></dt>
-        <dd>A symbolic follower coupled with a privately shared online transcription
+        <dd>A symbolic score follower coupled with a privately shared online transcription
           model <a href="#ref-2">[2]</a>. The transcription is precomputed, so RTF is
           not shown.</dd>
         <dt><span class="kind tempo">* tempo given</span></dt>
@@ -1109,7 +1109,7 @@ function datasetPanel(detail, other, otherDetail, pool, active) {
       <button class="dtab" data-pool="all" role="tab" aria-selected="${pool === "all"}">all pieces</button>
       <span>${pool === "tracked"
         ? "— what the main table reports"
-        : "— lost pieces included, so a follower that bails out shows it here"}</span>
+        : "— lost pieces included, so a score follower that bails out shows it here"}</span>
     </div>
     ${legend}${datasetTable(detail, other, pool, active)}`;
 }
@@ -1383,11 +1383,11 @@ async function fillDetail(entry, container) {
 // that only read the score's notated tempo (docs/eval-protocol.md), so its row
 // says so wherever it is shown.
 const AMT_BADGE = '<span class="kind amt">AMT [2]</span>';
-const AMT_RTF = '<span class="num dim" title="the transcription is not run here, so the RTF would cover only the follower">&mdash;</span>';
+const AMT_RTF = '<span class="num dim" title="the transcription is not run here, so the RTF would cover only the score follower">&mdash;</span>';
 const TEMPO_BADGE = '<span class="kind tempo" title="given the performance\'s estimated tempo, not only the score\'s notated one: an easier task">* tempo given</span>';
 
 function amtDescription(entry) {
-  return `Matchmaker's symbolic ${entry.method.replace(/^amt-/, "")} follower coupled with a
+  return `Matchmaker's symbolic ${entry.method.replace(/^amt-/, "")} score follower coupled with a
     privately shared online transcription model [2].
     The transcription is precomputed, so RTF is not shown.`;
 }
