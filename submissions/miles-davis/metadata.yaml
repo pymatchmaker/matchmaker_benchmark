@@ -1,0 +1,19 @@
+# Required -----------------------------------------------------------------
+name: OLTW (Dixon 2005; note-mismatch ratio)        # shown on the leaderboard
+authors:
+  - Timo Prömer
+input_type: midi                # "midi" or "audio" — must match solution.py
+description: >
+  On-Line Time Warping (Dixon 2005, https://www.ofai.at/papers/oefai-tr-2005-14.pdf)
+  applied event by event to MIDI. The local cost is the fraction of played
+  pitches that are not in the pitch set of the score onset; path costs are
+  normalised by path length (search width 50, max run count 50).
+
+# Required declaration. By setting this to true you state that the eval fold
+# was not used to develop, tune, select or validate this submission.
+# Read docs/eval-protocol.md before you set it.
+eval_fold_untouched: true
+
+# Optional -----------------------------------------------------------------
+tuned_on: [valid]                   # which folds you tuned on
+external_data: none                  # any data used beyond this benchmark
