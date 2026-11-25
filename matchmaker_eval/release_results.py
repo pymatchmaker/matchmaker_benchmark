@@ -26,6 +26,8 @@ TAG = re.compile(r"v\d+\.\d+\.\d+")
 #: How many of the newest releases the site serves under versions/<tag>/.
 SITE_VERSIONS = 5
 
+PINNED_VERSIONS = ("v0.1.0",)
+
 
 def gh(*args):
     return subprocess.check_output(["gh", *args], text=True).strip()
@@ -91,24 +93,33 @@ def snapshot(results, output):
             bundle.write(path, str(relative))
 
 
+def changed_keys(previous, current):
+    """Input types whose evaluation key in ``previous`` differs in ``current``."""
+    return sorted(t for t, key in previous.items() if current.get(t) != key)
+
+
 def publish(repo, tag, run_ids, records, destination):
-    if not TAG.fullmatch(tag):
+    base = latest(records)
+    adding = not tag
+    if tag and not TAG.fullmatch(tag):
         raise ValueError(f"Release tag must look like v1.0.0, not {tag!r}")
+    if adding and not base:
+        raise ValueError("The first release needs a tag such as v0.1.0")
     runs = [api(f"repos/{repo}/actions/runs/{run}") for run in run_ids]
     if any(run["conclusion"] != "success" for run in runs):
         raise ValueError("Only successful runs can be published")
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, text=True).strip()
 
-    base = latest(records)
-    entry_sources = {}
+    previous = {}
     if base:
         fetch(repo, base, destination)
-        entry_sources = json.loads((destination / "release.json").read_text())["entry_sources"]
+        previous = json.loads((destination / "release.json").read_text())
     else:
         destination.mkdir(parents=True)
         old_archive = REPO_ROOT / "results" / "archive"
         if old_archive.exists():
             shutil.copytree(old_archive, destination / "archive")
+    entry_sources = previous.get("entry_sources", {})
 
     with tempfile.TemporaryDirectory() as directory:
         work = Path(directory)
@@ -138,6 +149,13 @@ def publish(repo, tag, run_ids, records, destination):
             subprocess.run([sys.executable, str(REPO_ROOT / "matchmaker_eval" / script)],
                            env=env, check=True)
         board = json.loads((destination / "leaderboard.json").read_text())
+        if adding:
+            changed = changed_keys(previous.get("evaluation_keys", {}), board["evaluation_keys"])
+            if changed:
+                raise ValueError(f"These runs change the {', '.join(changed)} evaluation key of "
+                                 f"{base['tag_name']}; publish them as a new release")
+            tag = base["tag_name"]
+            sources = previous["source_runs"] + sources
         manifest = {"tag": tag, "publisher_commit": commit, "source_runs": sources,
                     "entry_sources": entry_sources,
                     "evaluation_keys": board["evaluation_keys"]}
@@ -150,8 +168,13 @@ def publish(repo, tag, run_ids, records, destination):
                         for s in sources)
             + "\n"
         )
-        gh("release", "create", tag, *(str(p) for p in sorted(assets.iterdir())),
-           "--repo", repo, "--target", commit, "--title", tag, "--notes-file", str(notes))
+        files = [str(p) for p in sorted(assets.iterdir())]
+        if adding:
+            gh("release", "upload", tag, *files, "--repo", repo, "--clobber")
+            gh("release", "edit", tag, "--repo", repo, "--notes-file", str(notes))
+        else:
+            gh("release", "create", tag, *files,
+               "--repo", repo, "--target", commit, "--title", tag, "--notes-file", str(notes))
     return tag
 
 
@@ -163,7 +186,9 @@ def fetch_versions(repo, records, destination):
     destination = Path(destination)
     destination.mkdir(parents=True, exist_ok=True)
     versions = []
-    for release in published(records)[:SITE_VERSIONS]:
+    kept = [release for rank, release in enumerate(published(records))
+            if rank < SITE_VERSIONS or release["tag_name"] in PINNED_VERSIONS]
+    for release in kept:
         tag = release["tag_name"]
         fetch(repo, release, destination / tag)
         manifest = json.loads((destination / tag / "release.json").read_text())

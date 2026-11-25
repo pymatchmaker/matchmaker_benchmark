@@ -242,9 +242,15 @@ class TestSiteAssembly:
         assert R.latest(records)["tag_name"] == "v1.1.0"
 
         monkeypatch.setattr(R, "SITE_VERSIONS", 1)
+        monkeypatch.setattr(R, "PINNED_VERSIONS", ())
         fetched.clear()
         R.fetch_versions("owner/repo", records, tmp_path / "newest")
         assert fetched == ["v1.1.0"]
+
+        monkeypatch.setattr(R, "PINNED_VERSIONS", ("v1.0.0",))
+        fetched.clear()
+        R.fetch_versions("owner/repo", records, tmp_path / "pinned")
+        assert fetched == ["v1.1.0", "v1.0.0"]
 
     def test_it_refuses_to_build_without_a_leaderboard(self, tmp_path, monkeypatch):
         import build_site
@@ -508,6 +514,15 @@ class TestReleasedResults:
         build_site.build(tmp_path / "site")
         for name in ("index.html", "leaderboard.json"):
             assert (tmp_path / "site" / name).exists()
+
+    def test_runs_without_a_tag_need_a_release_under_the_same_key(self, tmp_path):
+        from matchmaker_eval import release_results as R
+
+        with pytest.raises(ValueError, match="first release needs a tag"):
+            R.publish("test/repo", "", ["1"], [], tmp_path)
+        keys = {"midi": "ek1-aaa", "audio": "ek1-bbb"}
+        assert R.changed_keys(keys, dict(keys)) == []
+        assert R.changed_keys(keys, {**keys, "audio": "ek1-ccc"}) == ["audio"]
 
     @pytest.mark.parametrize("status,conclusion", [("in_progress", None), ("completed", "failure"),
                                                   ("completed", "cancelled")])

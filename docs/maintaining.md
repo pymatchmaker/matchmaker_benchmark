@@ -4,7 +4,7 @@
 
 | When | Do | Release |
 | --- | --- | --- |
-| A new submission arrives | Review the PR and merge it into `submissions`; `Evaluate - Submission` runs by itself. Then run `Publish - Leaderboard` with that run ID. | minor, e.g. `v0.1.0` → `v0.2.0` |
+| A new submission arrives | Review the PR and merge it into `submissions`; `Evaluate - Submission` runs by itself. Then run `Publish - Leaderboard` with that run ID and no tag. | none, added to the latest release |
 | Only the site or docs changed | Merge into `main`. The site redeploys the latest release. | none |
 | Scores change (matchmaker pin, scoring code, fold, data) | Run `Evaluate - Matchmaker` on `eval`, and `Evaluate - Submission` for every published submission. Publish all those run IDs together. | major, e.g. `v0.2.0` → `v1.0.0` |
 
@@ -57,8 +57,8 @@ Run `Publish - Leaderboard` on `main` with:
 
 - `source_runs`: the run IDs to add, separated by spaces. Later runs replace
   earlier entries of the same name.
-- `release_tag`: the new version, `vMAJOR.MINOR.PATCH`. Leave both empty to
-  redeploy the latest release.
+- `release_tag`: the new version, `vMAJOR.MINOR.PATCH`. Leave it empty to add
+  submissions to the latest release, or both empty to redeploy it.
 
 Only successful runs are accepted. The release stores the run artifacts and a
 `benchmark-snapshot.zip`, and the site is rebuilt from it.
@@ -72,12 +72,11 @@ with a folder per dataset with one
 ### Older result versions
 
 - **major**: a new evaluation key (scoring, data, fold or matchmaker version)
-- **minor**: new entries under the same key
+- **minor**: new or changed matchmaker methods under the same key
 - **patch**: a fix to already published entries
 
 The site serves the newest releases at `versions/<tag>/` (`SITE_VERSIONS` in
-`matchmaker_eval/release_results.py`). Cite the GitHub release in a paper; it
-stays after the site drops that version.
+`matchmaker_eval/release_results.py`), plus the releases in `PINNED_VERSIONS`.
 
 ### Withdrawing a result
 

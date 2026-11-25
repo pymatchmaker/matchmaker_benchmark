@@ -88,10 +88,6 @@ code; after merge it is evaluated and appears on the leaderboard.
   └──────────────── leaderboard on GitHub Pages ◄─────────────────────┘
 ```
 
-Review is the trust boundary: CI executes submitted code, it does not sandbox
-it. Evaluation after merge is automatic; a maintainer publishes results in
-batches as GitHub releases (see [publishing results](docs/maintaining.md#publishing)).
-
 ## Folds
 
 The benchmark is defined by frozen lists in `data/folds/`, committed so that any

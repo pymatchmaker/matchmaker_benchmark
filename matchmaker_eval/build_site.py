@@ -104,14 +104,7 @@ def pieces_folder_name(tag: str = None) -> str:
 
 
 def write_pieces_zip(details_dir: Path, destination: Path, folder: str = None) -> int:
-    """Write every detail file's per-piece metrics to a zip of TSVs.
-
-    Everything sits under one top ``folder`` (default ``pieces_folder_name()``),
-    so unpacking gives a folder named after the release. Each dataset has a folder with one ``<dataset>-<input type>-<method>.tsv``
-    per entry, and ``all-entries.tsv`` at the top holds every row, one per
-    entry and piece, for comparing methods piece by piece. Returns the number
-    of entries written.
-    """
+    """Write every detail file's per-piece metrics to a zip of TSVs and return the number of entries."""
     entries = []
     for path in sorted(Path(details_dir).glob("*.json")):
         detail = json.loads(path.read_text())
@@ -128,8 +121,6 @@ def write_pieces_zip(details_dir: Path, destination: Path, folder: str = None) -
         for row in rows:
             columns += [key for key in row if key not in columns]
 
-    # Entries sharing a method and input type, e.g. a submission named after a
-    # reference method, are told apart by their submission names instead.
     methods = Counter((detail.get("input_type"), detail.get("method")) for detail, _ in entries)
     files = {}
     for detail, rows in entries:

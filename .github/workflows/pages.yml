@@ -14,7 +14,7 @@ on:
         required: false
         default: ""
       release_tag:
-        description: "New release tag vX.Y.Z (needed with source_runs)"
+        description: "New release tag vX.Y.Z, or empty to add the runs to the latest release"
         required: false
         default: ""
 
