@@ -1,0 +1,47 @@
+name: Transcribe twice and follow (two streaming transcribers + event OLTW)
+authors:
+  - Matthias Nagl
+  - Klaus Lex
+  - Kevin Eberl
+affiliation: Johannes Kepler University Linz (Music Informatics WS26)
+input_type: audio
+description: >
+  Two causal piano transcribers of our own, computed frame by frame in numpy,
+  turn the audio into notes while it arrives. One looks 5 frames ahead (notes
+  final after 166 ms), the other does not (notes final after 46 ms).
+  Matchmaker's event-level online time warping on the slower, more reliable
+  notes decides where in the score the performer is, as in our first
+  submission (bjork-gudmundsdottir). The faster notes only decide when the
+  next chords come: each new fast chord moves the position one score chord
+  past the slow follower's last chord, until the slow follower takes its next
+  chord. Between notes the position moves on at the followed tempo.
+license: Apache-2.0 for the code. anchor.npz and fast.npz hold weights we trained on MAESTRO v3, under CC BY-NC-SA 4.0 because of the training data, see README.md.
+
+# How this submission was developed.
+tuned_on: [valid]
+external_data: >
+  Both transcribers are trained by us on the MAESTRO v3.0.0 train split only
+  (Hawthorne et al., ICLR 2019), with the MAESTRO validation split for early
+  stopping and the onset thresholds. ASAP's audio are MAESTRO recordings: all
+  42 ASAP recordings of the benchmark folds (10 valid, 32 eval) are in
+  MAESTRO's test split, listed in asap_in_maestro.csv. That split was never
+  prepared or read, and our data preparation stops if any of the 42 appears in
+  the train or validation split. We used MAESTRO with the agreement of the
+  course instructor. No other data.
+
+# Required declaration. See docs/eval-protocol.md.
+eval_fold_untouched: true
+
+notes: >
+  numpy only, weights load from two npz files (5.6 MB each, 1.5 million
+  parameters per network) at import. Real-time factor about 0.13 on the
+  validation fold (two pieces at a time on a 2-core machine). Validation fold,
+  one run: 20 of 20 performances tracked, mean of the per-piece median beat
+  errors 0.023 beats (bjork-gudmundsdottir: 0.085). The rule that combines the
+  two transcribers was designed after we had seen validation results of the
+  fast transcriber alone, which lost pieces at the start, so the validation
+  numbers are not an unbiased estimate. It adds no new settings: the onset
+  thresholds come from the MAESTRO validation split and the follower settings
+  from bjork-gudmundsdottir. We trained three seeds of each network. The
+  submitted pair (seed 0) was fixed before the combination was run on the
+  validation fold.
