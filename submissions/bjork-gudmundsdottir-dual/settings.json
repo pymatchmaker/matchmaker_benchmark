@@ -1,0 +1,24 @@
+{
+ "anchor": {
+  "onset_threshold": 0.5,
+  "onset_rule": "peak",
+  "weights": "transcriber_b/weights/maestro-seed0.npz",
+  "weights_sha256": "9a53dca7cadf81e1b45c298300a415c64e496cda8d6399829ffd0964f23923cc",
+  "dev_summary": "transcriber_b/runs/dev_eval/maestro-seed0/summary.json",
+  "run": "maestro-seed0",
+  "epoch": 79,
+  "seed": 0,
+  "lookahead_frames": 5
+ },
+ "fast": {
+  "onset_threshold": 0.5,
+  "onset_rule": "rising",
+  "weights": "transcriber_b/weights/maestro_la0-seed0.npz",
+  "weights_sha256": "60475fc7d10e0bfed8bbe4be7e882cb34d7b875b8ec5b759b37902e5cf81fa25",
+  "dev_summary": "transcriber_b/runs/dev_eval/maestro_la0-seed0/summary.json",
+  "run": "maestro_la0-seed0",
+  "epoch": 76,
+  "seed": 0,
+  "lookahead_frames": 0
+ }
+}
