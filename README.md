@@ -22,7 +22,7 @@ data** — the evaluation runs on GitHub's runners, which fetch what they need.
 git clone https://github.com/pymatchmaker/matchmaker_benchmark.git
 cd matchmaker_benchmark
 conda env create -f environment.yml && conda activate matchmaker-benchmark
-pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.5.0"
+pip install -r requirements-eval.txt
 
 cp -r submissions/_template submissions/your-name
 ```
@@ -87,10 +87,6 @@ code; after merge it is evaluated and appears on the leaderboard.
   │                 │                            │                    │
   └──────────────── leaderboard on GitHub Pages ◄─────────────────────┘
 ```
-
-Review is the trust boundary: CI executes submitted code, it does not sandbox
-it. Evaluation after merge is automatic; a maintainer publishes results in
-batches as GitHub releases (see [publishing results](docs/maintaining.md#staging-a-run-before-it-is-published)).
 
 ## Folds
 
@@ -219,52 +215,17 @@ Full detail, including fold hygiene and the anti-tuning policy, in
 ## Project structure
 
 ```
-matchmaker_eval/
-  eval.py                 — single-piece alignment functions (audio + symbolic)
-  test_audio.py           — audio runner for the built-in methods
-  test_symbolic.py        — symbolic runner for the built-in methods
-  submission.py           — loads submissions/<name>/ and validates metadata
-  run_submission.py       — evaluate one submission on one fold -> metrics.json
-  run_references.py       — evaluate every built-in method, then republish
-  validate_submission.py  — pull-request checks: structure, contract, smoke run
-  merge_shards.py         — recombine parallel shards into one metrics record
-  leaderboard.py          — metrics.json files -> leaderboard.json / .csv,
-                            plus the same ranked per dataset
-  test_submission.py      — what a submitter runs: their follower, validation fold
-  retract.py              — withdraw a published result, with a reason
-  merge_references.py     — regroup and merge a sharded multi-method run
-  export_details.py       — every pooled metric per dataset, per-piece
-                            detail and decimated alignment paths
-  folds.py, make_folds.py — fold definitions and their integrity checks
-  fetch_data.py           — locate a fold's data (--source), check it is all
-                            present (--verify), or download just what it needs
-  verify_equivalence.py   — proves submissions are scored like built-in methods
-  methods.py              — the one seam onto matchmaker's method spec
-  utils.py, verify_tracking.py, sweep.py
-data/
-  folds/                  — frozen fold definitions (example, valid, eval)
-  data_sources.yaml       — where performance data is fetched from
-  builtin_methods.yaml    — leaderboard prose for the reference methods
-                            (names and citations only; no configuration)
 submissions/
-  _template/              — copy-me skeleton
-  baseline-constant-tempo/  — the no-information floor
-  example-pitch-matcher/    — a worked example that actually listens
-tests/                    — registry/benchmark consistency checks (pytest)
-resources/                — the one example performance, CC BY-NC-SA 4.0
-                            (see resources/ATTRIBUTION.md — not Apache-2.0)
-results/
-  leaderboard.json/.csv   — the published ranking, with per-dataset columns
-  leaderboard-<ds>.json/.csv — the same entries ranked on one dataset
-  retracted.json          — results withdrawn from it, and why
-  details/<name>.json     — per-dataset, per-piece and alignment-path detail
-  submissions/<name>/     — per-submission metrics.json
-docs/                     — contributor and maintainer documentation, and the
-                            GitHub Pages leaderboard
-.github/workflows/
-  validate-submission.yml — pull-request checks (no secrets, read-only token)
-  evaluate.yml            — post-merge evaluation in parallel shards
-  pages.yml               — publishes selected runs as a release and the leaderboard
+  _template/                — copy this to start a submission
+  example-pitch-matcher/    — a worked example
+matchmaker_eval/
+  test_submission.py        — run your follower on the validation fold
+  validate_submission.py    — the checks your pull request runs
+  run_submission.py         — evaluate a submission on any fold
+data/folds/                 — the pieces in each fold (example, valid, eval)
+resources/                  — the example performance, CC BY-NC-SA 4.0
+                              (see resources/ATTRIBUTION.md)
+docs/                       — submitting, the evaluation protocol, maintaining
 ```
 
 ## Acknowledgments

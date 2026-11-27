@@ -5,11 +5,12 @@
     python matchmaker_eval/build_site.py _site --versions DIR   # plus versions/<tag>/
 
 The site is ``docs/`` plus what the page reads and links to: the leaderboard
-JSON and CSV, the same pair per dataset, and the per-entry detail files. Both
-the publish workflow and the staging preview call this, so what you look at
+JSON and CSV, the same pair per dataset, the per-entry detail files, and
+``per-piece.zip``, the detail files' per-piece metrics as TSV. Both the publish
+workflow and the staging preview call this, so what you look at
 before merging is assembled by the same code as what goes live.
 
-With ``--versions``, every published release is also assembled under
+With ``--versions``, each downloaded release is also assembled under
 ``versions/<tag>/`` (see docs/maintaining.md, "Older result versions").
 
 The page also reads ``../results/`` when it is served from a checkout, so
@@ -27,29 +28,28 @@ for _path in (_REPO_ROOT, _REPO_ROOT / "matchmaker_eval"):
         sys.path.insert(0, str(_path))
 
 import argparse
+import csv
+import io
 import json
 import shutil
+import zipfile
+from collections import Counter
 
 from matchmaker_eval.folds import REPO_ROOT, RESULTS_DIR
 
 DOCS_DIR = REPO_ROOT / "docs"
 
-#: Releases that keep their per-piece views under versions/: the newest few,
-#: plus any pinned ones, such as the release our paper cites.
-NEWEST_FULL_VERSIONS = 3
-PINNED_FULL_VERSIONS = ("v1.0.0",)
-
+#: Columns that lead every row of the per-piece TSVs, naming the entry.
+ENTRY_COLUMNS = ("submission", "method", "input_type")
+#: Per-piece fields left out of the TSVs: the paths the page plots.
+PATH_FIELDS = ("wp", "gt")
 
 class SiteError(Exception):
     """Raised when the site cannot be assembled."""
 
 
-def build(destination: Path, results_dir: Path = None, details: bool = True) -> dict:
-    """Copy docs/ and the result files into ``destination``. Returns a summary.
-
-    ``details=False`` leaves out the per-piece views, which are almost all of
-    a version's size; the tables and archived keys are always included.
-    """
+def build(destination: Path, results_dir: Path = None) -> dict:
+    """Copy docs/ and the result files into ``destination``. Returns a summary."""
     destination = Path(destination)
     results_dir = Path(results_dir or RESULTS_DIR)
     if destination.exists():
@@ -72,12 +72,16 @@ def build(destination: Path, results_dir: Path = None, details: bool = True) -> 
             summary["boards"].append(source.name)
 
     details_dir = results_dir / "details"
-    if details and details_dir.is_dir():
+    if details_dir.is_dir():
         target = destination / "details"
         target.mkdir(exist_ok=True)
         for path in sorted(details_dir.glob("*.json")):
             shutil.copy2(path, target / path.name)
             summary["details"] += 1
+        release = results_dir / "release.json"
+        tag = json.loads(release.read_text()).get("tag") if release.exists() else None
+        summary["pieces_zip"] = write_pieces_zip(details_dir, destination / "per-piece.zip",
+                                                 folder=pieces_folder_name(tag))
 
     # Every leaderboard ever published under an evaluation key, so a key cited
     # in a paper resolves to archive/<key>/leaderboard.json on the site.
@@ -94,18 +98,65 @@ def build(destination: Path, results_dir: Path = None, details: bool = True) -> 
     return summary
 
 
+def pieces_folder_name(tag: str = None) -> str:
+    """Name of the per-piece zip's top folder, and of the file the page saves it as."""
+    return f"matchmaker-benchmark-{tag}-per-piece-results" if tag else "matchmaker-benchmark-per-piece-results"
+
+
+def write_pieces_zip(details_dir: Path, destination: Path, folder: str = None) -> int:
+    """Write every detail file's per-piece metrics to a zip of TSVs and return the number of entries."""
+    entries = []
+    for path in sorted(Path(details_dir).glob("*.json")):
+        detail = json.loads(path.read_text())
+        if detail.get("pieces"):
+            rows = [
+                {**{column: detail.get(column) for column in ENTRY_COLUMNS},
+                 **{key: value for key, value in piece.items() if key not in PATH_FIELDS}}
+                for piece in detail["pieces"]
+            ]
+            entries.append((detail, rows))
+
+    columns = list(ENTRY_COLUMNS)
+    for _, rows in entries:
+        for row in rows:
+            columns += [key for key in row if key not in columns]
+
+    methods = Counter((detail.get("input_type"), detail.get("method")) for detail, _ in entries)
+    files = {}
+    for detail, rows in entries:
+        input_type, name = detail.get("input_type"), detail.get("method")
+        if methods[input_type, name] > 1:
+            name = detail.get("submission")
+        for dataset in sorted({row["dataset"] for row in rows}):
+            files[f"{dataset}/{dataset}-{input_type}-{name}.tsv"] = [
+                row for row in rows if row["dataset"] == dataset]
+    files["all-entries.tsv"] = [row for _, rows in entries for row in rows]
+
+    folder = folder or pieces_folder_name()
+    with zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(files):
+            archive.writestr(f"{folder}/{path}", format_tsv(files[path], columns))
+    return len(entries)
+
+
+def format_tsv(rows: list, columns: list) -> str:
+    """Rows of dicts as TSV text; a missing value is an empty cell."""
+    text = io.StringIO()
+    writer = csv.DictWriter(text, columns, delimiter="\t", lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+    return text.getvalue()
+
+
 def add_versions(destination: Path, versions_dir: Path) -> list:
     """Assemble each release in ``versions_dir/versions.json`` under ``versions/<tag>/``.
 
-    The newest ``NEWEST_FULL_VERSIONS`` and the ``PINNED_FULL_VERSIONS`` keep
-    their per-piece views; the others keep their tables only. The list is also written to ``versions.json``.
+    The list is also written to ``versions.json``.
     """
     destination, versions_dir = Path(destination), Path(versions_dir)
     listed = json.loads((versions_dir / "versions.json").read_text())["versions"]
-    for index, version in enumerate(listed):
-        version["full"] = index < NEWEST_FULL_VERSIONS or version["tag"] in PINNED_FULL_VERSIONS
-        build(destination / "versions" / version["tag"], versions_dir / version["tag"],
-              details=version["full"])
+    for version in listed:
+        build(destination / "versions" / version["tag"], versions_dir / version["tag"])
     (destination / "versions.json").write_text(json.dumps({"versions": listed}, indent=2) + "\n")
     return listed
 
@@ -168,10 +219,11 @@ def main():
         f"per-dataset file(s), {summary['details']} detail file(s), "
         f"{summary['archives']} archived key(s)"
     )
+    if "pieces_zip" in summary:
+        print(f"  per-piece.zip with {summary['pieces_zip']} entr(y/ies)")
     if args.versions:
         print(f"  {len(versions)} published version(s) under versions/: "
-              + (", ".join(v["tag"] + ("" if v["full"] else " (tables only)") for v in versions)
-                 or "none"))
+              + (", ".join(v["tag"] for v in versions) or "none"))
     for name in summary["missing"]:
         print(f"  note: results/{name} was not there")
     if args.serve:

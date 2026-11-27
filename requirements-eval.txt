@@ -1,0 +1,4 @@
+pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.5.2
+python-hiddenmarkov==0.3.0
+pyyaml
+pydantic-settings

@@ -5,7 +5,6 @@ event times are used as they are, without latency compensation.
 """
 
 import argparse
-import hashlib
 import json
 import sys
 from pathlib import Path
@@ -73,6 +72,8 @@ def main():
         (run_dir / f"{index}.json").write_text(json.dumps(result, indent=2, default=float) + "\n")
         return result
 
+    eval_scoring_parts = rs.scoring_parts()
+    rs.scoring_parts = lambda: eval_scoring_parts
     rs.run_piece = run_piece
     rs.builtin_metadata = lambda method, input_type: {
         "name": f"AMT + {args.method}", "input_type": "audio", "kind": "reference",
@@ -80,12 +81,7 @@ def main():
         "description": "Frozen online AMT output replayed through a symbolic follower.",
         rs.ESTIMATED_BPM_KEY: False, DECLARATION_KEY: True,
     }
-    scoring_parts = rs.scoring_parts
-    rs.scoring_parts = lambda: {
-        **scoring_parts(), "amt_inputs": pin, "amt_symbolic_method": args.method,
-        "amt_runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-    }
-    rs.evaluate_submission(builtin=args.method, input_type="audio", fold="eval",
+    rs.evaluate_submission(builtin=f"amt-{args.method}", input_type="audio", fold="eval",
                            shard=args.shard, num_shards=args.num_shards,
                            run_dir=args.output)
 

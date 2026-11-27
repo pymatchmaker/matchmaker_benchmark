@@ -1,0 +1,109 @@
+name: "Evaluate - Matchmaker (delay)"
+on:
+  workflow_call:
+    inputs:
+      shards:
+        type: string
+        default: '2'
+permissions:
+  contents: read
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      shards: ${{ steps.plan.outputs.shards }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - id: plan
+        env:
+          SHARDS: ${{ inputs.shards }}
+        run: |
+          pip install --quiet pyyaml
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+
+          import yaml
+
+          methods = sorted(yaml.safe_load(open("data/builtin_methods.yaml"))["audio"])
+          shards = int(os.environ["SHARDS"])
+          print("matrix=" + json.dumps({"method": methods, "shard": list(range(shards))}))
+          print(f"shards={shards}")
+          PY
+  evaluate:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      MATCHMAKER_DATA_DIR: ${{ github.workspace }}/benchmark-data
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fluidsynth libsndfile1 ffmpeg
+          pip install -r requirements-eval.txt
+      - name: Stream the valid fold at playback speed
+        run: |
+          python matchmaker_eval/run_delay.py --method '${{ matrix.method }}' \
+            --shard '${{ matrix.shard }}' --num-shards '${{ needs.plan.outputs.shards }}' \
+            --output results/delay
+      - uses: actions/upload-artifact@v4
+        with:
+          name: refshard-${{ matrix.method }}-audio-${{ matrix.shard }}
+          path: results/delay
+          retention-days: 30
+  merge:
+    needs: [plan, evaluate]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          pip install -r requirements-eval.txt
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: refshard-*
+          path: results/refshards
+      - name: Merge each method
+        run: python matchmaker_eval/merge_references.py results/refshards --output results/delay
+      - name: Summarise the delays
+        run: |
+          python - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+
+          import numpy as np
+
+          keys = ["delay_median_ms", "delay_p95_ms", "delay_max_ms", "delay_end_ms"]
+          print("| method | " + " | ".join(keys) + " |")
+          print("|---" * (len(keys) + 1) + "|")
+          for path in sorted(Path("results/delay").glob("*/metrics.json")):
+              pieces = json.loads(path.read_text())["pieces"]
+              medians = [np.nanmedian([p.get(k, np.nan) for p in pieces]) for k in keys]
+              print(f"| {path.parent.name} | " + " | ".join(f"{v:.0f}" for v in medians) + " |")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results-delay
+          path: results/delay
+          retention-days: 90

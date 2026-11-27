@@ -1,5 +1,5 @@
 # Publish selected runs as a release and deploy the leaderboard from its snapshot.
-name: Publish leaderboard
+name: "Publish - Leaderboard"
 
 on:
   push:
@@ -14,7 +14,7 @@ on:
         required: false
         default: ""
       release_tag:
-        description: "New release tag vX.Y.Z (needed with source_runs)"
+        description: "New release tag vX.Y.Z, or empty to add the runs to the latest release"
         required: false
         default: ""
 
@@ -48,8 +48,7 @@ jobs:
 
       - name: Install result export dependencies
         run: |
-          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.5.0"
-          pip install pyyaml pydantic-settings
+          pip install -r requirements-eval.txt
 
       - name: Preserve selected runs or fetch published results
         id: results

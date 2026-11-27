@@ -1,5 +1,5 @@
 # Evaluate new or changed submissions after they merge into `submissions`.
-name: Evaluate submissions
+name: "Evaluate - Submission"
 
 on:
   push:
@@ -173,8 +173,7 @@ jobs:
       - name: Install the benchmark environment
         run: |
           python -m pip install --upgrade pip
-          pip install "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.5.0"
-          pip install pyyaml pydantic-settings
+          pip install -r requirements-eval.txt
           if [ -d "${{ matrix.job.target }}" ] && [ -s "${{ matrix.job.target }}/requirements.txt" ]; then
             pip install -r "${{ matrix.job.target }}/requirements.txt"
           fi
@@ -264,8 +263,7 @@ jobs:
 
       - name: Install what the merge needs
         run: |
-          pip install --quiet "pymatchmaker @ git+https://github.com/pymatchmaker/matchmaker.git@v0.5.0"
-          pip install --quiet pyyaml pydantic-settings
+          pip install --quiet -r requirements-eval.txt
 
       - uses: actions/download-artifact@v4
         with:

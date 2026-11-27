@@ -116,27 +116,6 @@ class TestEvaluateWorkflow:
         assert (run.get("env") or {}).get("OMP_NUM_THREADS") == "1"
 
 
-class TestMatchmakerPin:
-    """All workflows must install the same matchmaker, or jobs disagree."""
-
-    def _pins(self) -> dict:
-        import re
-
-        found = {}
-        for path in sorted(WORKFLOWS.glob("*.yml")):
-            for match in re.finditer(r"matchmaker\.git@([\w./-]+)", path.read_text()):
-                found.setdefault(path.name, set()).add(match.group(1))
-        return found
-
-    def test_every_workflow_pins_the_same_ref(self):
-        refs = {ref for refs in self._pins().values() for ref in refs}
-        assert len(refs) == 1, (
-            f"workflows install different matchmaker refs: {sorted(refs)}. "
-            "A partial revert leaves the merge job on a different version "
-            "from the shards."
-        )
-
-
 class TestSiteAssembly:
     """One script builds the site, so preview and publish cannot diverge."""
 
@@ -148,6 +127,57 @@ class TestSiteAssembly:
         assert (site / "index.html").exists()
         assert (site / "leaderboard.json").exists()
         assert summary["details"] >= 0
+
+    def test_per_piece_zip_has_one_row_per_entry_and_piece(self, tmp_path):
+        import json
+        import zipfile
+        import build_site
+
+        details = tmp_path / "details"
+        details.mkdir()
+        for name, method in (("a-midi", "a"), ("b-midi", "b"), ("a-mine", "a")):
+            pieces = [{"piece_id": f"{dataset}/p{i}", "dataset": dataset, "tracked": True,
+                       "mean_b": 0.1, "wp": [[0, 0]]}
+                      for dataset in ("asap", "batik") for i in range(3)]
+            (details / f"{name}.json").write_text(json.dumps(
+                {"submission": name, "name": name, "method": method, "input_type": "midi",
+                 "pieces": pieces}))
+        (details / "empty.json").write_text("{}")
+
+        assert build_site.write_pieces_zip(details, tmp_path / "per-piece.zip") == 3
+        with zipfile.ZipFile(tmp_path / "per-piece.zip") as archive:
+            # "a-midi" and "a-mine" share method a, so both are named by submission.
+            top = "matchmaker-benchmark-per-piece-results/"
+            assert sorted(archive.namelist()) == [top + name for name in (
+                "all-entries.tsv",
+                "asap/asap-midi-a-midi.tsv", "asap/asap-midi-a-mine.tsv", "asap/asap-midi-b.tsv",
+                "batik/batik-midi-a-midi.tsv", "batik/batik-midi-a-mine.tsv", "batik/batik-midi-b.tsv",
+            )]
+            lines = archive.read(top + "all-entries.tsv").decode().splitlines()
+            asap_lines = archive.read(top + "asap/asap-midi-b.tsv").decode().splitlines()
+        header = lines[0].split("\t")
+        assert header[:3] == ["submission", "method", "input_type"]
+        assert "name" not in header and "wp" not in header
+        assert len(lines) == 1 + 3 * 6
+        assert len(asap_lines) == 1 + 3
+
+    def test_per_piece_zip_is_named_after_the_release(self, tmp_path, monkeypatch):
+        import json
+        import zipfile
+        import build_site
+
+        results = tmp_path / "results"
+        (results / "details").mkdir(parents=True)
+        (results / "leaderboard.json").write_text("{}")
+        (results / "release.json").write_text(json.dumps({"tag": "v1.2.0"}))
+        (results / "details" / "a-midi.json").write_text(json.dumps(
+            {"submission": "a-midi", "method": "a", "input_type": "midi",
+             "pieces": [{"piece_id": "asap/p", "dataset": "asap"}]}))
+        build_site.build(tmp_path / "site", results)
+
+        with zipfile.ZipFile(tmp_path / "site" / "per-piece.zip") as archive:
+            folders = {name.split("/")[0] for name in archive.namelist()}
+        assert folders == {"matchmaker-benchmark-v1.2.0-per-piece-results"}
 
     @staticmethod
     def _downloaded_versions(root, tags):
@@ -180,25 +210,6 @@ class TestSiteAssembly:
             assert json.loads((site / "versions" / tag / "leaderboard.json").read_text()) == {"tag": tag}
         assert (site / "leaderboard.json").exists()  # the root keeps the current results
 
-    def test_only_the_newest_and_pinned_versions_keep_per_piece_views(self, tmp_path, monkeypatch):
-        """Older versions shrink to their tables, keeping the site under the Pages
-        limit, while a pinned version (e.g. the one a paper cites) stays complete."""
-        import build_site
-
-        monkeypatch.setattr(build_site, "NEWEST_FULL_VERSIONS", 2)
-        monkeypatch.setattr(build_site, "PINNED_FULL_VERSIONS", ("v1.0.0",))
-        tags = ["v3.0.0", "v2.1.0", "v2.0.0", "v1.0.0"]  # newest first
-        self._downloaded_versions(tmp_path / "versions", tags)
-        site = tmp_path / "site"
-        build_site.build(site)
-        listed = build_site.add_versions(site, tmp_path / "versions")
-
-        assert [v["full"] for v in listed] == [True, True, False, True]
-        for version in listed:
-            folder = site / "versions" / version["tag"]
-            assert (folder / "details" / "m-midi.json").exists() is version["full"]
-            assert (folder / "leaderboard.json").exists()
-
     def test_release_versions_are_filtered_and_newest_first(self, tmp_path, monkeypatch):
         import json
         from matchmaker_eval import release_results as R
@@ -229,6 +240,17 @@ class TestSiteAssembly:
         assert [v["tag"] for v in versions] == ["v1.1.0", "v1.0.0"]
         assert versions[0]["url"] == "https://example/v1.1.0"
         assert R.latest(records)["tag_name"] == "v1.1.0"
+
+        monkeypatch.setattr(R, "SITE_VERSIONS", 1)
+        monkeypatch.setattr(R, "PINNED_VERSIONS", ())
+        fetched.clear()
+        R.fetch_versions("owner/repo", records, tmp_path / "newest")
+        assert fetched == ["v1.1.0"]
+
+        monkeypatch.setattr(R, "PINNED_VERSIONS", ("v1.0.0",))
+        fetched.clear()
+        R.fetch_versions("owner/repo", records, tmp_path / "pinned")
+        assert fetched == ["v1.1.0", "v1.0.0"]
 
     def test_it_refuses_to_build_without_a_leaderboard(self, tmp_path, monkeypatch):
         import build_site
@@ -492,6 +514,15 @@ class TestReleasedResults:
         build_site.build(tmp_path / "site")
         for name in ("index.html", "leaderboard.json"):
             assert (tmp_path / "site" / name).exists()
+
+    def test_runs_without_a_tag_need_a_release_under_the_same_key(self, tmp_path):
+        from matchmaker_eval import release_results as R
+
+        with pytest.raises(ValueError, match="first release needs a tag"):
+            R.publish("test/repo", "", ["1"], [], tmp_path)
+        keys = {"midi": "ek1-aaa", "audio": "ek1-bbb"}
+        assert R.changed_keys(keys, dict(keys)) == []
+        assert R.changed_keys(keys, {**keys, "audio": "ek1-ccc"}) == ["audio"]
 
     @pytest.mark.parametrize("status,conclusion", [("in_progress", None), ("completed", "failure"),
                                                   ("completed", "cancelled")])
