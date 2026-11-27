@@ -1,0 +1,6 @@
+# Extra pip dependencies, on top of the benchmark environment (environment.yml).
+# Pin exact versions so your run can be reproduced:
+#
+#   torch==2.4.1
+#
+# Leave empty if you need nothing beyond matchmaker, numpy, scipy and partitura.
