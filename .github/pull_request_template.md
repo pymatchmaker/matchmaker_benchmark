@@ -15,13 +15,7 @@
 - [ ] `python matchmaker_eval/validate_submission.py submissions/<name> --smoke`
       passes locally.
 - [ ] I tuned on the **valid** fold (or my own data) and did not use the eval
-      fold to develop, tune, select or validate this follower —
+      fold to develop, tune, select or validate this score follower —
       see [docs/eval-protocol.md](../docs/eval-protocol.md).
 - [ ] The code is mine to submit under the repository's licence, or I have said
       in `metadata.yaml` where it comes from.
-
-### For the maintainer
-
-The evaluation runs automatically after merge; the leaderboard is committed by
-CI. Review is the trust boundary — CI executes submitted code, it does not
-sandbox it. See [docs/maintaining.md](../docs/maintaining.md).
